@@ -194,5 +194,10 @@ resolves the road.
 - **Versioning:** adapter versions independently from 0.1.0.
 - Every decision is recorded as an ADR in `Docs/DecisionLog.md`.
 
+- **First heartbeat verified in-game (2026-08-09).** F4SE 0.7.8 loads the
+  plugin (handle 1) on runtime 1.11.221; the `GameLoaded` event fires and
+  the heartbeat lands in
+  `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`.
+
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the banner quote slots, and the Nexus name check.

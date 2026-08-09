@@ -72,6 +72,7 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
 3. Launch through F4SE. The heartbeat:
    `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`
    → `The Living Commonwealth heartbeat: the world is awake.`
+   ✅ Verified in-game 2026-08-09 (F4SE 0.7.8, runtime 1.11.221).
 
 ## License
 
