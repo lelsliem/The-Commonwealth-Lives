@@ -19,6 +19,16 @@ manager, not built from source. `common` — only F4SE's own build uses it.
 `json` and `DirectXTK` — banked for future stones; fetch when actually
 wired (YAGNI).
 
+**Re-fetch when needed** (known upstreams; the author can supply the
+correct links if any of these are wrong):
+
+| Repo | Upstream | When it would be needed |
+|------|----------|-------------------------|
+| `f4se` | https://github.com/ianpatt/f4se | only if we ever build the F4SE runtime/loader ourselves (unlikely — the runtime is a download) |
+| `common` | https://github.com/CharmedBaryon/common | together with `f4se` (its build dependency) |
+| `json` | https://github.com/nlohmann/json | serialization/config stones (co-save records, world-fact data) |
+| `DirectXTK` | https://github.com/Microsoft/DirectXTK | rendering stones (far off) |
+
 ## Provenance
 
 - `commonlibf4` — `https://github.com/libxse/commonlibf4`, branch `main`,
