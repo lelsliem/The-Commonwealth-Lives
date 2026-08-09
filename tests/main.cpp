@@ -5,6 +5,7 @@
 //=============================================================================//
 
 #include "Components.h"
+#include "Executor.h"
 #include "Serialization.h"
 #include "Translator.h"
 
@@ -23,6 +24,7 @@ namespace TLC::Tests
     bool TranslatorTest();
     bool SeedingTest();
     bool SerializationTest();
+    bool PlanBuilderTest();
 }
 
 namespace
@@ -55,6 +57,7 @@ int main()
     Run("TranslatorTest", TLC::Tests::TranslatorTest);
     Run("SeedingTest", TLC::Tests::SeedingTest);
     Run("SerializationTest", TLC::Tests::SerializationTest);
+    Run("PlanBuilderTest", TLC::Tests::PlanBuilderTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -269,6 +272,109 @@ namespace TLC::Tests
         if (restored.GetComponent<Needs>(merchant))
         {
             return false;
+        }
+
+        return true;
+    }
+
+    bool PlanBuilderTest()
+    {
+        //---------------------------------------------------------------------
+        // A hungry farmer with a decided intent to move to the merchant.
+        //---------------------------------------------------------------------
+        EntityRegistry registry;
+
+        const auto farmer = registry.CreateEntity();
+        const auto merchant = registry.CreateEntity();
+
+        registry.AddComponent<Intent>(farmer, Intent{
+            ActionType::MoveTo, merchant, 0.82f });
+
+        const auto all = [](EntityId) { return true; };
+        const auto none = [](EntityId) { return false; };
+
+        // Everything loaded and available → one executable plan entry.
+        {
+            const auto plan = BuildPlan(registry, all, all, all);
+
+            if (plan.size() != 1)
+            {
+                return false;
+            }
+
+            const auto& entry = plan[0];
+
+            if (entry.Entity != farmer
+                || entry.Intent.Action != ActionType::MoveTo
+                || entry.Intent.Target != merchant
+                || !entry.ActorLoaded
+                || !entry.TargetLoaded
+                || !entry.Available)
+            {
+                return false;
+            }
+        }
+
+        // An unloaded actor is refused — the sim re-decides next tick.
+        {
+            const auto plan = BuildPlan(registry, none, all, all);
+
+            if (plan.size() != 1 || plan[0].ActorLoaded)
+            {
+                return false;
+            }
+        }
+
+        // An unloaded target (the merchant is in another cell) is refused.
+        {
+            const auto plan = BuildPlan(registry, all, none, all);
+
+            if (plan.size() != 1 || plan[0].TargetLoaded)
+            {
+                return false;
+            }
+        }
+
+        // A busy actor is refused.
+        {
+            const auto plan = BuildPlan(registry, all, all, none);
+
+            if (plan.size() != 1 || plan[0].Available)
+            {
+                return false;
+            }
+        }
+
+        // The target predicate sees the merchant, not the actor.
+        {
+            EntityId seen{};
+
+            const auto plan = BuildPlan(registry, all, [&](EntityId a_entity) {
+                seen = a_entity;
+                return true;
+            }, all);
+
+            if (plan.size() != 1)
+            {
+                return false;
+            }
+
+            if (seen != merchant)
+            {
+                return false;
+            }
+        }
+
+        // A mind with no decision produces no plan.
+        {
+            EntityRegistry empty;
+
+            const auto plan = BuildPlan(empty, all, all, all);
+
+            if (!plan.empty())
+            {
+                return false;
+            }
         }
 
         return true;

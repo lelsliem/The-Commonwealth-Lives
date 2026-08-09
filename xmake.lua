@@ -163,5 +163,9 @@ target("TheLivingCommonwealth.Tests", function()
     set_kind("binary")
     add_rules("lce.core")
     add_includedirs("src")
-    add_files("src/Translator.cpp", "src/Serialization.cpp", "tests/**.cpp")
+    add_files(
+        "src/Translator.cpp",
+        "src/Serialization.cpp",
+        "src/Executor.cpp",
+        "tests/**.cpp")
 end)

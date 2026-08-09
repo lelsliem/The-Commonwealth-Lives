@@ -1,7 +1,9 @@
 # Intent Executor — "The Farmer Walks"
 
 **Stone:** adapter 0.3 (after translation, verified in-game)
-**Status:** Design — pending review
+**Status:** Implemented — the tick, the read, and the plan are verified in
+the codebase and by the adapter's test suite; the *walking call itself* is
+pending in-game verification (the one open item, flagged below).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026
 (free functions over static classes), Law 001 (simple things; compose the
 complex). The contract's guarantee this stone honors: **an intent is a
@@ -35,14 +37,22 @@ every frame (game thread)
 
 Three pieces, all inside the adapter (the core stays untouched):
 
-### 1. The tick — a frame hook
+### 1. The tick — a frame hook (verified)
 
 The plugin's own heartbeat becomes the simulation's: a **per-frame hook on
-`RE::Main::Update`**, installed once at init via the library's own
-mechanism (`REL::THook` registered in `FHookStore`, enabled at
-`InitHook`; the trampoline comes from `F4SE::Init` with
-`{ .trampoline = true }`). The exact hook ID resolves from the address
-library at implementation.
+`DelayFunctorQueue`** — the game's budget-ticked delay-functor queue that
+F4SE itself hooks to fire Papyrus `OnUpdate`. Installed once at init via
+the library's own mechanism (`REL::THook` registered in `FHookStore`,
+Init'd at `PreLoad`, enabled at `Load`; the trampoline comes from
+`F4SE::Init` with `{ .trampoline = true }`).
+
+How it was grounded: the address library knows the function (ID 2251368 →
+`0x010F04A0`, verified against the game's `version-1-11-221-0.bin` — the
+same file F4SE itself resolves against), and THook patches *call sites*, so
+`src/Tick.cpp` hooks the four `call DelayFunctorQueue` instructions inside
+the game loop (`0x010E9F7E`, `0x010EA08E`, `0x010EA24B`, `0x010EA2F6` —
+pinned to 1.11.221, the same discipline F4SE uses for its own offsets). A
+once-per-frame guard collapses the four sites into one tick.
 
 - Runs on the **game thread** — zero contention, trivially debuggable
   (the contract's threading decision for 0.4.0).
@@ -78,13 +88,21 @@ a fresh one next tick. Nothing is queued, nothing blocks.
 | `Rest` | wait / sleep | logged, table slot reserved |
 | `Socialize`, `Explore`, `Work` | conversation scene / wander / work | logged, table slot reserved |
 
-**MoveTo, concretely:** FO4's `AIProcess` has a movement planner — the
-call every serious mod uses to make an NPC genuinely walk to a point.
-It is declared in the adapter via `REL::Relocation` against the address
-library (the address resolves at implementation; the fallback, if the
-address proves unreliable, is a documented teleport stopgap so the loop
-is provable either way). The target position comes from the target form's
-`GetPosition()` — resolved through the Translator, never from the core.
+**MoveTo, concretely:** the adapter never teleports (the author's call).
+The game already knows how to walk NPCs — the adapter invokes it through
+`Movement::WalkTo`, one seam. The target position comes from the target
+form's `GetPosition()` — resolved through the Translator, never from the
+core.
+
+The honest open item: the game's walking call, `AIProcess::CreateMovementPlanner`
+(the call the game uses to walk settlers to workshop jobs), is **not
+wrapped in CommonLibF4 and has no address-library ID** — the FO4
+community declares it per runtime. Its 1.11.221 RVA is the one value this
+stone could not verify from the clone or the database, so the seam ships
+refusing (intent dropped, sim re-decides — never a teleport) and logs a
+clear `WalkTo — movement planner pending verification` line. When the RVA
+is confirmed in-game, one constant in `src/Movement.cpp` completes the
+farmer's road.
 
 Logging discipline: intents are logged when they **change**, not every
 frame; a per-settler log line like
@@ -113,18 +131,19 @@ spam.
 Files:
 
 ```
-src/Tick.h/.cpp       — the frame hook (small: install, call Adapter::Tick)
-src/Executor.h/.cpp   — the read + the table; pure plan-building, game execution
-src/Adapter.h/.cpp    — gains Tick(delta); owns the Executor
-src/main.cpp          — install the hook at init; init the trampoline
-tests/                — plan-building suites (below)
+src/Tick.h/.cpp       — the frame hook (four call sites, once-per-frame guard)
+src/Executor.h/.cpp   — the read + the table; the pure plan builder
+src/Movement.h/.cpp   — the WalkTo seam (the game's own walking, never teleport)
+src/Adapter.h/.cpp    — Tick(delta) + the game-side execution of the plan
+src/main.cpp          — install the tick; init the trampoline
+tests/                — plan-building suites (4/4 green)
 ```
 
 ## Test plan
 
 | Where | Proves |
 |-------|--------|
-| Adapter tests (on every build) | The plan builder: given registry intents + translator + a loaded-actor set, produces the right plan and the right refusals (unloaded actor, unloaded target, already-acting) — pure, no game required. |
+| Adapter tests (on every build) | **Implemented — `PlanBuilderTest`** (4/4 suites green): given registry intents + injected loaded/available answers, produces the right plan and the right refusals (unloaded actor, unloaded target, busy actor) — pure, no game required. |
 | In-game (author) | Needs decay over real time; intents appear in the log (`settler ... decides MoveTo ...`); a `MoveTo` executes — a settler walks. The farmer's road. |
 
 ## The four questions
@@ -139,15 +158,21 @@ tests/                — plan-building suites (below)
 - **Will this help build living worlds through simulation?** Yes — the
   farmer walks.
 
-## Decisions to review
+## Decisions (resolved)
 
-1. **Tick via a frame hook on `RE::Main::Update`** (trampoline from
-   `F4SE::Init`) over a Papyrus timer — code-only, no content files.
-2. **MoveTo via the AI process movement planner** — real walking; address
-   resolved from the address library at implementation, teleport
-   stopgap documented if it fails.
+1. **Tick via a frame hook** on the game's own per-frame pump
+   (`DelayFunctorQueue`) over a Papyrus timer — code-only, no content
+   files. The author asked which works best: the hook, and nothing needed
+   extending — the whole mechanism is in the library.
+2. **MoveTo: real walking, never teleport** — the author's call. The
+   engine (core) creates nothing: it only hands the adapter
+   `Intent{MoveTo, target}`; the walking is the game's own machinery,
+   invoked by the adapter. The one open item is the movement-planner RVA
+   for 1.11.221, flagged above.
 3. **One action end-to-end this stone** — `MoveTo` implemented; the other
    four actions get table slots and log lines. The loop is the proof.
 4. **Real-time delta for now** — time-scale becomes a tuning input later.
 5. **Refusal = drop the intent** — the hint-not-command guarantee, made
-   concrete.
+   concrete. No need to consult the engine tab: the contract already
+   blesses refusal, and the core recomputes a fresh intent every tick, so
+   a dropped one is simply re-decided next tick — nothing to coordinate.

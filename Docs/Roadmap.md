@@ -14,9 +14,9 @@ Status
 
 Current Version : 0.2.0-alpha
 
-Current Stage   : Translation — complete and verified in-game
+Current Stage   : Intent Executor — implemented; in-game verification pending
 
-Next Milestone  : 0.3.0 — Intent Executor
+Next Milestone  : 0.4.0 — Co-save
 
 ═══════════════════════════════════════════════
 
@@ -71,12 +71,23 @@ Sanctuary.
 
 Goal: the simulation ticks in-game, and intents become game actions.
 
-[ ] Design — Docs/Design/Executor.md
-[ ] Per-frame tick — the core's Update(registry, delta) on the game
-    thread, delta from the game clock
-[ ] Action table — Intent → game action (MoveTo → walk, Flee → flee,
-    Rest → wait/sleep), hint-not-command guards
-[ ] In-game test — needs decay; intents appear and execute
+STATUS: IMPLEMENTED — in-game verification pending
+
+[✓] Design — Docs/Design/Executor.md
+[✓] Per-frame tick — a hook on the game's own per-frame pump
+    (DelayFunctorQueue, verified against the 1.11.221 address library),
+    once per frame on the game thread, real delta
+[✓] Plan builder — pure and tested (PlanBuilderTest, 4/4 suites);
+    refusals are the contract: unloaded actor, unloaded target, busy
+    actor → dropped, re-decided next tick
+[✓] Action table — MoveTo through the Movement::WalkTo seam (never
+    teleport); Rest/Socialize/Explore/Work/Flee → table slots + log
+    lines
+[ ] Walking call — the AIProcess::CreateMovementPlanner RVA for
+    1.11.221 is pending in-game verification (one constant in
+    src/Movement.cpp); until then WalkTo refuses, never teleports
+[ ] In-game test — needs decay; intents appear in the log and a settler
+    walks to market
 
 ═══════════════════════════════════════════════
 

@@ -16,11 +16,14 @@ That sentence is the test plan.
 
 ## Roadmap
 
-Where this project is and where it's going: `Docs/Roadmap.md`. Three
-stones are in: the heartbeat (loads in-game), the translation (settlers
-become minds — verified at Sanctuary), and the snapshot substrate.
-Next: the intent executor — the simulation ticks in-game and intents
-become game actions.
+Where this project is and where it's going: `Docs/Roadmap.md`. Four
+stones are in: the heartbeat (verified in-game), the translation (settlers
+become minds — verified at Sanctuary), the snapshot substrate, and the
+intent executor — the simulation now ticks in-game (hooked to the game's
+own per-frame pump) and intents are read and executed. One open item: the
+game's walking call (the movement planner) is pending in-game
+verification — the executor refuses rather than teleport. Next: the
+co-save, where the world survives a save and a load.
 
 ## What this is
 
@@ -87,6 +90,11 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    On GameLoaded the translation stone logs
    `The Commonwealth wakes up: N settlers became minds.`
    ✅ Verified in-game 2026-08-09: 10 settlers at Sanctuary.
+   Every frame after that, the executor ticks the simulation and logs
+   intents as they change, e.g.
+   `settler 0008F3A1 decides MoveTo -> 0008F3B2 (0.82)`.
+   (The walking call itself is pending verification — see
+   `Docs/Design/Executor.md`.)
 
 ## Test
 
@@ -95,7 +103,8 @@ xmake run TheLivingCommonwealth.Tests
 ```
 
 Runs the adapter's harness (translator tables, seeding, snapshot
-round-trip) — links LCE.Core only, no game required.
+round-trip, plan builder) — links LCE.Core only, no game required.
+4/4 suites green.
 
 ## License
 

@@ -9,9 +9,15 @@
 
 #pragma once
 
+#include "Executor.h"
 #include "Translator.h"
 
 #include "LCE/Simulation/EntityRegistry.h"
+
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <unordered_map>
 
 namespace TLC
 {
@@ -35,9 +41,30 @@ namespace TLC
         void StartWorld();
         void EndWorld();
 
+        // The per-frame heartbeat of the simulation: decay, remember,
+        // decide, then execute. Called by the Tick hook on the game thread.
+        void Tick(double a_deltaSeconds);
+
     private:
+        // What an entity last did — so intents are logged when they change,
+        // not every frame.
+        struct LogKey
+        {
+            std::uint32_t Action = 0;
+            std::uint32_t Target = 0;
+            std::uint8_t Reason = 0;
+            bool operator==(const LogKey&) const = default;
+        };
+
+        void ExecutePlan(const std::vector<PlanEntry>& a_plan);
+        void LogPlanEntry(
+            LCE::Simulation::EntityId a_entity,
+            std::string a_message,
+            const LogKey& a_key);
+
         LCE::Simulation::EntityRegistry m_Registry;
         Translator m_Translator;
         bool m_Started = false;
+        std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
     };
 }

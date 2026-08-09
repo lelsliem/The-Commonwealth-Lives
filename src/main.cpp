@@ -10,6 +10,7 @@
 //=============================================================================//
 
 #include "Adapter.h"
+#include "Tick.h"
 
 #include <F4SE/F4SE.h>
 
@@ -62,8 +63,18 @@ namespace
 F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
 {
     // Init wires the F4SE interfaces and the log sink (msvc + file). The
-    // log name is kept free of spaces so the file stays clean.
-    F4SE::Init(a_intfc, { .logName = "TheLivingCommonwealth" });
+    // log name is kept free of spaces so the file stays clean. The
+    // trampoline is where the Tick hooks' branches are allocated — a few
+    // dozen bytes is all the four call-site hooks need.
+    F4SE::Init(a_intfc, {
+        .logName = "TheLivingCommonwealth",
+        .trampoline = true,
+        .trampolineSize = 128,
+    });
+
+    // The simulation's heartbeat: once per frame on the game thread, the
+    // adapter decays the world and executes what the minds decided.
+    TLC::Tick::Install([](double a_delta) { g_Adapter.Tick(a_delta); });
 
     // The engine's own logging, behind its API (ADR-0030: own the interface,
     // not the implementation).

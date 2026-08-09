@@ -181,7 +181,7 @@ resolves the road.
 |---------|-------|--------|
 | 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
 | 0.2.0 | Translation | ✅ verified in-game |
-| 0.3.0 | Intent executor | ⬜ next |
+| 0.3.0 | Intent executor | implemented — in-game verification pending |
 | 0.4.0 | Co-save | ⬜ |
 | 0.5.0 | Living world (the market test) | ⬜ |
 
@@ -215,6 +215,16 @@ See `Docs/Roadmap.md`.
   (FormRef + seeded Needs + empty Memory/Relationships) and registers the
   serializers for the 0.4.0 snapshot. Adapter tests 3/3 green; in-game
   log confirms: `The Commonwealth wakes up: 10 settlers became minds.`
+- **Intent executor implemented (2026-08-09).** The simulation now ticks
+  in-game: a per-frame hook on the game's own per-frame pump
+  (`DelayFunctorQueue` — verified against the game's address library bin,
+  ID 2251368), `Update(registry, delta)` on the game thread, then the
+  pure plan builder (tested) executes intents through the
+  `Movement::WalkTo` seam — refusing rather than teleporting.
+  `Rest`/`Socialize`/`Explore`/`Work`/`Flee` get table slots and log
+  lines. Adapter tests 4/4 green. The one open item: the walking call
+  (`AIProcess::CreateMovementPlanner`) RVA for 1.11.221, pending in-game
+  verification — see `Docs/Design/Executor.md`.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the banner quote slots, and the Nexus name check.
