@@ -18,7 +18,7 @@
 set_xmakever("3.0.0")
 
 set_project("TheLivingCommonwealth")
-set_version("0.1.0")
+set_version("0.2.0")
 set_plat("windows")
 set_arch("x64")
 set_languages("c++23")

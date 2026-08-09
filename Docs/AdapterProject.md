@@ -175,6 +175,18 @@ resolves the road.
 
 ---
 
+## Milestones
+
+| Version | Stone | Status |
+|---------|-------|--------|
+| 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
+| 0.2.0 | Translation | ✅ verified in-game |
+| 0.3.0 | Intent executor | ⬜ next |
+| 0.4.0 | Co-save | ⬜ |
+| 0.5.0 | Living world (the market test) | ⬜ |
+
+See `Docs/Roadmap.md`.
+
 ## Scaffold Decisions (2026-08) — the open questions, answered
 
 - **Name:** project and DLL are `TheLivingCommonwealth`; display name

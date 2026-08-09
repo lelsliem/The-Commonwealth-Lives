@@ -4,7 +4,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.1.0--alpha-emerald.svg)](Docs/DecisionLog.md)
+[![Version](https://img.shields.io/badge/Version-0.2.0--alpha-emerald.svg)](Docs/Roadmap.md)
 
 The setters aren't on quest scripts — they're **hungry**, they **remember**
 who cheated them, they **flee** when raiders come, and the market closes on
@@ -13,6 +13,14 @@ rainy days. The game does nothing but show the result.
 > A settler goes to market because they are hungry — no script.
 
 That sentence is the test plan.
+
+## Roadmap
+
+Where this project is and where it's going: `Docs/Roadmap.md`. Three
+stones are in: the heartbeat (loads in-game), the translation (settlers
+become minds — verified at Sanctuary), and the snapshot substrate.
+Next: the intent executor — the simulation ticks in-game and intents
+become game actions.
 
 ## What this is
 
