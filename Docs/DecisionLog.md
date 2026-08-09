@@ -52,11 +52,13 @@ pinned local copy already matches the game runtime, and offline builds work.
 
 **Accepted · 2026-08**
 
-`set_runtimes("MT")` at the project root — CommonLibF4, commonlib-shared,
-and the plugin all build with the static MSVC runtime, matching the core
+Static MSVC runtime everywhere — CommonLibF4, commonlib-shared, and the
+plugin all build with the static CRT, matching the core
 (`MultiThreaded$<$<CONFIG:Debug>:Debug>`) and the F4SE plugin ecosystem.
-Mixing static and dynamic CRTs across static libraries fails to link
-(LNK2038); the core decides the setting, everything else follows.
+Mode-aware: debug builds use `/MTd`, release `/MT` — the core's Debug libs
+are `/MTd`, and mixing static runtimes fails to link (LNK2038, discovered
+on the first link and fixed here). The core decides the setting; everything
+then follows. xrepo packages (spdlog) pick the same runtime automatically.
 
 ## 0004 — Logging: through LCE's API; eyes via REX::LOG
 
@@ -66,9 +68,17 @@ The mod logs through **`LCE::Logging`** (the documented channel — never
 spdlog directly; ADR-0030 in the core) **and** `REX::LOG` for the visible
 F4SE log file. LCE's logger is console-bound (`stdout_color_mt`) — inside a
 game process that is invisible — so `REX::LOG::Info` is the eyes
-(`My Games/Fallout4/F4SE/TheLivingCommonwealth.log`) and LCE's API is the
-contract. If the core's logger ever gains a file sink, the adapter's calls
+(`My Games/Fallout4/F4SE/TheLivingCommonwealth.log`) and LCE's APIis the contract. If the core's logger ever gains a file sink, the adapter's calls
 do not change.
+
+**One spdlog in the plugin.** The core builds spdlog compiled into
+`LCE.Core.lib`, and commonlib-shared links its own spdlog (xrepo) as a
+public dependency. The adapter links **only the xrepo copy** and lets
+LCE.Core's spdlog references resolve against it — linking both put two
+spdlog implementations in the DLL (duplicate symbols, first link failed).
+Version skew (core 1.17 vs xrepo 1.16) is API-compatible for what LCE
+uses and disappears when the core's logging gets a file sink or a
+header-only option; noted so it is revisited, not forgotten.
 
 ## 0005 — Target: runtime 1.11.221, address library, next-gen F4SE
 

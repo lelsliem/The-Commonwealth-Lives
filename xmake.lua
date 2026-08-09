@@ -19,14 +19,20 @@ set_xmakever("3.0.0")
 
 set_project("TheLivingCommonwealth")
 set_version("0.1.0")
+set_plat("windows")
 set_arch("x64")
 set_languages("c++23")
 set_encodings("utf-8")
 
 -- Static runtime everywhere: matches the core (MultiThreaded) and the F4SE
--- plugin ecosystem, so no VC runtime DLL is needed in-game. The core's
--- LCE.Core.lib is built with the same setting — mixing would fail to link.
-set_runtimes("MT")
+-- plugin ecosystem, so no VC runtime DLL is needed in-game. Mode-aware: the
+-- core's Debug libs are /MTd, so a debug adapter must be /MTd too — mixing
+-- static runtimes fails to link (LNK2038).
+if is_mode("debug") then
+    set_runtimes("MTd")
+else
+    set_runtimes("MT")
+end
 
 add_rules("mode.debug", "mode.releasedbg")
 
@@ -39,7 +45,7 @@ add_rules("mode.debug", "mode.releasedbg")
 --  whose RUNTIME_LATEST == 1.11.221 — exactly the project's game runtime.
 --==============================================================================
 
-add_subdirs("Depends/commonlibf4")
+includes("Depends/commonlibf4")
 
 --==============================================================================
 --  LCE.Core (CMake project, linked statically)
@@ -64,26 +70,45 @@ rule("lce.core", function()
             cfg = "Release"
         end
 
-        -- Configure once (VS generator: no vcvars environment needed), then
-        -- build incrementally. Only the library + headers cross the boundary;
-        -- LCE_BULD_*_TESTS/SAMPLES/DOCS stay off.
-        if not os.isfile(path.join(buildDir, "CMakeCache.txt")) then
+        -- One spdlog in the plugin. The core pins spdlog 1.17 via
+        -- FetchContent and compiles it with bundled fmt; the plugin's
+        -- commonlib-shared uses spdlog 1.16 built with std::format (xrepo,
+        -- std_format=true). Two copies do not mix — different versions and
+        -- different format backends produce different symbol names (the
+        -- first two links proved it). So the core is forced to build against
+        -- the same spdlog 1.16, cloned locally from Depends/spdlog (offline,
+        -- pinned), compiled with the same SPDLOG_USE_STD_FORMAT define, and
+        -- its own spdlog lib is never linked — LCE.Core's references resolve
+        -- against commonlib-shared's copy.
+        local spdlogTag = "v1.16.0"
+        local spdlogSrc = path.join(buildDir, "spdlog-" .. spdlogTag)
+        if not os.isfile(path.join(spdlogSrc, "CMakeLists.txt")) then
             os.exec(
-                'cmake -S "%s" -B "%s" -G "Visual Studio 17 2022" -A x64 '
-                    .. "-DLCE_BUILD_TESTS=OFF -DLCE_BUILD_SAMPLES=OFF -DLCE_BUILD_DOCS=OFF",
-                corePath,
-                buildDir)
+                'git clone -q -b %s --depth 1 "%s" "%s"',
+                spdlogTag,
+                path.join(os.projectdir(), "Depends", "spdlog"),
+                spdlogSrc)
         end
+
+        -- Configure + build (VS generator: no vcvars environment needed;
+        -- incremental, so repeats are cheap). Only the library + headers
+        -- cross the boundary; LCE_BUILD_*_TESTS/SAMPLES/DOCS stay off.
+        os.exec(
+            'cmake -S "%s" -B "%s" -G "Visual Studio 17 2022" -A x64 '
+                .. '-DFETCHCONTENT_SOURCE_DIR_SPDLOG="%s" '
+                .. '-DCMAKE_CXX_FLAGS="/DSPDLOG_USE_STD_FORMAT /EHsc" '
+                .. "-DLCE_BUILD_TESTS=OFF -DLCE_BUILD_SAMPLES=OFF -DLCE_BUILD_DOCS=OFF",
+            corePath,
+            buildDir,
+            spdlogSrc)
         os.exec('cmake --build "%s" --config %s --parallel', buildDir, cfg)
 
         target:add("includedirs", path.join(corePath, "Include"))
         target:add("linkdirs", path.join(buildDir, "Lib", cfg))
         target:add("links", "LCE.Core")
-        if cfg == "Debug" then
-            target:add("links", "spdlogd") -- spdlog debug build (core convention)
-        else
-            target:add("links", "spdlog")
-        end
+        -- spdlog is intentionally NOT linked here (see the note above):
+        -- commonlib-shared's std-format spdlog 1.16 satisfies LCE.Core's
+        -- references. One spdlog in the plugin.
     end)
 end)
 
@@ -105,7 +130,7 @@ target("TheLivingCommonwealth", function()
     })
 
     add_deps("commonlibf4")
-    add_rule("lce.core")
+    add_rules("lce.core")
 
     add_files("src/**.cpp")
 end)
