@@ -78,6 +78,7 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    ✅ Verified in-game 2026-08-09 (F4SE 0.7.8, runtime 1.11.221).
    On GameLoaded the translation stone logs
    `The Commonwealth wakes up: N settlers became minds.`
+   ✅ Verified in-game 2026-08-09: 10 settlers at Sanctuary.
 
 ## Test
 

@@ -1,7 +1,7 @@
 # Entity ↔ Form Translation — "The Commonwealth Wakes Up"
 
 **Stone:** adapter 0.2 (after the proven heartbeat)
-**Status:** Implemented and tested (adapter-side); in-game verification pending
+**Status:** Implemented and tested — adapter 3/3 green; verified in-game 2026-08-09 (10 settlers became minds at Sanctuary)
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0014
 (no global state), ADR-0023 (the core never knows the game), Law 001
 (simple things; compose the complex). Foundation: core 0.4.0 snapshot
@@ -197,5 +197,6 @@ tests/                  — the adapter's first test harness (below)
   the utility header when casting forms.
 - `ProcessLists::allProcesss` holds `NiPointer<Actor>` — `.get().get()`
   for the raw pointer.
-- In-game check: the log shows
-  `The Commonwealth wakes up: N settlers became minds.` on GameLoaded.
+- In-game check (done 2026-08-09): the log shows
+  `The Commonwealth wakes up: N settlers became minds.` on GameLoaded —
+  10 settlers at Sanctuary, matching the predicate's expectation.
