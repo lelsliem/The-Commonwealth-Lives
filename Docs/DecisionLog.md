@@ -108,6 +108,26 @@ owns the durable F4SE co-save record, its type names, and its versioning);
 Snapshot suite (14/14 green) proves the round-trip — the farmer still goes
 to market after save/load.
 
+## 0008 — Translation stone: the settlers wake up
+
+**Accepted · 2026-08**
+
+On GameLoaded the adapter translates every loaded settler into an entity
+inside the core's registry: a `FormRef` (the entity knows its game form),
+seeded `Needs` (all satisfied), empty `Memory` and `Relationships`. The
+predicate is **WorkshopNPCFaction membership** (`0x000337F3`, verified by
+parsing the game's own `Fallout4.esm` — the often-cited
+"WorkshopSettlerFaction" does not exist in the base game). The game is
+read once and never written — the value↔ActorValue write-through belongs
+to the executor stone (ADR-0024).
+
+Serializers are registered once at init for every persisted type (Needs,
+Memory, Relationships, Goals, Intent, FormRef), exercising the core's
+0.4.0 snapshot substrate for the first time. The adapter's first test
+harness (3/3 green, no game required) proves the translator tables, the
+seeding, and a full Capture/Restore round-trip through the adapter's own
+serializers.
+
 ## 0006 — Versioning
 
 **Accepted · 2026-08**

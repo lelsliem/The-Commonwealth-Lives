@@ -9,6 +9,8 @@
 //                                                                             //
 //=============================================================================//
 
+#include "Adapter.h"
+
 #include <F4SE/F4SE.h>
 
 #include <LCE/Logging/Logger.h>
@@ -17,10 +19,13 @@
 
 namespace
 {
+    // The plugin's one world object — owned here, by the module, never a
+    // reachable global in the core's sense.
+    TLC::Adapter g_Adapter;
+
     //-------------------------------------------------------------------------
-    // The heartbeat: the game is loaded, the simulation can start. For this
-    // stone we only prove the plugin breathes — the registry and the tick
-    // are the next stones.
+    // The world is awake: the heartbeat, then the translation — every
+    // sim-relevant settler becomes a mind.
     //-------------------------------------------------------------------------
     void OnGameLoaded()
     {
@@ -30,10 +35,21 @@ namespace
         REX::INFO("{}", Heartbeat);
 
         // The documented channel: the mod logs through LCE's API, never
-        // spdlog directly. LCE's logger is console-bound for now, so this is
-        // the contract; REX::LOG above is the eyes.
+        // spdlog directly.
         LCE::Logging::Info(Heartbeat);
+
+        g_Adapter.StartWorld();
         LCE::Logging::Flush();
+    }
+
+    void OnPreLoadGame()
+    {
+        g_Adapter.EndWorld();
+    }
+
+    void OnDeleteGame()
+    {
+        g_Adapter.EndWorld();
     }
 }
 
@@ -60,6 +76,12 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
             {
             case F4SE::MessagingInterface::kGameLoaded:
                 OnGameLoaded();
+                break;
+            case F4SE::MessagingInterface::kPreLoadGame:
+                OnPreLoadGame();
+                break;
+            case F4SE::MessagingInterface::kDeleteGame:
+                OnDeleteGame();
                 break;
             default:
                 break;

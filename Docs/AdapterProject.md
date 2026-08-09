@@ -198,6 +198,11 @@ resolves the road.
   plugin (handle 1) on runtime 1.11.221; the `GameLoaded` event fires and
   the heartbeat lands in
   `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`.
+- **Translation stone implemented (2026-08-09).** On GameLoaded the
+  adapter translates every loaded settler into an entity (FormRef + seeded
+  Needs + empty Memory/Relationships) and registers the serializers for
+  the 0.4.0 snapshot. Adapter tests 3/3 green; in-game verification
+  pending (`The Commonwealth wakes up: N settlers became minds.`).
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the banner quote slots, and the Nexus name check.

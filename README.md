@@ -34,7 +34,10 @@ The contract lives in the core repo:
 
 ```
 xmake.lua          build (xmake; drives the core's CMake via the lce.core rule)
-src/               the plugin: F4SEPlugin_Load, then translation + execution
+src/               the plugin: main (lifecycle), Adapter (the world object),
+                   Translator (form ↔ entity), Serialization, SimRelevant
+                   (the settler predicate), Components, BlobCodec
+tests/             the adapter's test harness (links LCE.Core only, no game)
 Docs/              handoff doc, decisions, design
 Depends/           local third-party clones — study/build inputs, not committed
 Build/             build output (gitignored)
@@ -73,6 +76,17 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`
    → `The Living Commonwealth heartbeat: the world is awake.`
    ✅ Verified in-game 2026-08-09 (F4SE 0.7.8, runtime 1.11.221).
+   On GameLoaded the translation stone logs
+   `The Commonwealth wakes up: N settlers became minds.`
+
+## Test
+
+```bat
+xmake run TheLivingCommonwealth.Tests
+```
+
+Runs the adapter's harness (translator tables, seeding, snapshot
+round-trip) — links LCE.Core only, no game required.
 
 ## License
 

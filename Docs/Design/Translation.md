@@ -1,7 +1,7 @@
 # Entity ↔ Form Translation — "The Commonwealth Wakes Up"
 
 **Stone:** adapter 0.2 (after the proven heartbeat)
-**Status:** Design — pending review
+**Status:** Implemented and tested (adapter-side); in-game verification pending
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0014
 (no global state), ADR-0023 (the core never knows the game), Law 001
 (simple things; compose the complex). Foundation: core 0.4.0 snapshot
@@ -65,8 +65,9 @@ EntityId → FormID       (what the sim is talking about)
 The predicate — **which actors become entities**:
 
 ```cpp
-// A settler is sim-relevant. Membership in the workshop settler faction.
-// FORMID TO VERIFY IN FO4EDIT AT IMPLEMENTATION (commonly cited 0x0001F3A4).
+// A settler is sim-relevant. Membership in WorkshopNPCFaction — the
+// vanilla settler faction, verified from the game's Fallout4.esm
+// (formID 0x000337F3). The player is excluded.
 bool IsSimRelevant(const RE::Actor* a_actor)
 {
     return a_actor && !a_actor->IsPlayerRef()
@@ -172,14 +173,29 @@ tests/                  — the adapter's first test harness (below)
 
 ---
 
-## Decisions to review
+## Decisions (reviewed 2026-08-09)
 
-1. **Settler = WorkshopSettlerFaction membership** (FormID to verify in
-   FO4Edit; one named function). Alternatives (keyword, form list in an
-   .esp) are later stones if the first test mis-captures.
+1. **Settler = WorkshopNPCFaction membership** — `0x000337F3`, extracted
+   from `Fallout4.esm` (FACT records scanned with a small parser; the
+   often-cited "WorkshopSettlerFaction" does not exist in the base game).
+   One named function; alternatives (keyword, form list in an .esp) are
+   later stones if the in-game test mis-captures.
 2. **No game writes this stone** — translation is read-once; the
    value↔ActorValue write-through lands with the executor.
-3. **Adapter test harness added** — the adapter's first tests, running on
-   every build, no game required.
+3. **Adapter test harness added** — the adapter's first tests (3/3 green),
+   running on every build, no game required.
 4. **World rebuilt on every load** — co-save is its own stone; the
    substrate (Capture/Restore) is proven and waiting.
+
+## Implementation notes (what the build taught)
+
+- CommonLibF4's headers lean on its PCH for standard headers
+  (`<concepts>`, `<type_traits>`, ...) — game-side `.cpp` files include
+  `<F4SE/Impl/PCH.h>` first, as the library's own sources do.
+- `TESForm::As<T>` is header-only, defined in `RE/T/TESFormUtil.h` (a
+  switch over every form type) — `TESForm.h` only declares it. Include
+  the utility header when casting forms.
+- `ProcessLists::allProcesss` holds `NiPointer<Actor>` — `.get().get()`
+  for the raw pointer.
+- In-game check: the log shows
+  `The Commonwealth wakes up: N settlers became minds.` on GameLoaded.

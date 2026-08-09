@@ -151,3 +151,17 @@ target("TheLivingCommonwealth", function()
 
     add_files("src/**.cpp")
 end)
+
+--==============================================================================
+--  The adapter's test harness (mirrors the core's: bool-returning suites,
+--  no framework). Links LCE.Core only — the pure pieces (translator tables,
+--  serializers, seeding) are tested without the game. Builds on every
+--  build; run it as `xmake run TheLivingCommonwealth.Tests`.
+--==============================================================================
+
+target("TheLivingCommonwealth.Tests", function()
+    set_kind("binary")
+    add_rules("lce.core")
+    add_includedirs("src")
+    add_files("src/Translator.cpp", "src/Serialization.cpp", "tests/**.cpp")
+end)
