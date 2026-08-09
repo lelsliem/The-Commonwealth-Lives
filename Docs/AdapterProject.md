@@ -55,19 +55,24 @@ The adapter is an F4SE plugin built on CommonLibF4 (`F4SE::Init`,
 
 ## Dependency Wiring
 
-`C:\Fallout4Adaption\Depends\` already contains full clones the author
-moved over: `f4se`, `commonlibf4`, `common`, `json`, `DirectXTK`, `spdlog`.
+`C:\Fallout4Adaption\Depends\` holds the clones the build needs:
+`commonlibf4` (the static dependency, built via `includes`) and `spdlog`
+(offline source for the core's spdlog 1.16). The original six were trimmed
+in 2026-08 — see `Depends/README.md` for what was removed and why.
 
-- **CommonLibF4** + **F4SE** — link these (the mod's game API + runtime).
-  Decide at scaffold time: `add_subdirectory` of the existing clones vs
-  FetchContent pinned. The engine now uses FetchContent pinned (see the
-  core's `CMakeLists.txt` for the pattern) — prefer it for reproducibility,
-  or keep the clones if the author prefers offline builds.
-- **LCE.Core** — link it. Preferred: FetchContent of the core repo pinned
-  to a version tag (the mod must build against a known core version).
-- **spdlog** — the vendored copy in `Depends/` is likely **redundant**:
-  the core now fetches its own spdlog, and the mod logs through LCE's API
-  (or CommonLibF4's `REX::LOG`), never spdlog directly. Confirm and remove.
+- **CommonLibF4** — the mod's game API + plugin contract. Built from the
+  local clone; its `RUNTIME_LATEST` (1.11.221) matches the game.
+- **F4SE** — runtime-only. The plugin does not link the F4SE source;
+  CommonLibF4 replaces it as the static dependency (its README says so).
+  The `f4se_1_10_*.dll` runtime is a download, installed via the mod
+  manager.
+- **LCE.Core** — linked statically, built by its own CMake via the
+  `lce.core` rule into `Build/core` (never touching the core repo's
+  `Build/`). Points at the local checkout; override with `LCE_CORE_PATH`.
+- **spdlog** — the local clone feeds the core build's `v1.16.0` (matching
+  the plugin's xrepo spdlog, `std::format` mode) so one spdlog serves the
+  DLL. The mod itself logs through LCE's API and `REX::LOG`, never spdlog
+  directly.
 
 ---
 

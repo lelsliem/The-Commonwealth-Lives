@@ -1,41 +1,38 @@
 # Depends — third-party clones
 
-Full git clones the author moved into this tree for study and offline
-builds. **None of this directory is committed** (see `.gitignore`): these
-are third-party projects with their own histories, licenses, and `.git`
-directories.
+Full git clones kept locally for study and offline builds. **None of this
+directory is committed** (see `.gitignore`): these are third-party projects
+with their own histories, licenses, and `.git` directories.
+
+The set was trimmed once the build's shape was known (2026-08): only the
+two clones the build actually uses remain.
 
 | Directory     | What it is                                          | License                     | Used by                     |
 |---------------|-----------------------------------------------------|-----------------------------|-----------------------------|
-| `commonlibf4` | Typed game API (C++23, static lib) + plugin rule; **the** static dependency | GPL-3.0 + modding/linking exceptions | the plugin (build via `add_subdirs`) |
-| `f4se`        | The F4SE runtime source (loader + dll)              | BSD-3-Clause                | runtime only — the plugin does not link it; CommonLibF4 replaces it statically |
-| `common`      | Shared foundation (REL/address library)             | zlib                        | F4SE's build (not the plugin's) |
-| `spdlog`      | Logging backend (v1.17.0)                           | MIT                         | the core's logging backend (the core fetches its own; this copy is redundant) |
-| `json`        | nlohmann/json                                       | MIT                         | future serialization stones |
-| `DirectXTK`   | DirectX Tool Kit                                    | MIT                         | future rendering stones |
+| `commonlibf4` | Typed game API (C++23, static lib) + plugin rule; **the** static dependency | GPL-3.0 + modding/linking exceptions | the plugin (built via `includes("Depends/commonlibf4")`) |
+| `spdlog`      | Logging backend (v1.16.0 tag available locally)     | MIT                         | the core's logging backend — the `lce.core` rule clones this tag locally so the core builds offline, version-aligned with the plugin's spdlog |
+
+**Removed (not needed by this build):** `f4se` (source) — the plugin does
+not link it; CommonLibF4 replaces it as the static dependency, and the F4SE
+**runtime** (`f4se_1_10_*.dll`) is a download, installed via the mod
+manager, not built from source. `common` — only F4SE's own build uses it.
+`json` and `DirectXTK` — banked for future stones; fetch when actually
+wired (YAGNI).
 
 ## Provenance
 
 - `commonlibf4` — `https://github.com/libxse/commonlibf4`, branch `main`,
   tag `1.0.0` + 963 commits (`a4b283fc`). Its `RUNTIME_LATEST` is
   **1.11.221** — matches the project's game runtime.
-- `f4se` — `https://github.com/ianpatt/f4se`, branch `master`,
-  `v0.7.8` + 3 commits (`cb39721`).
-- `common` — `https://github.com/CharmedBaryon/common` (used by F4SE).
-- `spdlog` — `https://github.com/gabime/spdlog`, `v1.17.0` (the core pins
-  this version via FetchContent; the local copy is a duplicate kept for
-  offline reference — the build does not use it).
-- `json`, `DirectXTK` — banked for later stones, not yet wired.
+- `spdlog` — `https://github.com/gabime/spdlog` (the core pins 1.17 via
+  FetchContent; the adapter's core build uses the local `v1.16.0` tag to
+  match the plugin's xrepo spdlog).
 
 ## Recreating this directory
 
 ```bat
 git clone --recurse-submodules https://github.com/libxse/commonlibf4
-git clone https://github.com/ianpatt/f4se
-git clone https://github.com/CharmedBaryon/common
-git clone --branch v1.17.0 https://github.com/gabime/spdlog
-git clone https://github.com/nlohmann/json
-git clone https://github.com/Microsoft/DirectXTK
+git clone https://github.com/gabime/spdlog
 ```
 
 ## Licensing landmine
