@@ -91,6 +91,23 @@ standard practice, and what keeps the plugin working across runtime
 patches. F4SE itself is a runtime-only dependency: CommonLibF4 replaces it
 as the static dependency, exactly as its README states.
 
+## 0007 — Core pinned to 0.4.0+ (the snapshot API)
+
+**Accepted · 2026-08**
+
+The `lce.core` rule verifies the core checkout's `Version.h` and refuses
+anything below 0.4.0 — the adapter's co-save stone stands on the snapshot
+API (`RegisterSerializer<T>`, `Capture`, `Restore`, `Clear`), which landed
+in 0.4.0. A stale checkout fails loudly at configure time with a clear
+message rather than silently building against the wrong API.
+
+The snapshot contract, as the core states it: a type with no serializer is
+not persisted; the snapshot is a **process-local** exchange (the adapter
+owns the durable F4SE co-save record, its type names, and its versioning);
+`Restore` requires the same registrations; `Clear` keeps them. The core's
+Snapshot suite (14/14 green) proves the round-trip — the farmer still goes
+to market after save/load.
+
 ## 0006 — Versioning
 
 **Accepted · 2026-08**

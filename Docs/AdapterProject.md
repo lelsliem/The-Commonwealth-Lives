@@ -53,6 +53,48 @@ The adapter is an F4SE plugin built on CommonLibF4 (`F4SE::Init`,
 
 ---
 
+## The core's 0.4.0 side is built — what the adapter gains
+
+The core is now `0.4.0-alpha`, 14/14 suites green. Two things changed
+that matter to this project:
+
+1. **The boundary is the public API only.** The old
+   `Include/LCE/Interfaces/` stubs (`IGameAdapter`, `IWorld`, `IEntity`)
+   are **deleted**. The adapter is a client of the core — nothing to
+   implement, nothing to include.
+2. **Save/load has its substrate.** The core now ships `RegistrySnapshot`
+   (`Include/LCE/Simulation/RegistrySnapshot.h`) and four registry
+   operations the co-save stone will use:
+   - `RegisterSerializer<T>({ serialize, deserialize })` — required for a
+     component type to appear in a snapshot. Register once at init for
+     every type the adapter uses (Needs, Memory, Relationships, Goals,
+     Intent, and any adapter-defined components).
+   - `Capture()` — the whole registry as pure data; entity identities
+     (index + generation) preserved exactly.
+   - `Restore(snapshot)` — rebuilds a registry with identical IDs;
+     requires the same serializers to be registered.
+   - `Clear()` — blank registry; serializers survive (register once,
+     reuse across games).
+
+   Semantics to respect:
+   - A component type with **no serializer is not persisted** — omitted
+     silently. Data presence decides membership.
+   - The snapshot is a **process-local exchange format**. The adapter
+     translates it into the F4SE co-save record with its own stable type
+     names and its own versioning — save-compatibility is the adapter's
+     job (migrate old saves on load).
+   - Snapshot components are keyed by `std::type_index` — stable within
+     a process, NOT across processes; another reason the durable record
+     needs the adapter's own names.
+
+   The lifecycle table below is now implementable: `GameLoaded` → create
+   entities; `PreSaveGame` → `Capture()` → co-save record; `PostLoadGame`
+   → read record → `Restore()`; `PreLoadGame`/`DeleteGame` → `Clear()`.
+   The round-trip is proven by the core's Snapshot suite — the farmer
+   still goes to market after a save and a load.
+
+---
+
 ## Dependency Wiring
 
 `C:\Fallout4Adaption\Depends\` holds the clones the build needs:

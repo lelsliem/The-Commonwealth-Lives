@@ -43,8 +43,9 @@ Build/             build output (gitignored)
 ## Build
 
 Requirements: xmake 3.0+, CMake 3.28+, Visual Studio 2022 (MSVC v143),
-and a checkout of the core at `C:\LivingCommonwealthEngine` (override with
-the `LCE_CORE_PATH` environment variable).
+and a checkout of the core at **0.4.0+** at `C:\LivingCommonwealthEngine`
+(override with the `LCE_CORE_PATH` environment variable; the build refuses
+a stale core with a clear message).
 
 ```bat
 xmake f -m debug

@@ -64,6 +64,23 @@ rule("lce.core", function()
         local corePath = os.getenv("LCE_CORE_PATH") or "C:/LivingCommonwealthEngine"
         local buildDir = path.join(os.projectdir(), "Build", "core")
 
+        -- Pin the core: the adapter builds against 0.4.0+ (the snapshot
+        -- API: RegisterSerializer / Capture / Restore / Clear). A stale or
+        -- missing checkout fails loudly instead of silently building
+        -- against the wrong API.
+        local versionHeader = path.join(corePath, "Include", "LCE", "Version", "Version.h")
+        local content = os.isfile(versionHeader) and io.readfile(versionHeader) or nil
+        local major = content and content:match("MajorValue%s*=%s*(%d+)") or nil
+        local minor = content and content:match("MinorValue%s*=%s*(%d+)") or nil
+        if not (major and minor) or (tonumber(major) == 0 and tonumber(minor) < 4) then
+            raise(
+                "LCE core at %s is %s.%s — this adapter requires 0.4.0+ "
+                    .. "(the snapshot API). Update the checkout or set LCE_CORE_PATH.",
+                corePath,
+                major or "?",
+                minor or "?")
+        end
+
         local cfg = "Debug"
         local mode = config.get("mode")
         if mode == "release" or mode == "releasedbg" then
