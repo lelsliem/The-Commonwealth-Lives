@@ -1,0 +1,28 @@
+#==============================================================================
+#  The Living Commonwealth — Fallout 4 adapter for LCE
+#
+#  Modeled on the core repo's .gitignore (/Build/, /.vs/, *.user, .freebuff/)
+#  plus the xmake build system and third-party dependency clones.
+#==============================================================================
+
+# Build output (xmake default: build/; the core's convention: Build/)
+/Build/
+/build/
+/.xmake/
+
+# Visual Studio
+/.vs/
+*.user
+CMakeUserPresets.json
+
+# Tool/agent directories
+.freebuff/
+
+# Third-party clones — full git clones kept locally for study and offline
+# builds. Never committed (nested repos, GPL provenance, hundreds of MB).
+# See Depends/README.md for what each is and how it was obtained.
+/Depends/*
+!/Depends/README.md
+
+# Logs
+*.log

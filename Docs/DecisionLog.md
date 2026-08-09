@@ -1,0 +1,93 @@
+# The Living Commonwealth — Decision Log
+
+We record why, not just what. Every architectural decision is logged — the
+core's convention (ADR-0011 there; the same discipline here). Once accepted,
+a decision only changes if a better alternative exists.
+
+---
+
+## 0001 — Build System: xmake
+
+**Accepted · 2026-08**
+
+The adapter builds with **xmake**, not CMake. CommonLibF4 (the current
+libxse generation) has no CMake support — it is an xmake project — and its
+plugin rule (`commonlibf4.plugin`) generates the entire plugin contract:
+`F4SEPlugin_Version` data, the Windows version resource, and the
+`Data/F4SE/Plugins` install layout. Fighting that with a hand-rolled CMake
+wrapper would be worse on every axis (Law 001: simple things).
+
+The core stays CMake. The adapter does not adopt the core's build system;
+it *drives* it — the `lce.core` rule configures and builds the core into
+`Build/core` and links `LCE.Core` + its spdlog backend statically. `xmake`
+remains the one command.
+
+*Four questions:* simpler — yes (the ecosystem's own tooling); belongs —
+yes (it is the ecosystem's standard); needed — yes (CommonLibF4 2.x only
+builds this way); helps — yes (the handshake is exactly what this stone
+proves).
+
+## 0002 — Dependencies: local clones, pinned by provenance
+
+**Accepted · 2026-08**
+
+Dependencies come from the **local clones in `Depends/`**, not from
+FetchContent/xrepo. The clones were moved into this tree deliberately and
+are pinned by their history to a build whose `RUNTIME_LATEST` is
+**1.11.221 — exactly the project's game runtime**. That match is the whole
+point: the plugin declares `CompatibleVersions({ F4SE::RUNTIME_LATEST })`
+and must never drift from the game it runs in.
+
+The clones are **gitignored** — they are third-party trees with their own
+`.git` directories and GPL provenance, and committing them would poison the
+repo. `Depends/README.md` records what each is and how it was obtained.
+The one unavoidable network fetch is commonlib-shared's own spdlog package
+via xrepo (first build only); documented in the README.
+
+*Alternative considered:* FetchContent/xrepo of CommonLibF4 (the core's own
+pattern, and the doc's stated preference) — rejected for now because the
+pinned local copy already matches the game runtime, and offline builds work.
+
+## 0003 — Runtime: static CRT everywhere
+
+**Accepted · 2026-08**
+
+`set_runtimes("MT")` at the project root — CommonLibF4, commonlib-shared,
+and the plugin all build with the static MSVC runtime, matching the core
+(`MultiThreaded$<$<CONFIG:Debug>:Debug>`) and the F4SE plugin ecosystem.
+Mixing static and dynamic CRTs across static libraries fails to link
+(LNK2038); the core decides the setting, everything else follows.
+
+## 0004 — Logging: through LCE's API; eyes via REX::LOG
+
+**Accepted · 2026-08**
+
+The mod logs through **`LCE::Logging`** (the documented channel — never
+spdlog directly; ADR-0030 in the core) **and** `REX::LOG` for the visible
+F4SE log file. LCE's logger is console-bound (`stdout_color_mt`) — inside a
+game process that is invisible — so `REX::LOG::Info` is the eyes
+(`My Games/Fallout4/F4SE/TheLivingCommonwealth.log`) and LCE's API is the
+contract. If the core's logger ever gains a file sink, the adapter's calls
+do not change.
+
+## 0005 — Target: runtime 1.11.221, address library, next-gen F4SE
+
+**Accepted · 2026-08**
+
+The plugin targets the **next-gen runtime 1.11.221** (the game installed on
+this machine; also the vendored CommonLibF4's `RUNTIME_LATEST`). It uses
+the **Address Library** (`UsesAddressLibrary(true)`) — required in-game,
+standard practice, and what keeps the plugin working across runtime
+patches. F4SE itself is a runtime-only dependency: CommonLibF4 replaces it
+as the static dependency, exactly as its README states.
+
+## 0006 — Versioning
+
+**Accepted · 2026-08**
+
+The adapter versions independently, starting at **0.1.0** for this scaffold
+stone. The core is 0.3.1 and its 0.4.0 milestone births this project, but
+the adapter is its own artifact with its own milestone rhythm: on milestone
+completion, bump the version in `xmake.lua`, the README badge, and the
+plugin version data (generated from `set_version`), then commit after the
+author approves.
