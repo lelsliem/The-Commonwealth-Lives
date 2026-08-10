@@ -87,6 +87,14 @@ with the memory after ~4.5s — one line, no trend; that's fixed.) A
 refused walk, a logged arrival, 60s passing, or a world end clears the
 session.
 
+The walker's position is read from its **3D node** (`Get3D()` →
+`GetWorldTransform().translate`), not `GetPosition()`: `GetPosition()`
+returns the REFR's stored `data.location` — the save-time position,
+which never changes while an actor moves. The first live-probe run froze
+at 1567.8 m (the saved distance) even while the settler was walking —
+and the same stale values are why the cross-map distances matched
+settlement workbenches so exactly.
+
 ---
 
 ## The market

@@ -20,6 +20,7 @@
 #include <F4SE/Impl/PCH.h>
 
 #include <RE/A/Actor.h>
+#include <RE/N/NiAVObject.h>
 #include <RE/P/ProcessLists.h>
 #include <RE/T/TESForm.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
@@ -541,7 +542,21 @@ namespace TLC
                 continue;
             }
 
-            const auto from = actor->GetPosition();
+            // The walker's LIVE position comes from its 3D node. Actor
+            // GetPosition() returns the stored `data.location` — the
+            // save-time position — which never changes while the actor
+            // moves: the first probe run showed a frozen 1567.8 m even
+            // though the settler was walking. The 3D world transform is
+            // the render position, always current.
+            const auto* node = actor->Get3D();
+
+            if (node == nullptr)
+            {
+                ++it;   // no 3D — nothing to measure this tick
+                continue;
+            }
+
+            const auto from = node->GetWorldTransform().translate;
             const auto to = target->GetPosition();
             const auto dx = from.x - to.x;
             const auto dy = from.y - to.y;
