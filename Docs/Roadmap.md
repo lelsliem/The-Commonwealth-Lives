@@ -115,11 +115,14 @@ STATUS: IMPLEMENTED — tick and walking verified in-game (2026-08-10)
 
 Goal: the simulation rides inside the game's save files.
 
-[ ] F4SE serialization records — the adapter's stable type names and
-    versioning over the core's Capture/Restore substrate (proven)
-[ ] Lifecycle — PreSaveGame → Capture → record; PostLoadGame →
-    record → Restore; PreLoadGame/DeleteGame → Clear
-[ ] Migration — old saves load forward
+[✓] F4SE serialization records — the adapter's stable type names and
+    versioning over the core's Capture/Restore substrate (CoSave, tested
+    — CoSaveTest 6/6 suites green)
+[✓] Lifecycle — PreSaveGame → Capture → record; load → record →
+    Restore (applied on GameLoaded); PreLoadGame/DeleteGame/new game →
+    Clear (serializers survive)
+[ ] Migration — old saves load forward (the version seam is in
+    CoSave::Decode; the first schema change exercises it)
 
 ═══════════════════════════════════════════════
 

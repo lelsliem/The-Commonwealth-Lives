@@ -4,6 +4,7 @@
 // Links LCE.Core only — no game required.
 //=============================================================================//
 
+#include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
 #include "Market.h"
@@ -18,14 +19,19 @@
 #include "LCE/Simulation/Relationships.h"
 #include "LCE/Simulation/Simulation.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace TLC::Tests
 {
     bool TranslatorTest();
     bool SeedingTest();
     bool SerializationTest();
+    bool CoSaveTest();
     bool PlanBuilderTest();
     bool MarketTest();
 }
@@ -60,6 +66,7 @@ int main()
     Run("TranslatorTest", TLC::Tests::TranslatorTest);
     Run("SeedingTest", TLC::Tests::SeedingTest);
     Run("SerializationTest", TLC::Tests::SerializationTest);
+    Run("CoSaveTest", TLC::Tests::CoSaveTest);
     Run("PlanBuilderTest", TLC::Tests::PlanBuilderTest);
     Run("MarketTest", TLC::Tests::MarketTest);
 
@@ -276,6 +283,215 @@ namespace TLC::Tests
         if (restored.GetComponent<Needs>(merchant))
         {
             return false;
+        }
+
+        return true;
+    }
+
+    bool CoSaveTest()
+    {
+        //-------------------------------------------------------------------------
+        // The durable round-trip (0.4.0): a living world → core snapshot →
+        // adapter record (stable names) → bytes → back → Restore. This is
+        // the record that actually rides inside the save file.
+        //-------------------------------------------------------------------------
+        EntityRegistry source;
+        RegisterAllSerializers(source);
+
+        const auto farmer = source.CreateEntity();
+        const auto merchant = source.CreateEntity();
+
+        source.AddComponent<FormRef>(farmer, FormRef{ 0x00012345u });
+        source.AddComponent<FormRef>(merchant, FormRef{ 0x00012346u });
+        source.AddComponent<Needs>(farmer, SeededNeeds());
+        source.AddComponent<Memory>(farmer, Memory{
+            { MemoryEvent{ merchant, InteractionKind::Trade, 1.0f } }
+        });
+        source.AddComponent<Relationships>(farmer, Relationships{
+            { { merchant, Relationship{ 0.4f, 0.6f } } }
+        });
+        source.AddComponent<Goals>(farmer, Goals{ Goal{
+            GoalType::AcquireFood, 0.5f } });
+        source.AddComponent<Intent>(farmer, Intent{
+            ActionType::MoveTo, merchant, 0.82f });
+
+        const auto snapshot = source.Capture();
+        const auto record = TLC::CoSave::Encode(snapshot);
+
+        // The record carries the adapter's stable names — literally in the
+        // bytes — never the process-local std::type_index addresses.
+        const auto contains = [](const std::vector<std::byte>& bytes, std::string_view needle)
+        {
+            for (std::size_t i = 0; i + needle.size() <= bytes.size(); ++i)
+            {
+                bool match = true;
+
+                for (std::size_t j = 0; j < needle.size(); ++j)
+                {
+                    if (std::to_integer<char>(bytes[i + j]) != needle[j])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        if (!contains(record, "needs")
+            || !contains(record, "intent")
+            || !contains(record, "formref"))
+        {
+            return false;
+        }
+
+        // Decode, then restore into a fresh registry — a fresh game
+        // session that never saw the first one.
+        RegistrySnapshot decoded;
+
+        if (!TLC::CoSave::Decode(record, decoded))
+        {
+            return false;
+        }
+
+        EntityRegistry restored;
+        RegisterAllSerializers(restored);
+        restored.Restore(decoded);
+
+        if (!restored.IsAlive(farmer) || !restored.IsAlive(merchant))
+        {
+            return false;
+        }
+
+        const auto form = restored.GetComponent<FormRef>(farmer);
+        const auto needs = restored.GetComponent<Needs>(farmer);
+        const auto memory = restored.GetComponent<Memory>(farmer);
+        const auto relationships = restored.GetComponent<Relationships>(farmer);
+        const auto goals = restored.GetComponent<Goals>(farmer);
+        const auto intent = restored.GetComponent<Intent>(farmer);
+
+        if (!form || form->FormId != 0x00012345u)
+        {
+            return false;
+        }
+
+        if (!needs || needs->List.size() != 5)
+        {
+            return false;
+        }
+
+        if (!memory || memory->Events.size() != 1
+            || memory->Events[0].Other != merchant
+            || memory->Events[0].Kind != InteractionKind::Trade
+            || memory->Events[0].Weight != 1.0f)
+        {
+            return false;
+        }
+
+        if (!relationships
+            || relationships->ByEntity.size() != 1
+            || relationships->ByEntity.at(merchant).Trust != 0.6f)
+        {
+            return false;
+        }
+
+        if (!goals || !goals->Active
+            || goals->Active->Type != GoalType::AcquireFood
+            || goals->Active->Urgency != 0.5f)
+        {
+            return false;
+        }
+
+        if (!intent || intent->Action != ActionType::MoveTo
+            || intent->Target != merchant
+            || intent->Confidence != 0.82f)
+        {
+            return false;
+        }
+
+        const auto merchantForm = restored.GetComponent<FormRef>(merchant);
+
+        if (!merchantForm || merchantForm->FormId != 0x00012346u)
+        {
+            return false;
+        }
+
+        // The merchant owns only its FormRef — nothing was invented.
+        if (restored.GetComponent<Needs>(merchant))
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // Refusal paths: a truncated record, an unsupported version, and
+        // an unknown component name all refuse the load — never half-apply.
+        //-------------------------------------------------------------------------
+        {
+            auto truncated = record;
+            truncated.resize(truncated.size() - 1);
+
+            RegistrySnapshot bad;
+
+            if (TLC::CoSave::Decode(truncated, bad))
+            {
+                return false;
+            }
+        }
+
+        {
+            auto badVersion = record;
+            badVersion[0] = std::byte{ 0xEF };   // the record version is
+            badVersion[1] = std::byte{ 0xBE };   // the first u32,
+            badVersion[2] = std::byte{ 0xAD };   // little-endian
+            badVersion[3] = std::byte{ 0xDE };
+
+            RegistrySnapshot bad;
+
+            if (TLC::CoSave::Decode(badVersion, bad))
+            {
+                return false;
+            }
+        }
+
+        {
+            auto unknownName = record;
+
+            // Replace the first "needs" name with an unknown name.
+            for (std::size_t i = 0; i + 5 <= unknownName.size(); ++i)
+            {
+                bool match = true;
+
+                for (std::size_t j = 0; j < 5; ++j)
+                {
+                    if (std::to_integer<char>(unknownName[i + j]) != "needs"[j])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                {
+                    for (std::size_t j = 0; j < 5; ++j)
+                    {
+                        unknownName[i + j] = std::byte{ 'x' };
+                    }
+                    break;
+                }
+            }
+
+            RegistrySnapshot bad;
+
+            if (TLC::CoSave::Decode(unknownName, bad))
+            {
+                return false;
+            }
         }
 
         return true;

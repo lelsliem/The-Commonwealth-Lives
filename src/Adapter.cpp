@@ -197,11 +197,64 @@ namespace TLC
 
     void Adapter::GameLoaded()
     {
-        // Every completed load is a fresh world: end whatever was running
-        // (covers the abort-recovery revive) and translate anew.
-        EndWorld();
-        StartWorld();
+        // Every completed load is a fresh world — but if the co-save held
+        // a world for this save, restore it instead of translating anew:
+        // the sim remembers (0.4.0). An empty pending restore (a save made
+        // while the sim was not running) falls through to a fresh world.
+        if (m_PendingRestore && !m_PendingRestore->Entities.empty())
+        {
+            ApplyRestore(std::move(*m_PendingRestore));
+        }
+        else
+        {
+            EndWorld();
+            StartWorld();
+        }
+
+        m_PendingRestore.reset();
         m_AwaitingLoad = false;
+    }
+
+    LCE::Simulation::RegistrySnapshot Adapter::CaptureWorld() const
+    {
+        return m_Registry.Capture();
+    }
+
+    void Adapter::QueueRestore(LCE::Simulation::RegistrySnapshot a_snapshot)
+    {
+        m_PendingRestore = std::move(a_snapshot);
+    }
+
+    void Adapter::ApplyRestore(LCE::Simulation::RegistrySnapshot a_snapshot)
+    {
+        // End whatever was running (the pre-load already did, defensively)
+        // — Clear keeps the serializers, registered once at init.
+        EndWorld();
+
+        m_Registry.Restore(a_snapshot);
+
+        // Rebuild the edge's memory: which form is which entity, from the
+        // restored FormRef components. The translator is adapter state,
+        // not core state — it never rides inside the snapshot.
+        m_Registry.ForEachWithComponent<FormRef>(
+            [this](LCE::Simulation::EntityId a_entity, FormRef& a_formRef)
+            {
+                m_Translator.Add(a_formRef.FormId, a_entity);
+            });
+
+        // The market was saved with the world (it owns a FormRef);
+        // EnsureMarket is a no-op when it is already known.
+        EnsureMarket();
+
+        REX::INFO(
+            "The Commonwealth wakes up: {} minds restored from the co-save.",
+            a_snapshot.Entities.size());
+        LCE::Logging::Info(
+            "The Commonwealth wakes up: " + std::to_string(a_snapshot.Entities.size())
+            + " minds restored from the co-save.");
+        LCE::Logging::Flush();
+
+        m_Started = true;
     }
 
     void Adapter::PreLoadGame()

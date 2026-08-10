@@ -166,6 +166,7 @@ target("TheLivingCommonwealth.Tests", function()
     add_files(
         "src/Translator.cpp",
         "src/Serialization.cpp",
+        "src/CoSave.cpp",
         "src/Executor.cpp",
         "tests/**.cpp")
 end)

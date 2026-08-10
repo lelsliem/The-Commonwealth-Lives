@@ -10,19 +10,90 @@
 //=============================================================================//
 
 #include "Adapter.h"
+#include "CoSave.h"
 #include "Tick.h"
 
 #include <F4SE/F4SE.h>
 
 #include <LCE/Logging/Logger.h>
+#include <LCE/Simulation/RegistrySnapshot.h>
 
+#include <cstddef>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 namespace
 {
     // The plugin's one world object — owned here, by the module, never a
     // reachable global in the core's sense.
     TLC::Adapter g_Adapter;
+
+    //-------------------------------------------------------------------------
+    // Co-save (0.4.0) — the simulation rides inside the save file. F4SE
+    // calls these during save/load; the adapter and the record codec stay
+    // game-free (pure data), and this glue — the only F4SE:: touch in the
+    // chain — lives here at the edge.
+    //-------------------------------------------------------------------------
+    void OnSaveGame(const F4SE::SerializationInterface* a_intfc)
+    {
+        const auto snapshot = g_Adapter.CaptureWorld();
+        const auto record = TLC::CoSave::Encode(snapshot);
+
+        REX::INFO(
+            "co-save: writing {} entities ({} bytes).",
+            snapshot.Entities.size(), record.size());
+
+        if (!a_intfc->WriteRecord(
+                TLC::CoSave::kRecordType, TLC::CoSave::kRecordVersion,
+                record.data(), static_cast<std::uint32_t>(record.size())))
+        {
+            REX::ERROR(
+                "co-save: WriteRecord failed — the world may not survive this save.");
+        }
+    }
+
+    void OnLoadGame(const F4SE::SerializationInterface* a_intfc)
+    {
+        std::uint32_t type = 0;
+        std::uint32_t version = 0;
+        std::uint32_t length = 0;
+
+        while (a_intfc->GetNextRecordInfo(type, version, length))
+        {
+            if (type != TLC::CoSave::kRecordType)
+            {
+                continue;   // another plugin's record — not ours
+            }
+
+            std::vector<std::byte> record(length);
+
+            if (a_intfc->ReadRecordData(record.data(), length) != length)
+            {
+                REX::ERROR("co-save: record read failed ({} bytes).", length);
+                continue;
+            }
+
+            LCE::Simulation::RegistrySnapshot snapshot;
+
+            if (!TLC::CoSave::Decode(record, snapshot))
+            {
+                REX::ERROR("co-save: record decode failed (version {}).", version);
+                continue;
+            }
+
+            REX::INFO("co-save: read {} entities — the world will be restored on load.",
+                snapshot.Entities.size());
+            g_Adapter.QueueRestore(std::move(snapshot));
+        }
+    }
+
+    void OnRevertGame(const F4SE::SerializationInterface*)
+    {
+        // A new game (or the pre-load reset): the sim starts blank — the
+        // next GameLoaded translates fresh. Clear keeps the serializers.
+        g_Adapter.EndWorld();
+    }
 
     //-------------------------------------------------------------------------
     // The world is awake: the heartbeat, then the translation — every
@@ -75,6 +146,23 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
     // The simulation's heartbeat: once per frame on the game thread, the
     // adapter decays the world and executes what the minds decided.
     TLC::Tick::Install([](double a_delta) { g_Adapter.Tick(a_delta); });
+
+    // The co-save (0.4.0): SetUniqueID first, then the callbacks. The UID
+    // is a placeholder — replace with the F4SE-assigned UID before
+    // release (CoSave.h). Revert clears on new game; Save writes the
+    // world; Load queues the restore that GameLoaded applies.
+    if (const auto* serialization = F4SE::GetSerializationInterface(); serialization)
+    {
+        serialization->SetUniqueID(TLC::CoSave::kSerializationUid);
+        serialization->SetRevertCallback(OnRevertGame);
+        serialization->SetSaveCallback(OnSaveGame);
+        serialization->SetLoadCallback(OnLoadGame);
+    }
+    else
+    {
+        REX::ERROR("The Living Commonwealth: failed to get the serialization interface.");
+        return false;
+    }
 
     // The engine's own logging, behind its API (ADR-0030: own the interface,
     // not the implementation).

@@ -13,10 +13,12 @@
 #include "Translator.h"
 
 #include "LCE/Simulation/EntityRegistry.h"
+#include "LCE/Simulation/RegistrySnapshot.h"
 
 #include <chrono>
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -50,6 +52,17 @@ namespace TLC
         void DeleteGame();
         void StartWorld();
         void EndWorld();
+
+        // Co-save (0.4.0) — the world rides inside the save file. The
+        // F4SE serialization callbacks (main.cpp) call these; the adapter
+        // stays game-free, so they are testable without the game.
+        //
+        //   PreSaveGame -> CaptureWorld(): the whole registry as data.
+        //   load        -> QueueRestore(snapshot): stash what the co-save
+        //                  held; GameLoaded applies it (or starts fresh
+        //                  when none is pending).
+        [[nodiscard]] LCE::Simulation::RegistrySnapshot CaptureWorld() const;
+        void QueueRestore(LCE::Simulation::RegistrySnapshot a_snapshot);
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -107,6 +120,12 @@ namespace TLC
         // is loaded, so every mind can remember where to trade.
         void EnsureMarket();
 
+        // Rebuilds the world from a co-save snapshot: Restore the registry
+        // (identities preserved), rebuild the translator from the restored
+        // FormRef components (the edge's memory is adapter state, never
+        // part of the snapshot), re-seed the market, and resume.
+        void ApplyRestore(LCE::Simulation::RegistrySnapshot a_snapshot);
+
         LCE::Simulation::EntityRegistry m_Registry;
         Translator m_Translator;
         bool m_Started = false;
@@ -126,5 +145,11 @@ namespace TLC
 
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
+
+        // The world the co-save held for this save. Set by QueueRestore
+        // during the load, consumed by GameLoaded; absent or empty means
+        // this session starts fresh (a new game, or a save made while the
+        // sim was not running).
+        std::optional<LCE::Simulation::RegistrySnapshot> m_PendingRestore;
     };
 }
