@@ -437,7 +437,7 @@ namespace TLC
             {
             case ActionType::MoveTo:
             {
-                const auto* target = RE::TESForm::GetFormByID<RE::TESObjectREFR>(targetFormId);
+                auto* target = RE::TESForm::GetFormByID<RE::TESObjectREFR>(targetFormId);
 
                 if (target == nullptr)
                 {
@@ -449,10 +449,11 @@ namespace TLC
                 //
                 // The walk session: while the Trade memory lasts the intent
                 // stays MoveTo and would re-issue the planner every frame.
-                // Issue each walk once per session; the game's planner keeps
-                // walking the settler to the destination on its own. The
-                // session outlives the intent (ProbeWalks measures it)
-                // because the memory fades long before the walk completes.
+                // Issue each walk once per session; the game's command
+                // package keeps walking the settler to the destination on
+                // its own. The session outlives the intent (ProbeWalks
+                // measures it) because the memory fades long before the
+                // walk completes.
                 auto& session = m_Walks[entry.Entity];
                 const auto now = std::chrono::steady_clock::now();
 
@@ -465,7 +466,7 @@ namespace TLC
                 }
                 else
                 {
-                    walked = Movement::WalkTo(actor, target->GetPosition());
+                    walked = Movement::WalkTo(actor, target);
 
                     if (walked)
                     {

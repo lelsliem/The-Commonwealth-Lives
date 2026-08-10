@@ -12,7 +12,7 @@
 namespace RE
 {
     class Actor;
-    class NiPoint3;
+    class TESObjectREFR;
 }
 
 namespace TLC
@@ -26,10 +26,13 @@ namespace TLC
     //-------------------------------------------------------------------------
     namespace Movement
     {
-        // Walks the actor to the destination using the game's own movement
-        // machinery. Returns false when walking is unavailable or the
-        // runtime verification fails — the intent is dropped and the sim
-        // re-decides next tick. Never teleports.
-        bool WalkTo(RE::Actor* a_actor, const RE::NiPoint3& a_destination);
+        // Walks the actor to the target using the game's own machinery —
+        // the command-mode travel package (the game's "move here", which
+        // outranks the sandbox package) plus the movement-planner
+        // destination and the kMove command state. Returns false when
+        // walking is unavailable or the runtime verification fails — the
+        // intent is dropped and the sim re-decides next tick. Never
+        // teleports.
+        bool WalkTo(RE::Actor* a_actor, RE::TESObjectREFR* a_target);
     }
 }

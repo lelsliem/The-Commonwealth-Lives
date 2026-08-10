@@ -255,7 +255,18 @@ See `Docs/Roadmap.md`.
   kilometers away (Abernathy, Warwick — each matched to its own
   workbench within meters), so the market seed is now radius-scoped
   (~10,000 units: only minds whose settler is within walking distance
-  remember the market). Open: the walk itself in-game — see
+  remember the market).
+- **The walk is now the game's command system (2026-08-10, later).** A
+  live 60s probe run proved planner + `kMove` command type do NOT walk:
+  distances stayed flat `[live]` for every walker. The missing piece is
+  the game's own "move here" — `Actor::InitiateCommandModeTravelPackage`
+  (named by both the old address database and the FO4 public PDB;
+  1.11.221 pair 0xD77440 / 0xD77680, 0x240 apart like the named pair).
+  `Movement::WalkTo` now issues the command-mode travel package (the
+  order — sandbox cannot override it), then the pinned planner
+  destination, then `SetCommandType(kMove)`. Pins are byte-verified at
+  runtime (prologue 55 53 56 57 41 54 41 55; controller vtable
+  0x2567B68). Open: the walk itself in-game — see
   `Docs/Design/Walking.md`.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
