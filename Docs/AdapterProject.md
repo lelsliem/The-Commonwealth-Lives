@@ -14,7 +14,9 @@ of the conversation that built it.
 
 **Design docs in this repo** (`Docs/Design/`): `Executor.md` (the tick +
 intent executor), `Walking.md` (the walk), `CoSave.md` (the co-save
-record). Each is flipped to **verified in-game** as its stone lands.
+record), `Behaviour.md` (the species split). Each is flipped to
+**verified in-game** as its stone lands; the ones that aren't verified
+yet say so.
 
 ---
 
@@ -37,7 +39,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 
 ---
 
-## Status — four stones, all verified in-game
+## Status
 
 | Version | Stone | Status |
 |---------|-------|--------|
@@ -45,12 +47,12 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ next |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **species/behaviour split implemented** (groundwork); arrival outcomes pending |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **6/6 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **7/7 suites green.**
 
 ---
 
@@ -60,16 +62,19 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 src/main.cpp        F4SE entry: hooks (Tick), messaging (lifecycle),
                     serialization callbacks (co-save glue)
 src/Adapter.h/.cpp  the one world object: registry + translator, the
-                    lifecycle, the tick loop (Update → plan → execute → probe)
+                    lifecycle, the tick loop (Update → plan → execute → probe),
+                    species classification (race → Human/Child/Animal)
 src/Translator.h/.cpp  formId ↔ EntityId tables (adapter state, game-free)
 src/SimRelevant.h/.cpp the settler predicate (WorkshopNPCFaction 0x000337F3)
+src/Behaviour.h/.cpp   Species + BehaviourProfile — who trades, who is fed
+                       (Human/Child/Animal); SeededNeeds(Species)
 src/Executor.h/.cpp    pure plan builder — refusals are the contract
 src/Movement.h/.cpp    WalkTo: the pinned Actor::InitiateCommandModeTravelPackage
 src/Market.h           the market seed (Sanctuary workshop REFR 000250FE)
-src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …)
+src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …, SpeciesTag)
 src/CoSave.h/.cpp     the durable co-save record (stable names, versioning)
 src/BlobCodec.h       little-endian byte codec
-src/Components.h      FormRef + SeededNeeds (adapter-defined components)
+src/Components.h      FormRef + SpeciesTag (adapter-defined components)
 src/Tick.h/.cpp       the per-frame VM-tick hooks
 ```
 
@@ -77,7 +82,7 @@ src/Tick.h/.cpp       the per-frame VM-tick hooks
 
 | Game event | The adapter does |
 |------------|------------------|
-| `kGameLoaded` (startup) | `StartWorld`: translate loaded sim-relevant actors into entities; seed the market memory |
+| `kGameLoaded` (startup) | `StartWorld`: translate loaded sim-relevant actors into entities (tagged by species, seeded per species); seed the market memory |
 | `kPostLoadGame` (a save finished loading) | Apply the co-save restore (or start fresh) — **the load's completion event; `kGameLoaded` alone does not fire for real loads** |
 | `kPreLoadGame` | `EndWorld` (Clear; serializers survive); arm abort recovery (60s) |
 | `kDeleteGame` | `EndWorld` |
@@ -91,10 +96,10 @@ issue; sessions capped at 16) → `ProbeWalks` (live distance probes).
 
 **The co-save record:** the core's snapshot is process-local (component
 keys are `std::type_index`) — the adapter's record translates it to stable
-names (`needs`, `memory`, `relationships`, `goals`, `intent`, `formref`)
-with its own version (`kRecordVersion = 1`). Refusals are the contract:
-truncated records, unsupported versions, and unknown component names
-never half-apply. Save-compatibility is the adapter's job.
+names (`needs`, `memory`, `relationships`, `goals`, `intent`, `formref`,
+`species`) with its own version (`kRecordVersion = 1`). Refusals are the
+contract: truncated records, unsupported versions, and unknown component
+names never half-apply. Save-compatibility is the adapter's job.
 
 **Two environment lessons learned (documented in Walking.md / CoSave.md):**
 - The crash saga: a corrupt save, not the plugin — the identical
@@ -106,31 +111,71 @@ never half-apply. Save-compatibility is the adapter's job.
 
 ---
 
+## The species/behaviour split (0.5.0 groundwork — built)
+
+The junkyard dog and brahmin are minds like settlers (they carry
+WorkshopNPCFaction too, so they pass the same sim-relevance gate) — they
+walk to the market when hungry, and they should. But a dog must not
+*trade, buy, or talk*. The core is species-agnostic by design, so the
+split lives in the adapter (see `Docs/Design/Behaviour.md`):
+
+- **`SpeciesTag` component** — set at translation from the actor's race,
+  persisted in the co-save (`species`), so a restored world keeps its dogs
+  dogs. Missing tag → Human.
+- **`BehaviourProfile` table** (`Behaviour.h`) — the single source of
+  truth:
+
+  | | Human | Child | Animal |
+  |---|---|---|---|
+  | Market interaction | `Trade` (with a trader) | `Aid` (fed) | `Aid` (fed) |
+  | CanTrade / CanTalk | ✅ / ✅ | ❌ / ✅ | ❌ / ❌ |
+  | Needs | all 5 | all 5 | Hunger/Fatigue/Safety |
+
+  No Social need → the core never produces a Socialize intent → an animal
+  never wanders off to "talk". No Comfort need → no Work intents.
+- **Classification** (`ClassifySpecies` in Adapter.cpp) — race FormIDs
+  **verified in xEdit 2026-08-10**: children = HumanChildRace
+  `0011D83F`, GhoulChildRace `0011EB96`; animals = DogmeatRace
+  `0001D698`, BrahminRace `0002047E`, CatRace `000C9ACF`, GorillaRace
+  `000D9804`, plus the wild set (24 races total, future-proofing).
+  Everything else defaults to Human.
+- **The one deliberate lie:** the market *memory* keeps `Trade`-kind for
+  every species. The core's hunger branch finds food only through
+  Trade-kind memories (`ChooseTarget(..., Trade)`) — change the seed to
+  `Aid` and the dog stops walking to the market. The memory says "food is
+  over there"; the profile decides what arrival means.
+- **Enemies never reach the table:** sim-relevance is WorkshopNPCFaction
+  membership, which hostiles don't hold. **Robots/synths:** a synth
+  settler is a person (Human is right); a robot (Mr. Handy, Protectron,
+  turrets) is a deliberate future species — no biological needs to seed.
+
+---
+
 ## The 0.5.0 roadmap — "The Settler Goes to Market"
 
-The core is at `0.5.0` stone 01 (15/15 suites green): tuning ergonomics —
-`SimulationTuning::FromConfiguration(config)` — is live. Known keys
-(`sim.memory.fade`, `sim.goal.urgency`, …) override defaults; broken or
-unknown keys never break the world. The adapter should feed tuning from a
-text file users can edit (its own keys ride in the same file).
+The core has shipped everything the adapter needs (see the canonical
+handoff — tuning stone 01, outcome channel stone 02, seeded RNG stone 05
+all live). Remaining adapter work:
 
-Remaining stones for the adapter, and what they need from the core:
-
-1. **World facts via `Remember`** — shipped and proven in the core
-   (0.3.1). Weather, market open/closed, road conditions: push as memory
-   events with an *invalid* Other. While remembered, the interaction is
-   unavailable to the mind; when it fades, it reopens. The adapter
-   controls duration by re-pushing.
-2. **Tuning from Configuration** — ✅ core stone 01. One call, one file.
-3. **The real test — a settler goes to market because they are hungry.**
-   Needs decay → goal urgency grows → a `MoveTo`-class intent → the
-   executor walks them (proven). Locations stay out of the core; the
-   adapter resolves "which trader".
-4. **The outcome channel** (core stone 02, not yet built). After the
-   walk, the adapter reports what *actually* happened — trade done,
-   robbed en route, road blocked — and the sim turns it into memory and
-   relationship changes. The loop's final leg; not a blocker for the
-   first test.
+1. **World facts via `Remember`** — shipped in the core (0.3.1). Weather,
+   market open/closed: push as memory events with an *invalid* Other.
+   While remembered, the interaction is unavailable to the mind; when it
+   fades, it reopens. The adapter controls duration by re-pushing.
+2. **Tuning from Configuration** — core stone 01. Feed a user-editable
+   text file to `SimulationTuning::FromConfiguration(config)`; the
+   adapter's own keys ride in the same file.
+3. **Arrival outcomes** — core stone 02. When a walk reaches the market,
+   report what actually happened per species: Human →
+   `{ trader, Trade, Result }` (trust with the merchant scales by
+   result); Child/Animal → `{ settlement, Aid, Result }` (fed — no trust
+   ledger, no barter). Use `OutcomeResult` honestly: never reached =
+   `Failure`, reached but no trade = `Partial`, fair trade = `Success`.
+   The intent is consumed — the next tick decides fresh with the outcome
+   in memory: the learning settler.
+4. **The real test:** a settler goes to market because they are hungry —
+   no script. Needs decay → goal urgency → `MoveTo` → the executor walks
+   them (all proven pieces; this stone assembles them).
+5. **Nexus name check + publish.**
 
 ---
 
@@ -155,15 +200,19 @@ Remaining stones for the adapter, and what they need from the core:
    truthfully — and not verified until proven in-game.
 2. **The four questions:** *Can it be simpler? Does it belong? Do we need
    it at all? Will this help build living worlds through simulation?*
-3. **The quote ritual:** every new `.h`/`.cpp` gets a banner with a
-   reserved line for a joke or quote. Leave the slot.
+3. **The quote ritual:** every `.h`/`.cpp` gets a banner with a reserved
+   line for a joke or quote; the author fills it. Tests get compact
+   headers, no banners.
 4. **Commit style:** concise messages that say *why*, one coherent change
    per commit, never commit `Build/` artifacts.
 5. **No global state.** Time and tuning are inputs.
 6. **Test rhythm:** pure pieces are unit-tested without the game
-   (translator, serializers, record codec, plan builder, market seed);
-   game-facing pieces are verified in-game via log lines, then the docs
-   flip to verified.
+   (translator, serializers, record codec, plan builder, market seed,
+   behaviour table); game-facing pieces are verified in-game via log
+   lines, then the docs flip to verified.
+7. **The verify ritual:** any hardcoded FormID (races, factions, REFRs)
+   is marked and confirmed in xEdit before it is trusted — the race
+   table caught two wrong guesses this way.
 
 ---
 
@@ -172,5 +221,15 @@ Remaining stones for the adapter, and what they need from the core:
 - The F4SE-assigned serialization UID — placeholder `'LCEW'` in
   `src/CoSave.h` (`kSerializationUid`) until assigned.
 - The plugin author handle (TODO in `xmake.lua`).
-- The banner quote slots (every file's reserved line).
 - The Nexus name check before publishing.
+- A `Robot` species (no biological needs, its own market rule) — noted in
+  Behaviour.md as the next category to grow.
+
+---
+
+## Canonical Copy
+
+This file is a snapshot. The Living Commonwealth Engine repo owns the
+living document — read it from `C:\LivingCommonwealthEngine\Docs\AdapterProject.md`,
+the single source of truth. When the core ships a new stone, that
+document grows first; re-sync this copy from it.
