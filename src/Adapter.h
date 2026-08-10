@@ -230,11 +230,24 @@ namespace TLC
         LCE::Simulation::EntityId OwnerEntityFor(
             LCE::Simulation::EntityId a_entity);
 
-        // A walk reached its food source: report the per-species outcome
-        // (Trade/Partial for a human, Aid/Success — fed, nothing in
-        // return — for a child or animal).
+        // A walk reached its food source: report the per-species outcome.
+        // A human trades for real when a trader resolves (the stall-keeper
+        // of the market they reached, or the person the walk itself
+        // resolved to — the remembered merchant); Trade, Success, the
+        // exchange lands. The first human at a market sets up its stall
+        // (Trade, Partial — no customers yet). A child or animal is fed —
+        // Aid, Success, nothing in return.
         void ReportArrival(
             LCE::Simulation::EntityId a_entity, std::uint32_t a_targetFormId);
+
+        // Who runs each market's stall this world (market entity →
+        // stall-keeper mind). Set by the first human arrival at that
+        // market; every later bench-arrival trades with them. Per-world
+        // edge state like weather — cleared on EndWorld, re-derived on
+        // restore, never persisted (a new world has a new stall-keeper).
+        std::unordered_map<
+            LCE::Simulation::EntityId, LCE::Simulation::EntityId>
+            m_StallKeepers;
 
         // Which animals already got their feeder announced this world
         // (one line per animal, cleared on EndWorld).

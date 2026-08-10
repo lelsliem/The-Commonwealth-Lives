@@ -10,9 +10,10 @@
 #pragma once
 
 #include "LCE/Simulation/Goals.h"
-#include "LCE/Simulation/Memory.h"   // InteractionKind
+#include "LCE/Simulation/Memory.h"   // InteractionKind, MemoryEvent
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Outcome.h"
+#include "LCE/Simulation/Relationships.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -140,17 +141,45 @@ namespace TLC
     }
 
     //-------------------------------------------------------------------------
-    // The arrival outcome (0.5.0): what reaching the food source means,
-    // per species. A human arrived at the market but traded nothing yet —
-    // Partial (the actual trade is the next stone's work). A child or an
-    // animal is fed — Aid, Success: fed, gives nothing in return. The
-    // feeder is whoever resolved as the food source (the owner, or the
-    // settlement).
+    // The arrival outcome (0.5.0 — the trade stone): what reaching the
+    // food source means, per species. A human who found a trader to deal
+    // with gets a real Trade — Success, the exchange lands (the core
+    // serves AcquireFood and earns trust). A human who found no one (the
+    // stall-keeper setting up, or a defensive miss) gets Trade, Partial —
+    // arrived, but nothing changed hands. A child or an animal is fed —
+    // Aid, Success: fed, gives nothing in return; a_traded is ignored for
+    // them, they never barter. a_other is whoever resolved as the
+    // counterparty (the trader, or the market for the stall-keeper; the
+    // owner, or the settlement, for the fed).
     //-------------------------------------------------------------------------
     [[nodiscard]]
     LCE::Simulation::Outcome ArrivalOutcome(
         Species a_species,
-        LCE::Simulation::EntityId a_feeder);
+        LCE::Simulation::EntityId a_other,
+        bool a_traded);
+
+    //-------------------------------------------------------------------------
+    // RecordSale — the trader's half of the exchange (the trade stone).
+    // A sale is a game fact at the edge: the stall-keeper remembers the
+    // customer (a Trade memory, day-stamped like every arrival memory)
+    // and warms toward them — repeat customers are good for business.
+    // Pure and testable; the caller passes the stall-keeper's own Memory
+    // and Relationships.
+    //-------------------------------------------------------------------------
+    inline void RecordSale(
+        LCE::Simulation::Memory& a_memory,
+        LCE::Simulation::Relationships& a_relationships,
+        LCE::Simulation::EntityId a_customer,
+        float a_warmth)
+    {
+        a_memory.Events.push_back(LCE::Simulation::MemoryEvent{
+            a_customer, LCE::Simulation::InteractionKind::Trade, 1.0f });
+
+        if (a_warmth != 0.0f)
+        {
+            a_relationships.ByEntity[a_customer].Disposition += a_warmth;
+        }
+    }
 
     //-------------------------------------------------------------------------
     // The hunger loop's payoff (0.5.0, the real test): arriving at the

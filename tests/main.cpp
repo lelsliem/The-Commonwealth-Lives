@@ -283,12 +283,26 @@ namespace TLC::Tests
             return false;
         }
 
-        // The arrival outcome is per-species: a human reached the market
-        // but traded nothing (Partial); a child or animal is fed — Aid,
-        // Success, nothing given in return.
+        // The arrival outcome is per-species — and since the trade stone,
+        // per outcome: a human who traded gets a real Trade, Success; one
+        // who found no one (the stall-keeper setting up) gets Trade,
+        // Partial; a child or animal is fed — Aid, Success, nothing given
+        // in return, a_traded ignored (they never barter).
         const auto feeder = source.CreateEntity();
+        const auto trader = source.CreateEntity();
 
-        const auto humanArrival = ArrivalOutcome(Species::Human, feeder);
+        const auto humanTrade = ArrivalOutcome(
+            Species::Human, trader, true);
+
+        if (humanTrade.Other != trader
+            || humanTrade.Kind != InteractionKind::Trade
+            || humanTrade.Result != OutcomeResult::Success)
+        {
+            return false;
+        }
+
+        const auto humanArrival = ArrivalOutcome(
+            Species::Human, feeder, false);
 
         if (humanArrival.Other != feeder
             || humanArrival.Kind != InteractionKind::Trade
@@ -297,7 +311,8 @@ namespace TLC::Tests
             return false;
         }
 
-        const auto dogArrival = ArrivalOutcome(Species::Animal, feeder);
+        const auto dogArrival = ArrivalOutcome(
+            Species::Animal, feeder, true);
 
         if (dogArrival.Other != feeder
             || dogArrival.Kind != InteractionKind::Aid
@@ -306,11 +321,41 @@ namespace TLC::Tests
             return false;
         }
 
-        const auto childArrival = ArrivalOutcome(Species::Child, feeder);
+        const auto childArrival = ArrivalOutcome(
+            Species::Child, feeder, false);
 
         if (childArrival.Other != feeder
             || childArrival.Kind != InteractionKind::Aid
             || childArrival.Result != OutcomeResult::Success)
+        {
+            return false;
+        }
+
+        // The trader's half of the exchange (the trade stone): a sale is
+        // remembered and warms the stall-keeper toward the customer.
+        Memory traderMemory;
+        Relationships traderRelationships;
+
+        RecordSale(traderMemory, traderRelationships, feeder, 0.1f);
+        RecordSale(traderMemory, traderRelationships, feeder, 0.1f);
+        RecordSale(traderMemory, traderRelationships, trader, 0.1f);
+
+        if (traderMemory.Events.size() != 3
+            || traderMemory.Events[0].Kind != InteractionKind::Trade
+            || traderMemory.Events[0].Other != feeder
+            || traderRelationships.ByEntity[feeder].Disposition != 0.2f
+            || traderRelationships.ByEntity[trader].Disposition != 0.1f)
+        {
+            return false;
+        }
+
+        // Zero warmth is memory-only — a sale the seller never warmed to.
+        Memory coldMemory;
+        Relationships coldRelationships;
+        RecordSale(coldMemory, coldRelationships, feeder, 0.0f);
+
+        if (coldMemory.Events.size() != 1
+            || coldRelationships.ByEntity.size() != 0)
         {
             return false;
         }
@@ -1412,6 +1457,7 @@ namespace TLC::Tests
             "sim.safety.decay = 0.004\r\n"
             "sim.social.decay = 0.005\r\n"
             "sim.comfort.decay = 0.006\r\n"
+            "sim.sale.warmth = 0.25\r\n"
             "market.open.hour = 9\r\n"
             "market.close.hour=21\r\n"
             "   padded.key   =   spaced   \r\n"
@@ -1445,7 +1491,8 @@ namespace TLC::Tests
             || settings.Rates.Fatigue != 0.003f
             || settings.Rates.Safety != 0.004f
             || settings.Rates.Social != 0.005f
-            || settings.Rates.Comfort != 0.006f)
+            || settings.Rates.Comfort != 0.006f
+            || settings.SaleWarmth != 0.25f)
         {
             return false;
         }
@@ -1459,7 +1506,8 @@ namespace TLC::Tests
             || defaults.Rates.Fatigue != 0.1f
             || defaults.Rates.Safety != 0.1f
             || defaults.Rates.Social != 0.1f
-            || defaults.Rates.Comfort != 0.1f)
+            || defaults.Rates.Comfort != 0.1f
+            || defaults.SaleWarmth != 0.1f)
         {
             return false;
         }

@@ -507,6 +507,7 @@ namespace TLC
         m_Translator.Clear();
         m_LastLogged.clear();
         m_FeederLogged.clear();
+        m_StallKeepers.clear();
         m_Walks.clear();
         m_TickCalled = false;
         m_FirstPassLogged = false;
@@ -634,27 +635,111 @@ namespace TLC
         const auto tag = m_Registry.GetComponent<SpeciesTag>(a_entity);
         const auto species = tag != nullptr ? tag->Value : Species::Human;
 
-        const auto feeder = m_Translator.EntityFor(a_targetFormId);
+        const auto target = m_Translator.EntityFor(a_targetFormId);
 
-        if (!feeder.IsValid())
+        if (!target.IsValid())
         {
             return;   // defensive — the walk target is a translated form
         }
-
-        const auto outcome = ArrivalOutcome(species, feeder);
-
-        ReportOutcome(m_Registry, a_entity, outcome, m_CoreTuning);
 
         const auto formId = m_Translator.FormFor(a_entity);
         const auto* label = species == Species::Human
             ? "settler"
             : (species == Species::Child ? "child" : "animal");
 
+        // The trade stone: who did this mind meet? The walk target is
+        // either the market (a workshop entity — FormRef only, no
+        // SpeciesTag) or a person (a translated mind, remembered as a
+        // merchant from a previous trade). A human trades with a person;
+        // the first human at a market sets up its stall; a child or an
+        // animal is fed by whoever resolved as its feeder (the owner, or
+        // the settlement).
+        LCE::Simulation::EntityId counterparty = target;
+        bool traded = false;
+        std::uint32_t marketFormId = a_targetFormId;
+
         if (species == Species::Human)
         {
-            REX::INFO(
-                "LCE: settler {:#x} arrived — no trade yet (Trade, Partial).",
-                formId);
+            const auto targetTag =
+                m_Registry.GetComponent<SpeciesTag>(target);
+
+            if (targetTag == nullptr)
+            {
+                // The bench: resolve the stall-keeper for this market.
+                marketFormId = a_targetFormId;
+
+                const auto iterator = m_StallKeepers.find(target);
+                const auto stall =
+                    iterator != m_StallKeepers.end() ? iterator->second
+                                                     : EntityId{};
+
+                if (stall.IsValid() && stall != a_entity)
+                {
+                    counterparty = stall;
+                    traded = true;
+                }
+                else
+                {
+                    // No stall yet — this mind sets it up. Honest Partial:
+                    // arrived, no customers, nothing changed hands.
+                    m_StallKeepers[target] = a_entity;
+                    counterparty = target;
+                    traded = false;
+                }
+            }
+            else if (targetTag->Value == Species::Human && target != a_entity)
+            {
+                // The walk resolved to a person — the remembered merchant
+                // (the core's ChooseTarget prefers the trader over the
+                // bench once a trade exists). Trade with them directly.
+                counterparty = target;
+                traded = true;
+            }
+            else
+            {
+                // Defensive: a non-human mind as a trade target cannot
+                // happen (children and animals never enter Trade memory).
+                // No trade — the honest Partial.
+                counterparty = target;
+                traded = false;
+            }
+        }
+
+        const auto outcome = ArrivalOutcome(species, counterparty, traded);
+
+        ReportOutcome(m_Registry, a_entity, outcome, m_CoreTuning);
+
+        if (species == Species::Human)
+        {
+            if (traded)
+            {
+                // The trader's half of the exchange: they remember the
+                // sale and warm toward the customer. The buyer's side —
+                // trust earned, the goal served — is the core's work via
+                // ReportOutcome above.
+                auto traderMemory = m_Registry.GetComponent<Memory>(counterparty);
+                auto traderRelationships =
+                    m_Registry.GetComponent<Relationships>(counterparty);
+
+                if (traderMemory && traderRelationships)
+                {
+                    RecordSale(
+                        *traderMemory, *traderRelationships,
+                        a_entity, m_Settings.SaleWarmth);
+                }
+
+                const auto traderFormId = m_Translator.FormFor(counterparty);
+
+                REX::INFO(
+                    "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed, trust earned.",
+                    formId, traderFormId, marketFormId);
+            }
+            else
+            {
+                REX::INFO(
+                    "LCE: settler {:#x} sets up the stall at market {:#x} — trade begins when customers come.",
+                    formId, marketFormId);
+            }
         }
         else
         {

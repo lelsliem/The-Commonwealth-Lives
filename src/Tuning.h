@@ -133,6 +133,12 @@ namespace TLC::Tuning
         // 0.1/s is the tuning stone's default (a fast demo); "a few
         // meals a day" is ~0.001–0.005/s (the math is in Tuning.md).
         NeedRates Rates;
+
+        // The trader's half of a sale (the trade stone): how much a
+        // stall-keeper's disposition toward a customer warms per sale.
+        // Matches the core's DispositionGain default (0.1) so a sale
+        // warms like good company.
+        float SaleWarmth = 0.1f;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -171,6 +177,8 @@ namespace TLC::Tuning
         settings.Rates.Social = read("sim.social.decay", settings.Rates.Social);
         settings.Rates.Comfort =
             read("sim.comfort.decay", settings.Rates.Comfort);
+
+        settings.SaleWarmth = read("sim.sale.warmth", settings.SaleWarmth);
 
         return settings;
     }

@@ -84,29 +84,38 @@ namespace TLC
 
     LCE::Simulation::Outcome ArrivalOutcome(
         Species a_species,
-        LCE::Simulation::EntityId a_feeder)
+        LCE::Simulation::EntityId a_other,
+        bool a_traded)
     {
         using namespace LCE::Simulation;
 
         switch (a_species)
         {
         case Species::Human:
-            // Arrived at the market, but no trade happened yet — the
-            // honest result per the outcome contract (got there, didn't
-            // trade = Partial). The actual trade is the next stone's work.
+            // A real trade — the exchange landed: the core serves
+            // AcquireFood and earns trust in the trader. Without one (the
+            // stall-keeper setting up, no customers yet), the honest
+            // result is Partial — got there, nothing changed hands.
             return Outcome{
-                a_feeder, InteractionKind::Trade, OutcomeResult::Partial, 1.0f };
+                a_other,
+                InteractionKind::Trade,
+                a_traded ? OutcomeResult::Success : OutcomeResult::Partial,
+                1.0f };
 
         case Species::Child:
         case Species::Animal:
             // Fed by the feeder — nothing given in return: disposition
-            // warms, no trust ledger, no barter.
+            // warms, no trust ledger, no barter. a_traded is ignored:
+            // they never trade.
             return Outcome{
-                a_feeder, InteractionKind::Aid, OutcomeResult::Success, 1.0f };
+                a_other, InteractionKind::Aid, OutcomeResult::Success, 1.0f };
         }
 
         return Outcome{
-            a_feeder, InteractionKind::Trade, OutcomeResult::Partial, 1.0f };
+            a_other,
+            InteractionKind::Trade,
+            a_traded ? OutcomeResult::Success : OutcomeResult::Partial,
+            1.0f };
     }
 
     float RestoreHunger(LCE::Simulation::Needs& a_needs)

@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -174,9 +174,11 @@ all live). Adapter progress:
    drive the world-facts hours gate. Missing/broken lines keep defaults.
    See Docs/Design/Tuning.md.
 3. ✅ **Arrival outcomes + the real test** (verified in-game 2026-08-10)
-   — walks report per species: Human → `{ market, Trade, Partial }` (no
-   trade yet), Child/Animal → `{ feeder, Aid, Success }` (fed, gives
-   nothing in return); the hunger write-through closes the loop (fed:
+   — walks report per species: Human → `Trade` (the trade stone: Success
+   with the stall-keeper or remembered merchant, Partial only for the
+   stall-keeper setting up), Child/Animal → `{ feeder, Aid, Success }`
+   (fed, gives nothing in return); the hunger write-through closes the
+   loop (fed:
    Hunger X -> 1.00; the fed dog decided Rest, not MoveTo, 6 ms later;
    19 feeds across the session).
 4. ✅ **Migration** (implemented 2026-08-10) — old saves load forward:
@@ -210,7 +212,16 @@ all live). Adapter progress:
    → SeededNeeds, still jittered per mind by VaryNeeds, serialized by
    the co-save. Missing/broken values keep the defaults. See
    Docs/Design/Tuning.md.
-9. **Nexus name check + publish.**
+9. ✅ **The trade stone** (implemented 2026-08-10, in-game verification
+   pending) — a human arrival at the market is a real exchange: the
+   first human at each market sets up its stall, every later
+   bench-arrival trades with them (Trade, Success — the core serves
+   AcquireFood and earns trust), and the trader's half lands too
+   (RecordSale: the stall-keeper remembers the customer and warms
+   toward them; sim.sale.warmth). The buyer's memory of the merchant
+   then beats the bench, so the next hungry walk resolves to the
+   person. No engine change, no new pins. See Docs/Design/Trade.md.
+10. **Nexus name check + publish.**
 
 ---
 

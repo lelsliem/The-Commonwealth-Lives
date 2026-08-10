@@ -33,6 +33,7 @@ sim.fatigue.decay = 0.001    ; the seeded need rhythm (a few meals a day)
 sim.safety.decay = 0.001
 sim.social.decay = 0.001
 sim.comfort.decay = 0.001
+sim.sale.warmth = 0.1        ; a stall-keeper's warmth toward a customer
 
 market.open.hour = 8         ; the adapter's own keys ride along
 market.close.hour = 20
@@ -82,7 +83,9 @@ Tuning::ParseConfig(text) ──► LCE::Config::Configuration
 (trust/disposition gains). `m_Settings` feeds the world-facts gate
 (*"is the market closed given the tuned hours?"*) and the need rhythm:
 `StartWorld` passes `m_Settings.Rates` into `SeededNeeds` for every
-fresh mind.
+fresh mind. `sim.sale.warmth` feeds the trade stone's `RecordSale`:
+how much a stall-keeper's disposition toward a customer warms per sale
+(default 0.1 — a sale warms like good company).
 
 The startup log lines:
 

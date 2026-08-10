@@ -217,10 +217,10 @@ Goal: the real test from the contract.
 [✓] Food sources + arrival outcomes — per-species food sources (a dog
     is fed by its owner when the game assigns one, else the settlement;
     humans trade at the market) resolved at seed time; on arrival,
-    ReportOutcome per species (Human → Trade, Partial — no trade yet;
-    Child/Animal → Aid, Success — fed, gives nothing in return).
-    Implemented 2026-08-10; in-game verification pending (the arrival
-    log lines + the feeder readout prove it)
+    ReportOutcome per species (Human → Trade — the trade stone makes it
+    Success; Child/Animal → Aid, Success — fed, gives nothing in
+    return). Implemented 2026-08-10; in-game verification pending (the
+    arrival log lines + the feeder readout prove it)
 [✓] The real test: a settler goes to market because they are hungry —
     no script. VERIFIED in-game 2026-08-10: the hunger write-through
     on arrival (fed: Hunger X -> 1.00) closes the loop — needs decay →
@@ -229,4 +229,14 @@ Goal: the real test from the contract.
     animals cycling). Goals seeded per species (Human: AcquireFood;
     Child/Animal: none). Engine ask remains: a Feed kind (or Aid
     serving AcquireFood) so animal goals can be served when wired.
+[✓] The trade stone — a human arrival at the market is a real
+    exchange: the first human at each market sets up its stall, every
+    later bench-arrival trades with them (Trade, Success — the core
+    serves AcquireFood and earns trust), and the trader's half lands
+    too (RecordSale: the stall-keeper remembers the customer and warms
+    toward them, sim.sale.warmth). The emergent second visit: the buyer
+    remembers the merchant, so the next hungry walk resolves to the
+    person, not the bench. Implemented 2026-08-10; in-game verification
+    pending (the `trades with settler` / `sets up the stall` lines) —
+    see Docs/Design/Trade.md
 [ ] Nexus name check + publish
