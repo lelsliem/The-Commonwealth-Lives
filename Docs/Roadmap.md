@@ -336,3 +336,50 @@ engine's AdapterProject.md.
 [ ] Engine hand-over: Request A — RelationshipChanged observation
     event (core stone 08 candidate); Request B — GoalType growth
     (optional, deferred). Handed to the engine 2026-08-10.
+
+═══════════════════════════════════════════════
+
+0.7.0 — Identity & the Player Window · "The Player Listens"
+
+═══════════════════════════════════════════════
+
+Goal: the world is alive even when the player isn't watching — settlers
+have names, and the player hears what's happening and tunes the world
+in-game. Sketched 2026-08-10 (Docs/Design/Life.md, "Beyond 0.6.0").
+
+STATUS: PLANNED — sketches only, no code.
+
+[ ] Names: a procedural name registry at mind-seed time, persisted in
+    the co-save (form id → name), deduped; logs, gossip, bonds, and the
+    radio speak in names
+[ ] The radio, step 1: world events (bonds, births, deaths, feuds,
+    famine, market openings) become one-line news — in-game
+    notifications + a news log
+[ ] The radio, step 2: a transceiver object in settlements plays the
+    news as captions while the player is near
+[ ] The radio, step 3 (deferred): real audio — only when assets exist
+[ ] MCM + Settings Manager: an MCM page over the tuning keys (INI
+    stays the source of truth; restore-defaults button); MCM as a soft
+    dependency with a small Papyrus surface
+
+═══════════════════════════════════════════════
+
+0.8.0 — Settler Agency · "Hands in the World"
+
+═══════════════════════════════════════════════
+
+Goal: settlers have hands — their intents produce real world changes:
+build, move items, destroy. Sketched 2026-08-10 (Docs/Design/Life.md,
+"Beyond 0.6.0").
+
+STATUS: PLANNED — sketches only, no code.
+
+[ ] Move items: a hauler transfers stock between containers; the stall
+    sells what was stocked
+[ ] Build: a builder places objects via the workshop placement path;
+    the settlement grows what it built
+[ ] Destroy: a destroyer clears clutter (disable refs); decay, raids,
+    and spite take things apart
+[ ] Engine ask (tentative): labour as first-class goals (Construct /
+    Haul / Demolish) grows Request B — otherwise the adapter maps
+    Prosper → labor intents on the existing surface

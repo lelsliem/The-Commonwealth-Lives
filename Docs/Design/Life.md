@@ -177,3 +177,72 @@ required for 0.6.0** — the adapter chains the existing four.
 
 Everything observable in the log; every behaviour driven by needs, bonds,
 memory, and the seeded RNG — never by a script.
+
+## Beyond 0.6.0 — the author's ideas (2026-08-10)
+
+Three pillars the author wants after the life core is real. They live
+here as sketches; each becomes a designed stone when its turn comes.
+
+### Identity — settlers get names
+
+The sim talks about people by formid hex. Names make it human: logs,
+gossip, bonds, and the radio all name people — "Marcy and Jun became
+friends", "a child was born to the Lees", "Sturges is feuding with the
+provisioner".
+
+- FO4's generic settlers are mostly named "Settler" in-game, so the
+  adapter assigns **procedural Commonwealth names** at mind-seed time
+  from a name list (INI-selectable), persisted in the co-save (a name
+  registry keyed by form id) — a settler is "Sturges" in Sanctuary and
+  still "Sturges" after reload and after a fast-travel despawn.
+- **Verify:** the log greets the world by name; save, reload, same names;
+  a name collision never happens (the registry dedupes).
+
+### Agency — settlers act on the world: build, move items, destroy
+
+Today settlers walk and trade. This pillar gives them **hands**: their
+intents produce real world changes, not just movement.
+
+- **Move items** — a hauler transfers stock between containers
+  (workshop → stall, stall → workshop) using the game's item APIs; the
+  stall actually sells what was stocked.
+- **Build** — a builder places objects at the settlement through the
+  workshop placement path (position, rotation, resources); the bench
+  grows a stall, a fence, a chair the sim built.
+- **Destroy** — a destroyer clears clutter (disable refs); decay, raids,
+  and spite take things apart.
+- **Engine ask (tentative):** the core's four `GoalType`s don't cover
+  labour. The adapter can map `Prosper` → labor intents with the
+  existing surface (no core change needed), but if the core wants
+  labour first-class — `Construct`, `Haul`, `Demolish` — that's a
+  growth of Request B.
+- **Verify:** a stocked stall sells stocked goods; a builder's fence
+  survives reload; a destroyer's clearing stays cleared.
+
+### The Player Window — a radio, and MCM
+
+The world is alive even when the player isn't watching. Give the player
+ears and hands.
+
+- **The radio** — a news channel that synthesizes world events into
+  plain speech for the player, in three steps:
+  1. **The news feed (first):** the adapter turns events (bonds, births,
+     deaths, feuds, famine, market openings) into one-line news, pushed
+     as in-game notifications and written to a news log the player can
+     open — "A feud has begun in Sanctuary", "A child was born at
+     Tenpines".
+  2. **The radio object:** a transceiver in settlements (an in-game
+     radio marker) plays the news as on-screen captions while the
+     player is near — the settlement tells its own story.
+  3. **Real audio (deferred):** voice lines need assets; the radio
+     becomes a real station only when the author ships or licenses
+     audio. Not a blocker for 1 and 2.
+- **MCM + Settings Manager** — a Mod Configuration Menu page exposing
+  the tuning keys (hunger rhythm, market hours, bond thresholds, births
+  gate, gossip radius, population cap) so players tune the world
+  in-game; the INI stays the source of truth, MCM reads and writes it
+  (or an override file), with a restore-defaults button. Requires the
+  MCM mod as a soft dependency and a small Papyrus surface on the
+  adapter side.
+- **Verify:** news appears for a feud without the player nearby; MCM
+  changes survive reload; defaults restore cleanly.
