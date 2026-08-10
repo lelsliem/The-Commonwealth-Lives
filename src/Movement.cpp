@@ -116,10 +116,21 @@ namespace TLC::Movement
         // to a pathing primitive that needs no command state (BSPathing
         // waypoints into the movement planner — which never crashed),
         // WalkTo refuses: never crash, never teleport.
-        REX::ERROR(
-            "LCE: WalkTo refused — travel package needs the game's command "
-            "state (not yet driven); pin verified at {:#x}; intent dropped.",
-            REL::Offset{ kTravelPackageRva }.address());
+        //
+        // Logged once per process: the blocker is global, not per-entity —
+        // a per-call ERROR here flooded the log with ~7,000 lines in one
+        // market-memory window (the per-entity "decides MoveTo — refused"
+        // plan line carries the per-entity truth, deduped).
+        static bool s_refusalLogged = false;
+
+        if (!s_refusalLogged)
+        {
+            s_refusalLogged = true;
+            REX::ERROR(
+                "LCE: WalkTo refused — travel package needs the game's command "
+                "state (not yet driven); pin verified at {:#x}; intent dropped.",
+                REL::Offset{ kTravelPackageRva }.address());
+        }
         return false;
     }
 }
