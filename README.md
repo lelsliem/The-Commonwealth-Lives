@@ -133,8 +133,10 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
 ## Tuning
 
 One text file next to the DLL, `Data\F4SE\Plugins\TheLivingCommonwealth.ini`.
-Unknown keys are ignored; missing, empty, or unparsable values keep the
-default — a broken line never breaks the world.
+The template ships in this repo at `config/TheLivingCommonwealth.ini` — copy
+it alongside the DLL and edit to taste. Unknown keys are ignored; missing,
+empty, or unparsable values keep the default — a broken line never breaks the
+world.
 
 ```ini
 ; The Living Commonwealth tuning
