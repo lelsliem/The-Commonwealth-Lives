@@ -71,14 +71,15 @@ Sanctuary.
 
 Goal: the simulation ticks in-game, and intents become game actions.
 
-STATUS: IMPLEMENTED — tick verified in-game; walking call pending
+STATUS: IN VERIFICATION — the per-frame hook is being attributed
 
 [✓] Design — Docs/Design/Executor.md
-[✓] Per-frame tick — a hook on the game's frame driver (0x00C30C0A,
-    inside the 5KB driver 0x00C2FD12), once per frame on the game
-    thread, real delta. Verified in-game 2026-08-10: fires at 60fps.
-    (The original target, ProcessVMTick ID 2251368, proved
-    event-driven and was pruned.)
+[ ] Per-frame tick — the sim ticked in-game with five candidate hooks
+    installed (all 11 settlers logged decides Explore), but the proof
+    logging couldn't attribute the ticks to a hook. Candidates: the
+    four ProcessVMTick sites (ID 2251368) and the driver site
+    (0x00C30C0A inside 0x00C2FD12). Per-hook fire counters added; one
+    in-game session names the path
 [✓] Plan builder — pure and tested (PlanBuilderTest, 4/4 suites);
     refusals are the contract: unloaded actor, unloaded target, busy
     actor → dropped, re-decided next tick; targetless intents are never

@@ -1,10 +1,12 @@
 # Intent Executor — "The Farmer Walks"
 
 **Stone:** adapter 0.3 (after translation, verified in-game)
-**Status:** Implemented — the tick is **verified in-game** (the frame
-hook fires every frame; intents appear in the log); the refusal fix for
-targetless intents is tested (adapter tests 4/4). One open item remains:
-the walking call (flagged below).
+**Status:** In verification — the sim ticked and logged intents in-game
+with all five candidate hooks installed, but the first proof logging
+could not attribute the ticks to a specific hook, so the per-frame path
+is not yet named. The refusal fix for targetless intents is tested
+(adapter tests 4/4). Open items: the frame hook's attribution and the
+walking call (both flagged below).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026
 (free functions over static classes), Law 001 (simple things; compose the
 complex). The contract's guarantee this stone honors: **an intent is a
@@ -38,32 +40,37 @@ every frame (game thread)
 
 Three pieces, all inside the adapter (the core stays untouched):
 
-### 1. The tick — a frame hook (verified in-game)
+### 1. The tick — a frame hook (in verification)
 
 The plugin's own heartbeat becomes the simulation's: a **per-frame hook on
-the game's frame driver**, installed once at init via the library's own
-mechanism (`REL::THook` registered in `FHookStore`, Init'd at `PreLoad`,
-enabled at `Load`; the trampoline comes from `F4SE::Init` with
+the game's loop**, installed once at init via the library's own mechanism
+(`REL::THook` registered in `FHookStore`, Init'd at `PreLoad`, enabled at
+`Load`; the trampoline comes from `F4SE::Init` with
 `{ .trampoline = true }`).
 
-The hook is one call site: `0x00C30C0A` — inside the game's 5KB frame
-driver `0x00C2FD12` (no direct callers; entered via function pointer;
-dozens of internal loops) into the update function `0x00C32450`. Pinned
-to 1.11.221, the same discipline F4SE uses for its own offsets.
+The candidates, pinned to 1.11.221 (mid-function call sites are not in
+the address library — the same discipline F4SE uses for its own offsets):
 
-**How it was grounded — and what the first test proved wrong.** The
-original plan hooked `DelayFunctorQueue`/`ProcessVMTick` (address library
-ID 2251368 — the budget-ticked Papyrus VM queue F4SE itself hooks for its
-delay functors) via its four call sites (`0x010E9F7E`, `0x010EA08E`,
-`0x010EA24B`, `0x010EA2F6` — verified real `call 0x010F04A0`
-instructions). The first in-game test: all four hooks enabled, world
-started (11 settlers), and **no tick lines for the whole session** — the
-four sites are event-driven (the VM only processes when it has queued
-work), so F4SE's delay functors are *not* per-frame either. A second
-test hooked the driver site alongside them with per-hook proof logging:
-`Tick hook 4` (the driver) fired at load and then every frame (600 frames
-per ~10s at 60fps for the whole session); hooks 0–3 fired only on later VM
-processing events. The driver is the path; the four VM sites were pruned.
+- **`[0..3]` ProcessVMTick's four call sites** (`0x010E9F7E`, `0x010EA08E`,
+  `0x010EA24B`, `0x010EA2F6` — verified real `call 0x010F04A0`
+  instructions; address library ID 2251368, the budget-ticked Papyrus VM
+  queue F4SE itself hooks for its delay functors).
+- **`[4]` the game driver** (`0x00C30C0A` — a call inside the 5KB driver
+  `0x00C2FD12`, no direct callers, entered via function pointer, dozens
+  of internal loops, into the update function `0x00C32450`).
+
+**Where the evidence stands.** Test 1 (VM sites only): no tick lines all
+session — the four sites were thought event-driven. Test 2 (all five,
+per-hook first-fire logging): the sim ticked and all 11 settlers logged
+`decides Explore` — but the intents appeared at the same millisecond as
+hook 1's first fire, **15s after the world started**, not within a frame
+of it, and the shared counter could not attribute its ~170 ticks/s to a
+hook. So no single path is proven per-frame yet; a single-driver-hook
+build (test 3) produced no visible tick lines, but that log had no
+attribution either. The current build restores all five with **per-hook
+fire counters** (`Tick N frames; fires: [0]=… [1]=… [2]=… [3]=… [4]=…`
+every 600 ticks) — one in-game session names the per-frame path exactly,
+then dead sites are pruned.
 
 Runs on the **game thread** — zero contention, trivially debuggable (the
 contract's threading decision for 0.4.0). The once-per-frame guard
