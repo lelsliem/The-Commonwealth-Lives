@@ -41,7 +41,8 @@ through **0.5.0** is in and verified in-game:
   probe reads the actor's data position instead of a lying 3D transform.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
-the 0.5.0 milestone is published. Nexus comes later.
+the 0.5.0 milestone is published (first beta release: `0.5.0-beta`, notes
+in [RELEASE_NOTES.md](RELEASE_NOTES.md)). Nexus comes later.
 
 ## What this is
 
