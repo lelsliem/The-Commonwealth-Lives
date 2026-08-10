@@ -217,6 +217,25 @@ namespace TLC
                 }
             };
         }
+
+        ComponentSerializer<SpeciesTag> MakeSpeciesTagSerializer()
+        {
+            return {
+                [](const SpeciesTag& tag)
+                {
+                    Codec::Writer writer;
+                    writer.U32(static_cast<std::uint32_t>(tag.Value));
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+
+                    return SpeciesTag{ static_cast<Species>(reader.U32()) };
+                }
+            };
+        }
     }
 
     void RegisterAllSerializers(EntityRegistry& registry)
@@ -227,5 +246,6 @@ namespace TLC
         registry.RegisterSerializer<Goals>(MakeGoalsSerializer());
         registry.RegisterSerializer<Intent>(MakeIntentSerializer());
         registry.RegisterSerializer<FormRef>(MakeFormRefSerializer());
+        registry.RegisterSerializer<SpeciesTag>(MakeSpeciesTagSerializer());
     }
 }

@@ -168,5 +168,6 @@ target("TheLivingCommonwealth.Tests", function()
         "src/Serialization.cpp",
         "src/CoSave.cpp",
         "src/Executor.cpp",
+        "src/Behaviour.cpp",
         "tests/**.cpp")
 end)

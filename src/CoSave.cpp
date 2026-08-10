@@ -44,15 +44,16 @@ namespace TLC::CoSave
             std::type_index Type;
         };
 
-        const std::array<TypeName, 6>& TypeNames()
+        const std::array<TypeName, 7>& TypeNames()
         {
-            static const std::array<TypeName, 6> kTable{
+            static const std::array<TypeName, 7> kTable{
                 TypeName{ "needs", typeid(Needs) },
                 TypeName{ "memory", typeid(Memory) },
                 TypeName{ "relationships", typeid(Relationships) },
                 TypeName{ "goals", typeid(Goals) },
                 TypeName{ "intent", typeid(Intent) },
                 TypeName{ "formref", typeid(FormRef) },
+                TypeName{ "species", typeid(SpeciesTag) },
             };
 
             return kTable;

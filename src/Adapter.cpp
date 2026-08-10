@@ -9,6 +9,7 @@
 
 #include "Adapter.h"
 
+#include "Behaviour.h"
 #include "Components.h"
 #include "Market.h"
 #include "Movement.h"
@@ -25,6 +26,7 @@
 #include <RE/T/TESForm.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
 #include <RE/T/TESObjectREFR.h>
+#include <RE/T/TESRace.h>
 
 #include <LCE/Logging/Logger.h>
 
@@ -44,11 +46,43 @@ namespace TLC
     namespace
     {
         //-------------------------------------------------------------------------
+        // Species classification (ADR-0024: game knowledge at the edge). The
+        // core never knows a race; the adapter decides which minds trade and
+        // which are fed. Race FormIDs are the adapter's to verify — the
+        // project ritual: FORMID TO VERIFY IN FO4EDIT AT IMPLEMENTATION.
+        // Fallout4.esm vanilla: HumanRace 00013A47; DogRace 0001D246;
+        // BrahminRace 0002A6A4. Anything outside the animal list defaults to
+        // Human — a workshop population is usually people, and a
+        // misclassified mind only behaves human until the table grows
+        // (Behaviour.h).
+        //-------------------------------------------------------------------------
+        Species ClassifySpecies(const RE::TESRace* a_race)
+        {
+            if (a_race == nullptr)
+            {
+                return Species::Human;
+            }
+
+            switch (a_race->GetFormID())
+            {
+            case 0x0001D246:   // DogRace — FORMID TO VERIFY IN FO4EDIT
+            case 0x0002A6A4:   // BrahminRace — FORMID TO VERIFY IN FO4EDIT
+                return Species::Animal;
+            default:
+                break;
+            }
+
+            return Species::Human;
+        }
+
+        //-------------------------------------------------------------------------
         // The translation itself (ADR-0024: at the edge). Every loaded
         // actor that is sim-relevant becomes an entity: a FormRef so the
-        // entity knows its game form, and a fresh mind (satisfied needs,
-        // empty memory, empty relationships). The game is read once and
-        // never written — the write-through belongs to the executor stone.
+        // entity knows its game form, a SpeciesTag so the sim knows what
+        // kind of mind it is, and a fresh mind (satisfied needs seeded for
+        // the species, empty memory, empty relationships). The game is
+        // read once and never written — the write-through belongs to the
+        // executor stone.
         //-------------------------------------------------------------------------
         std::size_t TranslateLoadedActors(
             LCE::Simulation::EntityRegistry& registry,
@@ -93,10 +127,12 @@ namespace TLC
                         continue;
                     }
 
+                    const auto species = ClassifySpecies(actor->race);
                     const auto id = registry.CreateEntity();
 
                     registry.AddComponent<FormRef>(id, FormRef{ formId });
-                    registry.AddComponent<Needs>(id, SeededNeeds());
+                    registry.AddComponent<SpeciesTag>(id, SpeciesTag{ species });
+                    registry.AddComponent<Needs>(id, SeededNeeds(species));
                     registry.AddComponent<Memory>(id, Memory{});
                     registry.AddComponent<Relationships>(id, Relationships{});
 

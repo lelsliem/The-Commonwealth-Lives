@@ -138,8 +138,15 @@ ticking its first pass.
 
 Goal: the real test from the contract.
 
+[✓] Species/behaviour split (groundwork) — SpeciesTag component +
+    BehaviourProfile table: animals cannot trade, buy, or talk (no
+    Social/Comfort needs → no Socialize/Work intents); the market
+    memory keeps Trade-kind so the dog still walks; the profile decides
+    what arrival means (Aid, not Trade) — see Docs/Design/Behaviour.md
 [ ] World facts — Remember pushes (weather, market open/closed)
 [ ] Tuning from the Configuration service
+[ ] Arrival outcomes — ReportOutcome per species (Human → Trade with
+    the trader; Animal → Aid with the settlement)
 [ ] The real test: a settler goes to market because they are hungry —
     no script
 [ ] Nexus name check + publish

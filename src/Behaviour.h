@@ -1,0 +1,64 @@
+//=============================================================================//
+//                                                                             //
+//   The Living Commonwealth — Fallout 4 adapter for the Living Commonwealth   //
+//   Engine (LCE).                                                             //
+//                                                                             //
+//   A dog knows where the food is; it just doesn't call it trade.              //
+//                                                                             //
+//=============================================================================//
+
+#pragma once
+
+#include "LCE/Simulation/Memory.h"   // InteractionKind
+#include "LCE/Simulation/Needs.h"
+
+namespace TLC
+{
+    //-------------------------------------------------------------------------
+    // Species — what kind of mind this is. The core is deliberately
+    // species-agnostic: Decide reasons over needs and memory, never game
+    // facts. The behavior split is the adapter's, because "who can trade"
+    // is game knowledge (ADR-0024: game knowledge at the edge). A junkyard
+    // dog is a mind like a settler — it just cannot buy, sell, or talk.
+    //-------------------------------------------------------------------------
+    enum class Species
+    {
+        Human,
+        Animal
+    };
+
+    //-------------------------------------------------------------------------
+    // BehaviourProfile — what a species may do and how its mind is seeded.
+    //
+    // The 0.5.0 arrival leg consults this: a human's market interaction is
+    // Trade with a trader; an animal's is Aid with the settlement — fed,
+    // never bartering. CanTrade / CanTalk gate the execution side; the
+    // needs flags decide which drives a mind is born with (no Social need,
+    // no Socialize intent — an animal never wanders off to talk).
+    //
+    // Deliberately free of game types: the whole table is testable.
+    //-------------------------------------------------------------------------
+    struct BehaviourProfile
+    {
+        LCE::Simulation::InteractionKind MarketKind;
+        bool CanTrade;
+        bool CanTalk;
+        bool NeedsSocial;
+        bool NeedsComfort;
+    };
+
+    //-------------------------------------------------------------------------
+    // The profile for a species. Unknown species fall back to Human — a
+    // misclassified mind only behaves human until the table grows.
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    const BehaviourProfile& BehaviourFor(Species a_species);
+
+    //-------------------------------------------------------------------------
+    // A fresh mind of a given species: every seeded need satisfied, decay
+    // rates at the seed defaults. Hunger, Fatigue, and Safety are
+    // universal; Social and Comfort belong to species that can use them.
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    LCE::Simulation::Needs SeededNeeds(Species a_species);
+}

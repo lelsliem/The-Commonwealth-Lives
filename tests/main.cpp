@@ -4,6 +4,7 @@
 // Links LCE.Core only — no game required.
 //=============================================================================//
 
+#include "Behaviour.h"
 #include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
@@ -30,6 +31,7 @@ namespace TLC::Tests
 {
     bool TranslatorTest();
     bool SeedingTest();
+    bool BehaviourTest();
     bool SerializationTest();
     bool CoSaveTest();
     bool PlanBuilderTest();
@@ -65,6 +67,7 @@ int main()
 {
     Run("TranslatorTest", TLC::Tests::TranslatorTest);
     Run("SeedingTest", TLC::Tests::SeedingTest);
+    Run("BehaviourTest", TLC::Tests::BehaviourTest);
     Run("SerializationTest", TLC::Tests::SerializationTest);
     Run("CoSaveTest", TLC::Tests::CoSaveTest);
     Run("PlanBuilderTest", TLC::Tests::PlanBuilderTest);
@@ -139,7 +142,8 @@ namespace TLC::Tests
 
     bool SeedingTest()
     {
-        const auto needs = SeededNeeds();
+        // A fresh human mind — the trading, talking kind (Behaviour.h).
+        const auto needs = SeededNeeds(Species::Human);
 
         // A fresh mind has all five needs, all satisfied.
         if (needs.List.size() != 5)
@@ -183,6 +187,75 @@ namespace TLC::Tests
         return sawHunger && sawFatigue && sawSocial && sawSafety && sawComfort;
     }
 
+    bool BehaviourTest()
+    {
+        //-------------------------------------------------------------------------
+        // The behaviour split (0.5.0): the core is species-agnostic — the
+        // adapter decides which minds trade and which are fed. The profile
+        // table is the single source of that truth.
+        //-------------------------------------------------------------------------
+
+        // A human trades and talks, and the market means Trade for them.
+        const auto& human = BehaviourFor(Species::Human);
+
+        if (!human.CanTrade || !human.CanTalk ||
+            human.MarketKind != InteractionKind::Trade ||
+            !human.NeedsSocial || !human.NeedsComfort)
+        {
+            return false;
+        }
+
+        // An animal cannot trade, buy, or talk — the market means being
+        // fed (Aid), and it has no social or comfort drives to act on.
+        const auto& animal = BehaviourFor(Species::Animal);
+
+        if (animal.CanTrade || animal.CanTalk ||
+            animal.MarketKind != InteractionKind::Aid ||
+            animal.NeedsSocial || animal.NeedsComfort)
+        {
+            return false;
+        }
+
+        // An animal is seeded with the universal needs only — Hunger,
+        // Fatigue, Safety — so it never produces a Socialize or Work
+        // intent (no social drive, no comfort drive to work off).
+        const auto animalNeeds = SeededNeeds(Species::Animal);
+
+        if (animalNeeds.List.size() != 3)
+        {
+            return false;
+        }
+
+        bool sawSocial = false;
+        bool sawComfort = false;
+
+        for (const auto& need : animalNeeds.List)
+        {
+            sawSocial = sawSocial || need.Type == NeedType::Social;
+            sawComfort = sawComfort || need.Type == NeedType::Comfort;
+        }
+
+        if (sawSocial || sawComfort)
+        {
+            return false;
+        }
+
+        // The SpeciesTag rides the co-save: a restored dog stays a dog.
+        EntityRegistry source;
+        RegisterAllSerializers(source);
+
+        const auto dog = source.CreateEntity();
+        source.AddComponent<SpeciesTag>(dog, SpeciesTag{ Species::Animal });
+
+        EntityRegistry restored;
+        RegisterAllSerializers(restored);
+        restored.Restore(source.Capture());
+
+        const auto tag = restored.GetComponent<SpeciesTag>(dog);
+
+        return tag != nullptr && tag->Value == Species::Animal;
+    }
+
     bool SerializationTest()
     {
         //---------------------------------------------------------------------
@@ -197,7 +270,7 @@ namespace TLC::Tests
 
         source.AddComponent<FormRef>(farmer, FormRef{ 0x00012345u });
         source.AddComponent<FormRef>(merchant, FormRef{ 0x00012346u });
-        source.AddComponent<Needs>(farmer, SeededNeeds());
+        source.AddComponent<Needs>(farmer, SeededNeeds(Species::Human));
         source.AddComponent<Memory>(farmer, Memory{
             { MemoryEvent{ merchant, InteractionKind::Trade, 1.0f } }
         });
@@ -303,7 +376,7 @@ namespace TLC::Tests
 
         source.AddComponent<FormRef>(farmer, FormRef{ 0x00012345u });
         source.AddComponent<FormRef>(merchant, FormRef{ 0x00012346u });
-        source.AddComponent<Needs>(farmer, SeededNeeds());
+        source.AddComponent<Needs>(farmer, SeededNeeds(Species::Human));
         source.AddComponent<Memory>(farmer, Memory{
             { MemoryEvent{ merchant, InteractionKind::Trade, 1.0f } }
         });
@@ -634,7 +707,7 @@ namespace TLC::Tests
         const auto settler = registry.CreateEntity();
         const auto market = registry.CreateEntity();
 
-        registry.AddComponent<Needs>(settler, SeededNeeds());
+        registry.AddComponent<Needs>(settler, SeededNeeds(Species::Human));
         registry.AddComponent<Memory>(settler, Memory{});
         registry.AddComponent<FormRef>(market, FormRef{ kMarketFormId });
 
@@ -657,7 +730,7 @@ namespace TLC::Tests
 
         const auto wanderer = bare.CreateEntity();
 
-        bare.AddComponent<Needs>(wanderer, SeededNeeds());
+        bare.AddComponent<Needs>(wanderer, SeededNeeds(Species::Human));
         bare.AddComponent<Memory>(wanderer, Memory{});
 
         Update(bare, 1.0);

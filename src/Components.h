@@ -3,13 +3,13 @@
 //   The Living Commonwealth — Fallout 4 adapter for the Living Commonwealth   //
 //   Engine (LCE).                                                             //
 //                                                                             //
-//   First the belly, then the Commonwealth.                                      //
+//   First the belly, then the Commonwealth.                                    //
 //                                                                             //
 //=============================================================================//
 
 #pragma once
 
-#include "LCE/Simulation/Needs.h"
+#include "Behaviour.h"
 
 #include <cstdint>
 
@@ -28,21 +28,13 @@ namespace TLC
     };
 
     //-------------------------------------------------------------------------
-    // SeededNeeds — a fresh mind: every need satisfied. Decay rates are the
-    // seed defaults; real tuning arrives with the executor stone (the
-    // simulation does not tick yet, so these values are initial state).
+    // SpeciesTag — what kind of mind this entity is (Behaviour.h). Set once
+    // at translation from the actor's race; persisted in the co-save so a
+    // restored world keeps its dogs dogs. A missing tag reads as Human —
+    // the default for a workshop population.
     //-------------------------------------------------------------------------
-    [[nodiscard]]
-    inline LCE::Simulation::Needs SeededNeeds()
+    struct SpeciesTag
     {
-        using namespace LCE::Simulation;
-
-        return Needs{
-            { Need{ NeedType::Hunger, 1.0f, 0.1f },
-              Need{ NeedType::Fatigue, 1.0f, 0.1f },
-              Need{ NeedType::Social, 1.0f, 0.1f },
-              Need{ NeedType::Safety, 1.0f, 0.1f },
-              Need{ NeedType::Comfort, 1.0f, 0.1f } }
-        };
-    }
+        Species Value = Species::Human;
+    };
 }
