@@ -214,9 +214,13 @@ namespace TLC
             return buffer;
         }
 
-        // A settler standing next to the workbench counts as arrived; the
-        // game's arrival stop is typically 1-3 m from the marker.
-        constexpr float kArrivalRadius = 4.0f;
+        // A settler reaching the market counts as arrived. The game's own
+        // command-mode arrival stop leaves walkers ~1 m short of the
+        // marker (probes bottom out around 50 units ≈ 0.7 m), so the
+        // radius must cover the stop distance — 200 units ≈ 2.8 m — not
+        // hug the marker (4 units ≈ 6 cm never fired: walkers stood at
+        // the bench outside a 6 cm circle).
+        constexpr float kArrivalRadius = 200.0f;
 
         // The market seed's radius: only settlers within walking distance
         // of the market remember it. ~10,000 units (≈140 m) covers all of
