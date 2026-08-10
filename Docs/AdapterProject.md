@@ -2,295 +2,175 @@
 
 **Handoff document.** This file exists so a new agent (a new Freebuff tab
 rooted at `C:\Fallout4Adaption`) can start this project with full context —
-the plan, the conventions, and the contract — without having been part of
-the conversation that built the engine.
+what exists, how it is wired, and what is next — without having been part
+of the conversation that built it.
 
 **Companion documents** (in the LCE core repo, `C:\LivingCommonwealthEngine`):
-- `Docs/Architecture/PlatformIntegration.md` — the 0.4.0 boundary design
-  (read this first; it is the contract this project implements)
-- `Docs/LearningPath.md` — how the engine works and what each piece teaches
+- `Docs/Architecture/PlatformIntegration.md` — the boundary contract this
+  project implements (read this first)
 - `Docs/ProjectPhilosophy.md` — the Six Design Laws, especially
   Law 001: *simple things; compose the complex*
+- `Docs/LearningPath.md` — how the engine works
+
+**Design docs in this repo** (`Docs/Design/`): `Executor.md` (the tick +
+intent executor), `Walking.md` (the walk), `CoSave.md` (the co-save
+record). Each is flipped to **verified in-game** as its stone lands.
 
 ---
 
 ## The Project
 
 **Name:** The Living Commonwealth (the mod). The Fallout 4 adapter for the
-Living Commonwealth Engine (LCE). Chosen because Fallout 4's setting *is*
-the Commonwealth, and this mod makes it live.
+Living Commonwealth Engine (LCE). An F4SE plugin (GPL — it links
+CommonLibF4) that is a *client* of LCE.Core (MIT). It does NOT
+reimplement simulation; per `PlatformIntegration.md` the boundary is the
+core's public API: the adapter calls `CreateEntity` / `DestroyEntity` /
+`Remember` / `Update` and reads intents via `GetComponent<Intent>`.
 
-**Repo naming:** `the-living-commonwealth` (or `lce-fallout4` — decide at
-scaffold time, then name the repo after the public name).
+**The contract's guarantee:** *an intent is a hint, not a command* — the
+adapter decides how to walk the settler, and may refuse. The core never
+names a game action and never appears in the adapter's game-facing code.
 
-**License:** GPL — the mod links CommonLibF4 (GPL-3.0 with modding/linking
-exceptions). The core stays MIT. This split is deliberate and physical: the
-adapter lives in its own repo and never shares a tree with the core.
-
-**Check:** verify the name is not already taken on Nexus Mods before
-publishing.
-
----
-
-## What This Project Is
-
-The adapter is a **client** of LCE.Core — exactly like the engine's test
-harness, but living in its own repository and talking to a game. It does
-NOT reimplement simulation. Per `PlatformIntegration.md`, the boundary is
-the core's public API:
-
-- The adapter **calls**: `CreateEntity`, `DestroyEntity`, `Remember`
-  (experiences and world facts), `Update` — and **reads** intents via
-  `GetComponent<Intent>`.
-- The adapter **guarantees**: an intent is a *hint*, not a command — the
-  adapter decides how to walk the settler, and may refuse.
-- The core **promises**: no game knowledge, no queries of the world, a
-  stateless tick.
-
-The adapter is an F4SE plugin built on CommonLibF4 (`F4SE::Init`,
-`GetMessagingInterface()`, `GetSerializationInterface()`, `GetTaskInterface()`,
-`RE::` types).
+**The game setup:** Fallout 4 1.11.221 (Next-Gen), F4SE 0.7.8, run through
+MO2 (`B:\Modding\MO2`). The plugin logs to
+`C:\Users\mrlma\Documents\My Games\Fallout4\F4SE\TheLivingCommonwealth.log`.
 
 ---
 
-## The core's 0.4.0 side is built — what the adapter gains
+## Status — four stones, all verified in-game
 
-The core is now `0.4.0-alpha`, 14/14 suites green. Two things changed
-that matter to this project:
+| Version | Stone | Status |
+|---------|-------|--------|
+| 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
+| 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
+| 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
+| 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ next |
 
-1. **The boundary is the public API only.** The old
-   `Include/LCE/Interfaces/` stubs (`IGameAdapter`, `IWorld`, `IEntity`)
-   are **deleted**. The adapter is a client of the core — nothing to
-   implement, nothing to include.
-2. **Save/load has its substrate.** The core now ships `RegistrySnapshot`
-   (`Include/LCE/Simulation/RegistrySnapshot.h`) and four registry
-   operations the co-save stone will use:
-   - `RegisterSerializer<T>({ serialize, deserialize })` — required for a
-     component type to appear in a snapshot. Register once at init for
-     every type the adapter uses (Needs, Memory, Relationships, Goals,
-     Intent, and any adapter-defined components).
-   - `Capture()` — the whole registry as pure data; entity identities
-     (index + generation) preserved exactly.
-   - `Restore(snapshot)` — rebuilds a registry with identical IDs;
-     requires the same serializers to be registered.
-   - `Clear()` — blank registry; serializers survive (register once,
-     reuse across games).
+**Build:** `xmake` (one command). Two targets:
+`TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
+(the harness — links LCE.Core only, no game; run as
+`xmake run TheLivingCommonwealth.Tests`). **6/6 suites green.**
 
-   Semantics to respect:
-   - A component type with **no serializer is not persisted** — omitted
-     silently. Data presence decides membership.
-   - The snapshot is a **process-local exchange format**. The adapter
-     translates it into the F4SE co-save record with its own stable type
-     names and its own versioning — save-compatibility is the adapter's
-     job (migrate old saves on load).
-   - Snapshot components are keyed by `std::type_index` — stable within
-     a process, NOT across processes; another reason the durable record
-     needs the adapter's own names.
+---
 
-   The lifecycle table below is now implementable: `GameLoaded` → create
-   entities; `PreSaveGame` → `Capture()` → co-save record; `PostLoadGame`
-   → read record → `Restore()`; `PreLoadGame`/`DeleteGame` → `Clear()`.
-   The round-trip is proven by the core's Snapshot suite — the farmer
-   still goes to market after a save and a load.
+## Architecture — how the adapter is wired
+
+```
+src/main.cpp        F4SE entry: hooks (Tick), messaging (lifecycle),
+                    serialization callbacks (co-save glue)
+src/Adapter.h/.cpp  the one world object: registry + translator, the
+                    lifecycle, the tick loop (Update → plan → execute → probe)
+src/Translator.h/.cpp  formId ↔ EntityId tables (adapter state, game-free)
+src/SimRelevant.h/.cpp the settler predicate (WorkshopNPCFaction 0x000337F3)
+src/Executor.h/.cpp    pure plan builder — refusals are the contract
+src/Movement.h/.cpp    WalkTo: the pinned Actor::InitiateCommandModeTravelPackage
+src/Market.h           the market seed (Sanctuary workshop REFR 000250FE)
+src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …)
+src/CoSave.h/.cpp     the durable co-save record (stable names, versioning)
+src/BlobCodec.h       little-endian byte codec
+src/Components.h      FormRef + SeededNeeds (adapter-defined components)
+src/Tick.h/.cpp       the per-frame VM-tick hooks
+```
+
+**Lifecycle mapping (current, verified):**
+
+| Game event | The adapter does |
+|------------|------------------|
+| `kGameLoaded` (startup) | `StartWorld`: translate loaded sim-relevant actors into entities; seed the market memory |
+| `kPostLoadGame` (a save finished loading) | Apply the co-save restore (or start fresh) — **the load's completion event; `kGameLoaded` alone does not fire for real loads** |
+| `kPreLoadGame` | `EndWorld` (Clear; serializers survive); arm abort recovery (60s) |
+| `kDeleteGame` | `EndWorld` |
+| serialization save callback | `CaptureWorld` → `CoSave::Encode` → `WriteRecord` |
+| serialization load callback | read record → `CoSave::Decode` → `QueueRestore` (applied on `kPostLoadGame`) |
+| new game (revert callback) | `EndWorld` |
+
+**The sim loop** (per frame, game thread): `Update(registry, delta)` →
+`BuildPlan` (pure; loaded/available refusals) → `ExecutePlan` (the walk
+issue; sessions capped at 16) → `ProbeWalks` (live distance probes).
+
+**The co-save record:** the core's snapshot is process-local (component
+keys are `std::type_index`) — the adapter's record translates it to stable
+names (`needs`, `memory`, `relationships`, `goals`, `intent`, `formref`)
+with its own version (`kRecordVersion = 1`). Refusals are the contract:
+truncated records, unsupported versions, and unknown component names
+never half-apply. Save-compatibility is the adapter's job.
+
+**Two environment lessons learned (documented in Walking.md / CoSave.md):**
+- The crash saga: a corrupt save, not the plugin — the identical
+  fail-fast signature hit no-DLL runs. DisableExitSave prevents the
+  exit-save cycle.
+- Every "load abort" was our own recovery timer: real loads are slow
+  (a 600-actor co-save world takes >12s), and the completion event is
+  `kPostLoadGame`.
+
+---
+
+## The 0.5.0 roadmap — "The Settler Goes to Market"
+
+The core is at `0.5.0` stone 01 (15/15 suites green): tuning ergonomics —
+`SimulationTuning::FromConfiguration(config)` — is live. Known keys
+(`sim.memory.fade`, `sim.goal.urgency`, …) override defaults; broken or
+unknown keys never break the world. The adapter should feed tuning from a
+text file users can edit (its own keys ride in the same file).
+
+Remaining stones for the adapter, and what they need from the core:
+
+1. **World facts via `Remember`** — shipped and proven in the core
+   (0.3.1). Weather, market open/closed, road conditions: push as memory
+   events with an *invalid* Other. While remembered, the interaction is
+   unavailable to the mind; when it fades, it reopens. The adapter
+   controls duration by re-pushing.
+2. **Tuning from Configuration** — ✅ core stone 01. One call, one file.
+3. **The real test — a settler goes to market because they are hungry.**
+   Needs decay → goal urgency grows → a `MoveTo`-class intent → the
+   executor walks them (proven). Locations stay out of the core; the
+   adapter resolves "which trader".
+4. **The outcome channel** (core stone 02, not yet built). After the
+   walk, the adapter reports what *actually* happened — trade done,
+   robbed en route, road blocked — and the sim turns it into memory and
+   relationship changes. The loop's final leg; not a blocker for the
+   first test.
 
 ---
 
 ## Dependency Wiring
 
-`C:\Fallout4Adaption\Depends\` holds the clones the build needs:
-`commonlibf4` (the static dependency, built via `includes`) and `spdlog`
-(offline source for the core's spdlog 1.16). The original six were trimmed
-in 2026-08 — see `Depends/README.md` for what was removed and why.
-
-- **CommonLibF4** — the mod's game API + plugin contract. Built from the
-  local clone; its `RUNTIME_LATEST` (1.11.221) matches the game.
-- **F4SE** — runtime-only. The plugin does not link the F4SE source;
-  CommonLibF4 replaces it as the static dependency (its README says so).
-  The `f4se_1_10_*.dll` runtime is a download, installed via the mod
-  manager.
+- **CommonLibF4** — the game API + plugin contract, from the local clone
+  (`Depends/commonlibf4`); its `RUNTIME_LATEST` (1.11.221) matches the game.
+- **F4SE** — runtime-only; CommonLibF4 replaces it as the static dependency.
 - **LCE.Core** — linked statically, built by its own CMake via the
   `lce.core` rule into `Build/core` (never touching the core repo's
-  `Build/`). Points at the local checkout; override with `LCE_CORE_PATH`.
-- **spdlog** — the local clone feeds the core build's `v1.16.0` (matching
-  the plugin's xrepo spdlog, `std::format` mode) so one spdlog serves the
-  DLL. The mod itself logs through LCE's API and `REX::LOG`, never spdlog
-  directly.
+  `Build/`). The rule pins the core version (refuses below 0.4.0).
+  Point at another checkout with `LCE_CORE_PATH`.
+- **spdlog** — the local clone feeds the core build's v1.16.0; the mod
+  logs through LCE's API and `REX::LOG`, never spdlog directly.
 
 ---
 
-## Lifecycle Mapping (the mod's heartbeat)
+## Working Conventions (follow these)
 
-| Game event | The adapter does |
-|------------|------------------|
-| `GameLoaded` | Create the registry; translate each sim-relevant Actor into an entity with components |
-| game tick | `Update(registry, delta)`; read intents; execute via `RE::` |
-| world events | `Remember` — experiences and world facts ("the market is closed" = `{ invalid, Trade, weight }`) |
-| `PreSaveGame` / `PostSaveGame` | Snapshot the registry into the co-save record; release |
-| `PreLoadGame` / `PostLoadGame` | Clear the registry; restore from the co-save record |
-| `DeleteGame` | Clear everything |
-
-Translation rules: components ↔ game data (a settler's `Hunger` ↔ an
-`ActorValue` write through `RE::Actor`); intents ↔ game actions (`MoveTo`
-→ a movement AI package; `Flee` → a flee package; `Rest` → wait/sleep);
-locations stay out of the core — intents target entities, the adapter
-resolves the road.
-
----
-
-## Working Conventions (how the engine was built — follow these)
-
-1. **The build rhythm, one stone at a time:**
-   design document → headers → source → tests → docs → green build.
-   A milestone is not done until the docs claim it truthfully.
-2. **The four questions** for every piece of design:
-   *Can it be simpler? Does it belong? Do we need it at all? Will this help
-   build living worlds through simulation?*
-3. **The quote ritual:** every new `.h`/`.cpp` gets a banner with a line
-   reserved for a joke or quote from the author. Leave the slot; the author
-   fills it. Tests get compact headers, no banners.
-4. **Version ritual:** on milestone completion, bump the version everywhere
-   (`Version.h`, `CMakeLists.txt`, README badge) and commit after the
-   author approves. The author reads and questions everything — no question
-   is too basic; explain the *why*, not just the *what*.
-5. **Commit style:** concise messages that say *why*, one coherent change
-   per commit, no stray files, never commit `Build/` artifacts or tool dirs
-   (`.gitignore` first).
-6. **No global state** (ADR-0014). Time and tuning are inputs.
+1. **One stone at a time:** design document → headers → source → tests →
+   docs → green build. A milestone is not done until the docs claim it
+   truthfully — and not verified until proven in-game.
+2. **The four questions:** *Can it be simpler? Does it belong? Do we need
+   it at all? Will this help build living worlds through simulation?*
+3. **The quote ritual:** every new `.h`/`.cpp` gets a banner with a
+   reserved line for a joke or quote. Leave the slot.
+4. **Commit style:** concise messages that say *why*, one coherent change
+   per commit, never commit `Build/` artifacts.
+5. **No global state.** Time and tuning are inputs.
+6. **Test rhythm:** pure pieces are unit-tested without the game
+   (translator, serializers, record codec, plan builder, market seed);
+   game-facing pieces are verified in-game via log lines, then the docs
+   flip to verified.
 
 ---
 
-## First Stones (the initial commit list)
+## Open Items (author-side)
 
-1. `git init` + `.gitignore` (learn from the core's: `/Build/`, `.vs/`,
-   `*.user`, tool dirs).
-2. Project scaffold: `CMakeLists.txt` (C++23, `/W4 /WX`, static runtime —
-   match the core's compiler config), dependency wiring (CommonLibF4 +
-   F4SE + LCE.Core), `F4SEPlugin_Load` entry point with version banner and
-   quote slot.
-3. A hello-world plugin that loads in Fallout 4 and logs through LCE —
-   the "first heartbeat" of the mod.
-4. Then the real stones: entity ↔ form translation, intent executor,
-   co-save, and the real test: *a settler goes to market because they are
-   hungry — no script.*
-
----
-
-## Milestones
-
-| Version | Stone | Status |
-|---------|-------|--------|
-| 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
-| 0.2.0 | Translation | ✅ verified in-game |
-| 0.3.0 | Intent executor | ✅ verified in-game — tick and walking (settlers walked to market, 2026-08-10) |
-| 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored (2026-08-10) |
-| 0.5.0 | Living world (the market test) | ⬜ |
-
-See `Docs/Roadmap.md`.
-
-## Scaffold Decisions (2026-08) — the open questions, answered
-
-- **Name:** project and DLL are `TheLivingCommonwealth`; display name
-  "The Living Commonwealth". Repo slug (when published):
-  `the-living-commonwealth`. Nexus check still pending.
-- **Build system:** xmake (CommonLibF4 2.x has no CMake; its
-  `commonlibf4.plugin` rule generates the plugin contract). The core stays
-  CMake and is driven from the `lce.core` rule into `Build/core`.
-- **Dependencies:** the local `Depends/` clones (gitignored; provenance in
-  `Depends/README.md`). The vendored CommonLibF4's `RUNTIME_LATEST` is
-  **1.11.221** — the game's runtime. `Depends/spdlog` confirmed redundant
-  and unused by the build.
-- **Target:** next-gen runtime 1.11.221, Address Library required in-game.
-- **CRT:** static (`/MT(d)`) everywhere, matching the core.
-- **Logging:** through `LCE::Logging` (the contract) + `REX::LOG` (the
-  visible file, `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`).
-- **Versioning:** adapter versions independently from 0.1.0.
-- Every decision is recorded as an ADR in `Docs/DecisionLog.md`.
-
-- **First heartbeat verified in-game (2026-08-09).** F4SE 0.7.8 loads the
-  plugin (handle 1) on runtime 1.11.221; the `GameLoaded` event fires and
-  the heartbeat lands in
-  `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`.
-- **Translation stone implemented and verified in-game (2026-08-09).** On
-  GameLoaded the adapter translates every loaded settler into an entity
-  (FormRef + seeded Needs + empty Memory/Relationships) and registers the
-  serializers for the 0.4.0 snapshot. Adapter tests 3/3 green; in-game
-  log confirms: `The Commonwealth wakes up: 10 settlers became minds.`
-- **Intent executor implemented, tick verified in-game (2026-08-10).**
-  The simulation ticks inside the game: a per-frame hook on
-  `ProcessVMTick` (address library ID 2251368 — the budget-ticked
-  Papyrus VM queue F4SE itself hooks for its delay functors), two of
-  whose four call sites (`0x010E9F7E`, `0x010EA08E`) fire once per
-  frame, `Update(registry, delta)` on the game thread, then the pure
-  plan builder executes intents through the `Movement::WalkTo` seam —
-  refusing rather than teleporting. Verified in-game by per-hook fire
-  counters: the two sites fired once per frame for 12,600+ frames, and
-  9 settlers at Sanctuary logged clean `decides Explore (0.5x)` lines
-  within 88ms of the world waking. The route taught a lesson: the
-  first in-game test was misread as a dead tick (its log was
-  truncated), sending a driver-hook detour that per-hook fire counters
-  ended in one session — attribution counters are the tool. Also
-  fixed from the first run: targetless intents (Explore) were wrongly
-  refused "target not loaded" — the plan builder now treats a
-  targetless intent's target as loaded by definition (tested).
-  Adapter tests 4/4 green.
-- **Walking stone implemented, pending in-game verification
-  (2026-08-10).** The walking call is pinned against Fallout4.exe
-  1.11.221 — and the earlier assumption of a function named
-  `AIProcess::CreateMovementPlanner` was wrong: FO4's walk-to-point is
-  the movement controller's `DoSetPlannerDirectControl` (the NPC
-  subobject vtable 0x2567B68, slot [2] = 0xdc92f0, `this` =
-  controller+0x138 — RTTI chain: name → type descriptor → COL →
-  vtable → slot). `Movement::WalkTo` calls it with a runtime vtable
-  guard that refuses (never teleports) and prints the real vtable on a
-  mismatch. The market half: every mind is seeded with a Trade memory
-  pointing at the Sanctuary workshop (REFR 000250FE, verified from
-  Fallout4.esm — the record's EDID is SanctuaryWorkshopREF and its
-  position cross-checks the canonical settlement table; base 000C1AEB),
-  so hungry settlers decide `MoveTo -> 000250FE`; a per-entity walk
-  session issues each walk once while the memory lasts. MarketTest proves the decision half
-  (seeded mind → MoveTo; bare mind → Explore). Adapter tests 5/5
-  green. A distance probe (per-entity, every 5s) was added so arrival
-  is proven in the log, not by eye — and its first run found the walk
-  orders were going to settler-faction actors at settlements
-  kilometers away (Abernathy, Warwick — each matched to its own
-  workbench within meters), so the market seed is now radius-scoped
-  (~10,000 units: only minds whose settler is within walking distance
-  remember the market).
-- **The walk is the game's command system, verified in-game
-  (2026-08-10).** A live probe run proved planner + `kMove` command type
-  do NOT walk: distances stayed flat `[live]`. The missing piece is the
-  game's own "move here" — `Actor::InitiateCommandModeTravelPackage`
-  (named by the old address database and the FO4 public PDB; located in
-  1.11.221 at 0xC6BE90 by name-anchoring across address-library eras —
-  the first pin, 0xD77440, was wrong and the runtime byte check refused
-  it; see `Docs/Design/Walking.md`). `Movement::WalkTo` issues exactly
-  that call (byte-verified prologue `48 89 5C 24 18 57 41 54`) with
-  `kMove`. Verified in-game: every MoveTo issued the package and live
-  probe distances closed steadily (min 85.6→47.8, 118.1→60.9, …) —
-  settlers, traders included, walked to the Sanctuary workshop. The
-  crash blamed on this call was a corrupt save (identical signature in
-  runs without the DLL); DisableExitSave now prevents the exit-save
-  cycle that produced it.
-- **The co-save is verified in-game (0.4.0, 2026-08-10).**
-  `TLC::CoSave` (`src/CoSave.h/.cpp`) is the adapter's durable record
-  over the core's snapshot substrate: stable component names (`needs`,
-  `memory`, … — never `std::type_index`, which is process-local) and the
-  adapter's own versioning, per the core 0.4.0 contract that
-  save-compatibility is the adapter's job. F4SE callbacks in `main.cpp`:
-  `PreSaveGame → CaptureWorld → Encode → WriteRecord`; load → `Decode →
-  QueueRestore`; the load's **completion event** (`kPostLoadGame`,
-  deduped against `kGameLoaded` — real loads complete without firing
-  `kGameLoaded`) applies the restore (or starts fresh when the co-save
-  held nothing); `PreLoadGame`/`DeleteGame`/new game → Clear
-  (serializers survive). Refusals are the contract: truncated records,
-  unsupported versions, and unknown component names never half-apply.
-  CoSaveTest proves the durable round-trip and the refusal paths
-  (6/6 suites green). **Verified in-game: a save wrote 637 entities
-  (105 KB) and the load restored them (`The Commonwealth wakes up: 637
-  minds restored from the co-save`), the restored world ticking its
-  first pass.** The abort-recovery window is 60s and a completed load
-  ends the pending state immediately — see `Docs/Design/CoSave.md`.
-
-Open items for the author: the plugin author handle (TODO in `xmake.lua`),
-the F4SE-assigned serialization UID (placeholder `'LCEW'` in `CoSave.h`),
-the banner quote slots, and the Nexus name check.
+- The F4SE-assigned serialization UID — placeholder `'LCEW'` in
+  `src/CoSave.h` (`kSerializationUid`) until assigned.
+- The plugin author handle (TODO in `xmake.lua`).
+- The banner quote slots (every file's reserved line).
+- The Nexus name check before publishing.
