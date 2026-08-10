@@ -8,7 +8,6 @@ resolver). In-game verification pending: the `settlement census:` log
 line, and each settler walking to its own settlement's bench.
 **No new pins:** the workshop base form (`000C1AEB`) was already
 verified as part of the Sanctuary market pin's comment in Market.h.
-The engine's REFR form array provides the positions directly.
 
 ## Why the single market was wrong
 
@@ -20,15 +19,25 @@ problem*. Real settlements don't trade at a single workbench.
 
 ## The census
 
-`Adapter::RefreshWorkshops` calls `TESDataHandler::GetFormArray<RE::TESObjectREFR>()`
-and keeps every ref whose base form matches the vanilla workshop
-workbench (`000C1AEB`). Position comes from the ref's data record
-(`data.location`), valid even for refs in unloaded cells — one pass,
-no cells loaded, complete census.
+`Adapter::RefreshWorkshops` enumerates the worldspaces' **persistent
+cells**: `TESDataHandler::GetFormArray<RE::TESWorldSpace>()` → each
+worldspace's `persistentCell` → `ForEachReference`, keeping every ref
+whose base form matches the vanilla workshop workbench (`000C1AEB`).
+Position comes from the ref's data record (`data.location`), valid even
+for refs in unloaded cells — one pass, no cells loaded, complete
+census.
+
+Why not the flat REFR array? FO4 does not store REFRs in
+`TESDataHandler::formArrays` the way Skyrim does —
+`GetFormArray<RE::TESObjectREFR>()` is always empty in-game (verified:
+`0 REFRs probed` across retries, two world starts). Settlement
+workbenches are all *persistent* refs, and every persistent ref lives
+in its worldspace's persistent cell, which is loaded at world start —
+so the persistent-cell scan is the correct FO4-native enumeration.
 
 Static per load order, so a **non-empty** result is final (found once,
 it survives world clears). An **empty** result is not pinned: the
-census can run before the game's REFR data is fully populated, so
+census can run before the game's worldspace data is fully populated, so
 `RefreshWorkshops` retries on the seed cycle (throttled to ~every 5 s)
 while the fallback below covers the world — a false 0 would lock the
 whole session into the single-bench mode. Modded workshops that share
@@ -55,15 +64,16 @@ per-mind lambda instead of a global market entity. For each mind:
 ## Log lines
 
 ```
-settlement census: 42 REFRs probed, 42 workshops known (base 0xc1aeb) — markets are per settlement.
-settlement census: 0 REFRs probed, 0 workshops known (base 0xc1aeb) — will retry.   ← when the array isn't populated yet
-census probe: REFR 0x250fe base 0xc1aeb.   ← once per session, the diagnostic that says what the filter saw
+settlement census: 4 worldspaces, 42 workshops known (base 0xc1aeb) — markets are per settlement.
+settlement census: 4 worldspaces, 0 workshops known (base 0xc1aeb) — will retry.   ← when nothing matched yet
+census probe: world 0x3c persistent REFR 0x250fe base 0xc1aeb.   ← once per session, the diagnostic that says what the filter saw
 The market is open: every mind remembers where its own settlement trades (42 workshops).  ← seed announce
 ```
 
-A 0-result census logs the REFR count and — once — the first base forms
-actually in the array, so a miss tells us whether the array was empty
-or the workbench's real base differs from the pinned `000C1AEB`.
+A 0-result census logs the worldspace count and — once — the first
+base forms actually in the persistent cells, so a miss tells us whether
+the scan found nothing or the workbench's real base differs from the
+pinned `000C1AEB`.
 
 A settler at Tenpines shows `decides MoveTo -> 00080F7B` instead of the
 old `Decides MoveTo -> 000250FE` (000250FE is Sanctuary's form). The

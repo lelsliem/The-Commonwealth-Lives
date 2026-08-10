@@ -177,18 +177,22 @@ Goal: the real test from the contract.
     + world-turns lines; `fw 1ca7e4` forces rain) — see
     Docs/Design/WeatherFacts.md
 [✓] Per-settlement markets — every settlement's workshop is its own
-    market. A census over the REFR form array (base form 000C1AEB
-    "Workshop") finds every vanilla settlement market; each mind
-    remembers the nearest workshop within ~140 m — Sanctuary at
-    Sanctuary, Tenpines at Tenpines, a mind in the wastes knows none
-    and explores until it finds one. The legacy single-bench fallback
-    (000250FE) covers an empty census, and the census now RETRIES when
-    it finds nothing (a false 0 was locking the session into fallback;
-    the REFR array can be unpopulated when the world wakes) with a
-    one-time base-form probe diagnostic. Implemented 2026-08-10; in-game
-    verification pending (the `settlement census:` line shows the REFR
-    count and the probe shows what bases the array holds; a settler at
-    Tenpines should walk to Tenpines' bench, not Sanctuary's) — see
+    market. A census over the worldspaces' **persistent cells** (base
+    form 000C1AEB "Workshop") finds every vanilla settlement market —
+    FO4 never fills `formArrays[REFR]`, so the Skyrim-style flat-array
+    scan always read 0 in-game (the per-settlement stone was silently
+    running its fallback); every settlement workbench is a persistent
+    ref, so the persistent-cell scan is the correct FO4-native
+    enumeration. Each mind remembers the nearest workshop within
+    ~140 m — Sanctuary at Sanctuary, Tenpines at Tenpines, a mind in
+    the wastes knows none and explores until it finds one. The legacy
+    single-bench fallback (000250FE) covers an empty census, and the
+    census now RETRIES when it finds nothing (a false 0 was locking the
+    session into fallback) with a one-time base-form probe diagnostic.
+    Implemented 2026-08-10; in-game verification pending (the
+    `settlement census:` line shows the worldspace count and the probe
+    shows what bases the persistent cells hold; a settler at Tenpines
+    should walk to Tenpines' bench, not Sanctuary's) — see
     Docs/Design/SettlementMarkets.md
 [✓] Desync the herd — every mind's needs are born slightly different
     (VaryNeeds: a deterministic per-entity jitter on each need's value

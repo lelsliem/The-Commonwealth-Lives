@@ -23,12 +23,15 @@
 #include <F4SE/Impl/PCH.h>
 
 #include <RE/A/Actor.h>
+#include <RE/B/BSContainer.h>
 #include <RE/C/Calendar.h>
 #include <RE/N/NiAVObject.h>
 #include <RE/P/ProcessLists.h>
 #include <RE/S/Sky.h>
 #include <RE/T/TESDataHandler.h>
 #include <RE/T/TESForm.h>
+#include <RE/T/TESObjectCELL.h>
+#include <RE/T/TESWorldSpace.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
 #include <RE/T/TESObjectREFR.h>
 #include <RE/T/TESRace.h>
@@ -607,50 +610,67 @@ namespace TLC
             return;
         }
 
-        // One pass over the game's REFR form array: every placed ref
-        // whose base is the vanilla workshop workbench is a settlement
-        // market. Position comes from the ref's data record — valid even
-        // for refs in unloaded cells, so the census is complete without
-        // loading a single cell.
-        const auto& refs = dataHandler->GetFormArray<RE::TESObjectREFR>();
+        // FO4 does not store REFRs in the data handler's flat form
+        // array — GetFormArray<TESObjectREFR> is a Skyrim-ism that is
+        // always empty here (verified in-game: 0 REFRs across retries).
+        // Settlement workbenches are all *persistent* refs, and every
+        // persistent ref lives in its worldspace's persistent cell,
+        // which is loaded at world start — so one pass over the
+        // worldspaces' persistent cells finds every settlement market
+        // with valid positions, without loading a single cell.
+        const auto& worldspaces =
+            dataHandler->GetFormArray<RE::TESWorldSpace>();
 
-        std::size_t probed = 0;
+        std::size_t probed = 0;  // diagnostic refs logged (once)
 
-        for (const auto* ref : refs)
+        for (const auto* world : worldspaces)
         {
-            if (ref == nullptr)
+            if (world == nullptr)
             {
                 continue;
             }
 
-            const auto* base = ref->GetObjectReference();
+            auto* cell = world->persistentCell;
 
-            if (base == nullptr)
+            if (cell == nullptr)
             {
                 continue;
             }
 
-            // Diagnostic (once per session): the first bases actually in
-            // the array, so a 0-result census says what the filter saw,
-            // not just that it saw nothing — is the array empty, or is
-            // the workbench's real base different from the pinned one?
-            if (!m_CensusDiagnosed && probed < 3)
-            {
-                REX::INFO(
-                    "census probe: REFR {:#x} base {:#x}.",
-                    ref->GetFormID(), base->GetFormID());
-                ++probed;
-            }
+            cell->ForEachReference(
+                [&](RE::TESObjectREFR* a_ref)
+                {
+                    const auto* base = a_ref->GetObjectReference();
 
-            if (base->GetFormID() != kWorkshopBaseFormId)
-            {
-                continue;
-            }
+                    if (base == nullptr)
+                    {
+                        return RE::BSContainer::ForEachResult::kContinue;
+                    }
 
-            const auto pos = ref->GetPosition();
+                    // Diagnostic (once per session): the first bases in
+                    // the persistent cells, so a 0-result census says
+                    // what the filter saw, not just that it saw nothing.
+                    if (!m_CensusDiagnosed && probed < 3)
+                    {
+                        REX::INFO(
+                            "census probe: world {:#x} persistent REFR {:#x} base {:#x}.",
+                            world->GetFormID(), a_ref->GetFormID(),
+                            base->GetFormID());
+                        ++probed;
+                    }
 
-            m_Workshops.push_back(WorkshopPosition{
-                ref->GetFormID(), pos.x, pos.y });
+                    if (base->GetFormID() != kWorkshopBaseFormId)
+                    {
+                        return RE::BSContainer::ForEachResult::kContinue;
+                    }
+
+                    const auto pos = a_ref->GetPosition();
+
+                    m_Workshops.push_back(WorkshopPosition{
+                        a_ref->GetFormID(), pos.x, pos.y });
+
+                    return RE::BSContainer::ForEachResult::kContinue;
+                });
         }
 
         if (probed > 0)
@@ -667,8 +687,8 @@ namespace TLC
         }
 
         REX::INFO(
-            "settlement census: {} REFRs probed, {} workshops known (base {:#x}){}.",
-            refs.size(), m_Workshops.size(), kWorkshopBaseFormId,
+            "settlement census: {} worldspaces, {} workshops known (base {:#x}){}.",
+            worldspaces.size(), m_Workshops.size(), kWorkshopBaseFormId,
             m_Workshops.empty() ? " — will retry" : " — markets are per settlement");
     }
 
