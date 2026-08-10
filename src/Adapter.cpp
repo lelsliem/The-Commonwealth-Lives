@@ -382,13 +382,20 @@ namespace TLC
     {
         if (!m_Started)
         {
-            // Abort recovery: a PreLoadGame armed a pending load that
-            // never completed (the game's in-session load aborts ~9-12s
-            // in, every session, killing the sim). Revive the world so
-            // the simulation survives it.
+            // Abort recovery: a PreLoadGame armed a pending load. Two
+            // cases, and the window separates them:
+            //   - a REAL load is slow: a 600-actor co-save world can take
+            //     far longer than 12s to finish. The old 12s window fired
+            //     mid-load, revived a world while the game was still
+            //     loading, and that revival killed the load — every
+            //     in-game load "aborted" at exactly 12s, every session.
+            //   - a true phantom load (the pre-DisableExitSave exit-save
+            //     reload) never completes at all.
+            // The window is the patience: 60s lets real loads finish; a
+            // phantom past that is dead, and the sim revives to survive.
             if (m_AwaitingLoad
                 && std::chrono::steady_clock::now() - m_WorldEndedAt
-                    > std::chrono::seconds(12))
+                    > std::chrono::seconds(60))
             {
                 m_AwaitingLoad = false;
 
