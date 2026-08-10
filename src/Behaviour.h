@@ -19,12 +19,14 @@ namespace TLC
     // species-agnostic: Decide reasons over needs and memory, never game
     // facts. The behavior split is the adapter's, because "who can trade"
     // is game knowledge (ADR-0024: game knowledge at the edge). A junkyard
-    // dog is a mind like a settler — it just cannot buy, sell, or talk.
+    // dog is a mind like a settler — it just cannot buy, sell, or talk;
+    // a child can talk but does not run a stall.
     //-------------------------------------------------------------------------
     enum class Species
     {
-        Human,
-        Animal
+        Human,   // adult settlers — trade, talk, work
+        Child,   // can talk, cannot trade — fed by the settlement
+        Animal   // cannot trade, buy, or talk — fed by the settlement
     };
 
     //-------------------------------------------------------------------------

@@ -47,14 +47,20 @@ namespace TLC
     {
         //-------------------------------------------------------------------------
         // Species classification (ADR-0024: game knowledge at the edge). The
-        // core never knows a race; the adapter decides which minds trade and
-        // which are fed. Race FormIDs are the adapter's to verify — the
-        // project ritual: FORMID TO VERIFY IN FO4EDIT AT IMPLEMENTATION.
-        // Fallout4.esm vanilla: HumanRace 00013A47; DogRace 0001D246;
-        // BrahminRace 0002A6A4. Anything outside the animal list defaults to
-        // Human — a workshop population is usually people, and a
+        // core never knows a race; the adapter decides which minds trade,
+        // which are fed, and which are children. Race FormIDs verified in
+        // xEdit 2026-08-10 from Fallout4.esm. Anything outside the lists
+        // defaults to Human — a workshop population is usually people, and a
         // misclassified mind only behaves human until the table grows
         // (Behaviour.h).
+        //
+        // Enemies (feral ghouls, super mutants, ...) never reach this
+        // table: sim-relevance is WorkshopNPCFaction membership, and
+        // hostiles do not hold it. The wild-animal entries below are
+        // future-proofing — if a mod ever makes one a settler, it is fed,
+        // not trading. Robots and synths are deliberately absent: a synth
+        // settler is a person (Human is right); a robot is its own species
+        // for a later stone (no biological needs to seed).
         //-------------------------------------------------------------------------
         Species ClassifySpecies(const RE::TESRace* a_race)
         {
@@ -65,9 +71,38 @@ namespace TLC
 
             switch (a_race->GetFormID())
             {
-            case 0x0001D246:   // DogRace — FORMID TO VERIFY IN FO4EDIT
-            case 0x0002A6A4:   // BrahminRace — FORMID TO VERIFY IN FO4EDIT
+            // Children — they play and talk; they don't run stalls.
+            case 0x0011D83F:   // HumanChildRace
+            case 0x0011EB96:   // GhoulChildRace
+                return Species::Child;
+
+            // Animals — fed at the settlement, never bartering.
+            case 0x0001D698:   // DogmeatRace (junkyard dog)
+            case 0x0001D810:   // MoleratRace
+            case 0x0001DB4A:   // DeathclawRace
+            case 0x0002047E:   // BrahminRace (pack brahmin)
+            case 0x00023FFC:   // MirelurkRace
+            case 0x0002456D:   // BloodbugRace
+            case 0x00029463:   // BloatflyRace
+            case 0x0003578A:   // ViciousDogRace
+            case 0x0004716C:   // RadRoachRace
+            case 0x0005FBB1:   // StingwingRace
+            case 0x000636AB:   // RadScorpionRace
+            case 0x00064C60:   // MirelurkHunterRace
+            case 0x0006B4EC:   // FeralGhoulRace
+            case 0x0007ED1D:   // RadStagRace
+            case 0x00090C33:   // FEVHoundRace
+            case 0x000A0F2F:   // YaoGuaiRace
+            case 0x000A563A:   // EyeBotRace
+            case 0x000A96BF:   // FeralGhoulGlowingRace
+            case 0x000B7F91:   // MirelurkKingRace
+            case 0x000C9ACF:   // CatRace
+            case 0x000D77E3:   // VertibirdRace
+            case 0x000D9804:   // GorillaRace (settlement gorillas)
+            case 0x000E12A6:   // MirelurkQueenRace
+            case 0x00187AF9:   // RaiderDogRace
                 return Species::Animal;
+
             default:
                 break;
             }

@@ -27,19 +27,21 @@ Human — the safe default for a workshop population.
 
 **`BehaviourProfile`** (`Behaviour.h`) — the table the adapter owns:
 
-| | Human | Animal |
-|---|---|---|
-| Market interaction (`MarketKind`) | `Trade` (with a trader) | `Aid` (fed by the settlement) |
-| `CanTrade` | ✅ | ❌ — never buys or sells |
-| `CanTalk` | ✅ | ❌ — no conversation |
-| `NeedsSocial` | ✅ | ❌ — no Socialize intents |
-| `NeedsComfort` | ✅ | ❌ — no Work intents |
+| | Human | Child | Animal |
+|---|---|---|---|
+| Market interaction (`MarketKind`) | `Trade` (with a trader) | `Aid` (fed by the settlement) | `Aid` (fed by the settlement) |
+| `CanTrade` | ✅ | ❌ — no stall, no barter | ❌ — never buys or sells |
+| `CanTalk` | ✅ | ✅ — plays, chats | ❌ — no conversation |
+| `NeedsSocial` | ✅ | ✅ | ❌ — no Socialize intents |
+| `NeedsComfort` | ✅ | ✅ | ❌ — no Work intents |
 
 `BehaviourFor(Species)` returns the profile (unknown species fall back
 to Human). `SeededNeeds(Species)` seeds a fresh mind: Hunger, Fatigue,
 and Safety are universal; Social and Comfort belong only to species that
 can use them. No social drive → the core never produces a Socialize
-intent → an animal never wanders off to "talk."
+intent → an animal never wanders off to "talk." A child keeps the full
+need set — it plays, it gets tired, it wants comfort — but its market
+interaction is Aid, never Trade.
 
 ## The one deliberate lie
 
@@ -56,22 +58,44 @@ reports an Aid outcome with the settlement — fed, never bartering. The
 0.5.0 arrival leg consults `MarketKind`/`CanTrade` when it reports the
 outcome; the lie stays inside the sim and is invisible to the player.
 
-## Classification — FORMID TO VERIFY IN FO4EDIT
+## Classification — verified in xEdit (2026-08-10)
 
 `ClassifySpecies(const RE::TESRace*)` in `Adapter.cpp` reads the
-actor's race (`Actor::race`, offset 0x418) and switches on FormID:
+actor's race (`Actor::race`, offset 0x418) and switches on FormID. The
+FormIDs below were read off Fallout4.esm in xEdit — the verify ritual
+caught two wrong guesses (HumanRace is `00013746`, not `13A47`):
 
 ```cpp
-case 0x0001D246:   // DogRace     — FORMID TO VERIFY IN FO4EDIT
-case 0x0002A6A4:   // BrahminRace — FORMID TO VERIFY IN FO4EDIT
+// Children
+case 0x0011D83F:   // HumanChildRace
+case 0x0011EB96:   // GhoulChildRace
+    return Species::Child;
+
+// Animals (verified)
+case 0x0001D698:   // DogmeatRace (junkyard dog)
+case 0x0002047E:   // BrahminRace (pack brahmin)
+case 0x000C9ACF:   // CatRace
+case 0x000D9804:   // GorillaRace
+... // 24 animal races total, incl. the wild ones
     return Species::Animal;
 ```
 
 Everything else defaults to Human. The lists grow as settlement content
-grows (cats, robots, synths — each decides where it belongs). A
-misclassified mind is harmless: it only behaves human until the table
-grows, and the classification runs at translation, so a re-translate
-re-tags.
+grows; a misclassified mind is harmless (it only behaves human until
+the table grows) and a re-translate re-tags it.
+
+**Enemies never reach this table**: sim-relevance is
+`WorkshopNPCFaction` membership, and hostiles (feral ghouls, super
+mutants, deathclaws as enemies) do not hold it — they never become
+minds, so they never get market intents. The wild-animal entries are
+future-proofing: if a mod ever makes one a settler, it is fed, not
+trading.
+
+**Robots and synths are deliberately absent.** A synth settler is a
+person — Human is right. A robot (Mr. Handy, Protectron, Assaultron,
+SentryBot, turrets) is its own species for a later stone: no biological
+needs to seed, its own market rule. Noted here so the table grows
+intentionally, not by accident.
 
 ## What changed
 

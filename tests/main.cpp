@@ -205,6 +205,24 @@ namespace TLC::Tests
             return false;
         }
 
+        // A child talks but does not trade — fed by the settlement like
+        // an animal, social like a person.
+        const auto& child = BehaviourFor(Species::Child);
+
+        if (child.CanTrade || !child.CanTalk ||
+            child.MarketKind != InteractionKind::Aid ||
+            !child.NeedsSocial || !child.NeedsComfort)
+        {
+            return false;
+        }
+
+        // ...and a child is seeded with the full need set, same as an
+        // adult — it plays, it gets tired, it wants comfort.
+        if (SeededNeeds(Species::Child).List.size() != 5)
+        {
+            return false;
+        }
+
         // An animal cannot trade, buy, or talk — the market means being
         // fed (Aid), and it has no social or comfort drives to act on.
         const auto& animal = BehaviourFor(Species::Animal);

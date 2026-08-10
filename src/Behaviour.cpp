@@ -23,6 +23,14 @@ namespace TLC
             .NeedsComfort = true,
         };
 
+        static const BehaviourProfile kChild{
+            .MarketKind   = Aid,
+            .CanTrade     = false,
+            .CanTalk      = true,
+            .NeedsSocial  = true,
+            .NeedsComfort = true,
+        };
+
         static const BehaviourProfile kAnimal{
             .MarketKind   = Aid,
             .CanTrade     = false,
@@ -35,6 +43,8 @@ namespace TLC
         {
         case Species::Animal:
             return kAnimal;
+        case Species::Child:
+            return kChild;
         case Species::Human:
             break;
         }
