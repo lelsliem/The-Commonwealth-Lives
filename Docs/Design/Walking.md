@@ -1,16 +1,16 @@
 # Walking — "The Farmer Walks to Market"
 
 **Stone:** adapter 0.3.1 (after the executor, verified in-game pending)
-**Status:** Blocked on a game-side prerequisite — the walking call is
-**pinned and verified statically** (name anchors + disassembly against
-Fallout4.exe 1.11.221, described below; the first pin, 0xD77440, was
-wrong — the runtime byte check refused it in-game and disassembly
-confirmed the error), but **calling the verified function cold crashed
-the game** (heap corruption, 0xC0000409 — it needs the game's
-command-mode state, which the adapter doesn't drive). `WalkTo` now
-refuses with a logged reason; the next stone is the command sequence or
-a pathing primitive. The decision half is unit-tested (MarketTest, 5/5
-suites green).
+**Status:** In verification — the walking call is **pinned and verified
+statically** (name anchors + disassembly against Fallout4.exe 1.11.221,
+described below; the first pin, 0xD77440, was wrong — the runtime byte
+check refused it in-game and disassembly confirmed the error). The
+crashes blamed on the call were later proven to be a **corrupt save**
+(identical signature across builds where the call never executed and a
+run with the DLL removed; a stable save runs smooth), so `WalkTo` now
+issues the call — one invocation of the command-mode travel package
+(0xC6BE90) with `kMove` — and this is its real test. The decision half
+is unit-tested (MarketTest, 5/5 suites green).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026.
 The contract's guarantee this stone honors: **an intent is a hint, not a
 command — the adapter decides how to walk the settler, and may refuse.**
@@ -97,38 +97,45 @@ package (0xC6BE90, the order — sandbox cannot override it) with `kMove`;
 the function itself sets the command state, writes the destination, and
 evaluates the package.
 
-### The call crashed — the game's command state is a prerequisite
+### The crash was the save — the call is re-enabled for its real test
 
 The first in-game run with the real pin crashed the game on load
-(`CTD upon trying to load`, every run). Two pieces of evidence pin the
-cause:
+(`CTD upon trying to load`), and the initial diagnosis blamed the call:
+heap corruption (`ucrtbase.dll`, `0xC0000409` — the CRT's fail-fast) at
+a stable offset, with a theory that travel reads a global
+commander/commanded-actor pointer the game only establishes in its
+command-mode flow (`Actor::InitiateCommandMode`, 0xC6AA80), and that
+calling it cold wrote through a stale pointer.
 
-- **The plugin log stops mid-first-pass.** The plan always orders the
-  MoveTo (0001CA7D) right after the Explore lines; the log ends on the
-  last Explore with no `decides MoveTo`, no `first pass complete` — the
-  crash is inside the travel call.
-- **The crash signature is heap corruption, not a null deref.** Windows
-  Event Viewer: `ucrtbase.dll`, `0xC0000409` (STATUS_STACK_BUFFER_OVERRUN
-  — the CRT's fail-fast, raised on detected heap corruption) at the same
-  offset in both the flood crash and the load crash.
+**That attribution was wrong, and the evidence is unambiguous.** The
+identical crash signature hit:
 
-Why: the travel function reads a global commander/commanded-actor pointer
-and writes through it (`mov edx,[rbx+0x20]` / `mov [rbx+0x20],edx`),
-state the game only establishes in its command-mode flow
-(`Actor::InitiateCommandMode`, 0xC6AA80 — the twin function the dispatch
-uses before travel). Calling travel cold, without that state, wrote
-through a stale pointer and corrupted the heap.
+- builds where the travel call **never executed** (the refusal build),
+- a run with **our DLL removed entirely** (A/B test — plugin log
+  unwritten, same crash at ~150s),
+- a session with **only our plugin** loaded (survived 184s+,
+  past every crash window, no crash event),
+- a session with **zero plugins** (survived cleanly).
 
-**Decision: `WalkTo` now refuses** (with a logged reason) until the
-adapter either (a) drives the full command sequence — player command-mode
-entry with the settler as target, then travel — which needs internal
-command-target state we can't safely set, or (b) switches to a pathing
-primitive that needs no command state: compute a path with the game's
-pathing API (`BSPathingRequest` → waypoints) and feed the waypoints into
-the movement planner (`DoSetPlannerDirectControl`, 0xDC92F0) — the
-planner calls never crashed; they just lost to the sandbox package, and
-the waypoint path is the piece that was missing. Refusing is the
-contract: never crash, never teleport, and the log names the blocker.
+Every crash correlated with the **full plugin loadout**, and the user
+confirmed the root cause independently: **the save was corrupt** (the
+exit-save load-abort cycle left the world half-loaded with 610 temp
+actors). Rolling back to a stable save, the game runs smooth with our
+plugin — and the travel call itself was **never tested on a stable
+save**. The command-state prerequisite theory is unproven.
+
+**Current state: `WalkTo` issues the call** — one invocation of the
+command-mode travel package (0xC6BE90, the order — sandbox cannot
+override it) with `kMove`, byte-verified. This is the call's real test:
+if it walks on the stable save, the stone is verified; if it still
+crashes (now on a clean save), the command-state theory is real and the
+pivot is either (a) the full command sequence — command-mode entry with
+the settler as target, then travel — or (b) a pathing primitive that
+needs no command state: compute a path with the game's pathing API
+(`BSPathingRequest` → waypoints) and feed the waypoints into the
+movement planner (`DoSetPlannerDirectControl`, 0xDC92F0) — the planner
+calls never crashed; they just lost to the sandbox package, and the
+waypoint path is the piece that was missing.
 
 ### The guard
 
