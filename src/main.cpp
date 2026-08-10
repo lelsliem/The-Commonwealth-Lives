@@ -86,12 +86,29 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
             switch (a_msg->type)
             {
             case F4SE::MessagingInterface::kGameLoaded:
+                REX::INFO("lifecycle: GameLoaded — the world wakes.");
                 OnGameLoaded();
                 break;
             case F4SE::MessagingInterface::kPreLoadGame:
+                // kPreLoadGame fires only from BGSSaveLoadGame::LoadGame —
+                // a save is actually being loaded. The name tells us which
+                // one: in-game sessions showed a load firing ~10s after
+                // the world woke, with no GameLoaded following it (the
+                // sim died every run). The name is the clue to what
+                // triggers it.
+                REX::INFO(
+                    "lifecycle: PreLoadGame — loading save '{}'.",
+                    a_msg->data != nullptr
+                        ? static_cast<const char*>(a_msg->data)
+                        : "?");
                 OnPreLoadGame();
                 break;
             case F4SE::MessagingInterface::kDeleteGame:
+                REX::INFO(
+                    "lifecycle: DeleteGame — deleting save '{}'.",
+                    a_msg->data != nullptr
+                        ? static_cast<const char*>(a_msg->data)
+                        : "?");
                 OnDeleteGame();
                 break;
             default:

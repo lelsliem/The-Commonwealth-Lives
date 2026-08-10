@@ -543,11 +543,16 @@ namespace TLC
             }
 
             // Live position: prefer the 3D node (the render position —
-            // always current). Fall back to the stored position when the
-            // node is missing (some actors report no 3D — a hard skip here
-            // once silenced the probe entirely), and tag which one was
-            // used so the reading is interpretable.
+            // always current); some actors report no 3D from Get3D(), so
+            // try GetFullyLoaded3D() too, then fall back to the stored
+            // position (a hard skip once silenced the probe entirely).
+            // The reading is tagged so the source is interpretable.
             const auto* node = actor->Get3D();
+
+            if (node == nullptr)
+            {
+                node = actor->GetFullyLoaded3D();
+            }
 
             const auto from = node != nullptr
                 ? node->GetWorldTransform().translate
