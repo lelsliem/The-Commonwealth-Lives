@@ -22,6 +22,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace TLC
 {
@@ -157,6 +158,22 @@ namespace TLC
         // brings 637 entities back, but their actors load gradually —
         // still learn where to trade.
         std::chrono::steady_clock::time_point m_LastMarketSeed{};
+
+        // The animal's feeder: its owner when the game assigns one and
+        // the owner is a sim entity, else the settlement. Resolved per
+        // mind at seed time (the 0.5.0 food-source resolver).
+        LCE::Simulation::EntityId OwnerEntityFor(
+            LCE::Simulation::EntityId a_entity);
+
+        // A walk reached its food source: report the per-species outcome
+        // (Trade/Partial for a human, Aid/Success — fed, nothing in
+        // return — for a child or animal).
+        void ReportArrival(
+            LCE::Simulation::EntityId a_entity, std::uint32_t a_targetFormId);
+
+        // Which animals already got their feeder announced this world
+        // (one line per animal, cleared on EndWorld).
+        std::unordered_set<LCE::Simulation::EntityId> m_FeederLogged;
 
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;

@@ -397,6 +397,7 @@ namespace TLC
         m_Registry.Clear();
         m_Translator.Clear();
         m_LastLogged.clear();
+        m_FeederLogged.clear();
         m_Walks.clear();
         m_TickCalled = false;
         m_FirstPassLogged = false;
@@ -421,6 +422,88 @@ namespace TLC
 
         m_Registry.AddComponent<FormRef>(id, FormRef{ kMarketFormId });
         m_Translator.Add(kMarketFormId, id);
+    }
+
+    LCE::Simulation::EntityId Adapter::OwnerEntityFor(
+        LCE::Simulation::EntityId a_entity)
+    {
+        const auto formId = m_Translator.FormFor(a_entity);
+        auto* actor = RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+        if (actor == nullptr)
+        {
+            return {};
+        }
+
+        const auto* owner = actor->GetOwner();
+        LCE::Simulation::EntityId ownerEntity;
+
+        if (owner != nullptr)
+        {
+            ownerEntity = m_Translator.EntityFor(owner->GetFormID());
+        }
+
+        // One line per animal per world — the readout that proves the
+        // ownership resolution in-game (the junkyard dog's owner is
+        // likely the player, which is no entity — the dog comes home to
+        // be fed).
+        if (m_FeederLogged.insert(a_entity).second)
+        {
+            if (owner == nullptr)
+            {
+                REX::INFO(
+                    "LCE: animal {:#x} has no owner — fed by the settlement.",
+                    formId);
+            }
+            else if (ownerEntity.IsValid())
+            {
+                REX::INFO(
+                    "LCE: animal {:#x} is fed by its owner {:#x} (a settler).",
+                    formId, owner->GetFormID());
+            }
+            else
+            {
+                REX::INFO(
+                    "LCE: animal {:#x} has no sim owner ({:#x}) — fed by the settlement.",
+                    formId, owner->GetFormID());
+            }
+        }
+
+        return ownerEntity;
+    }
+
+    void Adapter::ReportArrival(
+        LCE::Simulation::EntityId a_entity, std::uint32_t a_targetFormId)
+    {
+        using namespace LCE::Simulation;
+
+        const auto tag = m_Registry.GetComponent<SpeciesTag>(a_entity);
+        const auto species = tag != nullptr ? tag->Value : Species::Human;
+
+        const auto feeder = m_Translator.EntityFor(a_targetFormId);
+
+        if (!feeder.IsValid())
+        {
+            return;   // defensive — the walk target is a translated form
+        }
+
+        const auto outcome = ArrivalOutcome(species, feeder);
+
+        ReportOutcome(m_Registry, a_entity, outcome);
+
+        if (species == Species::Human)
+        {
+            REX::INFO(
+                "LCE: settler {:#x} arrived — no trade yet (Trade, Partial).",
+                m_Translator.FormFor(a_entity));
+        }
+        else
+        {
+            REX::INFO(
+                "LCE: {} {:#x} arrived — fed, gives nothing in return (Aid, Success).",
+                species == Species::Child ? "child" : "animal",
+                m_Translator.FormFor(a_entity));
+        }
     }
 
     void Adapter::SeedMarket(bool a_announce)
@@ -448,6 +531,24 @@ namespace TLC
 
                 SeedMarketMemory(
                     m_Registry, market,
+                    [this, market](LCE::Simulation::EntityId a_entity) {
+                        // Settlers trade at the market. A child or an
+                        // animal is fed — by its owner when the game
+                        // assigns one and the owner is a sim entity, else
+                        // by the settlement (the player is no entity — a
+                        // player-owned dog comes home to be fed).
+                        const auto tag =
+                            m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                        if (tag == nullptr || tag->Value == Species::Human)
+                        {
+                            return market;
+                        }
+
+                        const auto owner = OwnerEntityFor(a_entity);
+
+                        return owner.IsValid() ? owner : market;
+                    },
                     [this, marketPos](LCE::Simulation::EntityId a_entity) {
                         const auto formId = m_Translator.FormFor(a_entity);
                         const auto* actor =
@@ -822,8 +923,9 @@ namespace TLC
             if (d < kArrivalRadius)
             {
                 session.Reached = true;
+                ReportArrival(it->first, session.Target);
                 REX::INFO(
-                    "LCE: settler {} reached the market (d = {:.1f} m).",
+                    "LCE: settler {} arrived (d = {:.1f} m).",
                     FormatHex8(actorFormId), d);
             }
             else if (now - session.LastProbe >= std::chrono::seconds(2)

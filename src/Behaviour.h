@@ -11,6 +11,7 @@
 
 #include "LCE/Simulation/Memory.h"   // InteractionKind
 #include "LCE/Simulation/Needs.h"
+#include "LCE/Simulation/Outcome.h"
 
 namespace TLC
 {
@@ -63,4 +64,17 @@ namespace TLC
     //-------------------------------------------------------------------------
     [[nodiscard]]
     LCE::Simulation::Needs SeededNeeds(Species a_species);
+
+    //-------------------------------------------------------------------------
+    // The arrival outcome (0.5.0): what reaching the food source means,
+    // per species. A human arrived at the market but traded nothing yet —
+    // Partial (the actual trade is the next stone's work). A child or an
+    // animal is fed — Aid, Success: fed, gives nothing in return. The
+    // feeder is whoever resolved as the food source (the owner, or the
+    // settlement).
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    LCE::Simulation::Outcome ArrivalOutcome(
+        Species a_species,
+        LCE::Simulation::EntityId a_feeder);
 }

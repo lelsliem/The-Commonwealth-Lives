@@ -271,7 +271,39 @@ namespace TLC::Tests
 
         const auto tag = restored.GetComponent<SpeciesTag>(dog);
 
-        return tag != nullptr && tag->Value == Species::Animal;
+        if (tag == nullptr || tag->Value != Species::Animal)
+        {
+            return false;
+        }
+
+        // The arrival outcome is per-species: a human reached the market
+        // but traded nothing (Partial); a child or animal is fed — Aid,
+        // Success, nothing given in return.
+        const auto feeder = source.CreateEntity();
+
+        const auto humanArrival = ArrivalOutcome(Species::Human, feeder);
+
+        if (humanArrival.Other != feeder
+            || humanArrival.Kind != InteractionKind::Trade
+            || humanArrival.Result != OutcomeResult::Partial)
+        {
+            return false;
+        }
+
+        const auto dogArrival = ArrivalOutcome(Species::Animal, feeder);
+
+        if (dogArrival.Other != feeder
+            || dogArrival.Kind != InteractionKind::Aid
+            || dogArrival.Result != OutcomeResult::Success)
+        {
+            return false;
+        }
+
+        const auto childArrival = ArrivalOutcome(Species::Child, feeder);
+
+        return childArrival.Other == feeder
+            && childArrival.Kind == InteractionKind::Aid
+            && childArrival.Result == OutcomeResult::Success;
     }
 
     bool SerializationTest()
@@ -791,6 +823,66 @@ namespace TLC::Tests
             SeedMarketMemory(world, stall);
 
             if (memory->Events.size() != 1)
+            {
+                return false;
+            }
+        }
+
+        // The food-source resolver: a mind remembers whoever resolves as
+        // its source, not the fallback market. The idempotent guard keys
+        // on the source, so a changed source re-seeds with the new one.
+        {
+            EntityRegistry world;
+
+            const auto human = world.CreateEntity();
+            const auto dog = world.CreateEntity();
+            const auto owner = world.CreateEntity();
+            const auto market = world.CreateEntity();
+
+            world.AddComponent<Memory>(human, Memory{});
+            world.AddComponent<Memory>(dog, Memory{});
+            world.AddComponent<FormRef>(market, FormRef{ kMarketFormId });
+
+            const auto resolve = [market, owner, dog](EntityId a_entity) {
+                return a_entity == dog ? owner : market;
+            };
+
+            SeedMarketMemory(world, market, resolve);
+
+            const auto humanMemory = world.GetComponent<Memory>(human);
+            const auto dogMemory = world.GetComponent<Memory>(dog);
+
+            if (!humanMemory || humanMemory->Events.size() != 1
+                || humanMemory->Events[0].Other != market)
+            {
+                return false;
+            }
+
+            if (!dogMemory || dogMemory->Events.size() != 1
+                || dogMemory->Events[0].Other != owner)
+            {
+                return false;
+            }
+
+            // Re-seed: the dog still targets its owner (idempotent), and
+            // a mind with no valid source (a grazer) is not seeded at all.
+            SeedMarketMemory(world, market, resolve);
+
+            if (dogMemory->Events.size() != 1)
+            {
+                return false;
+            }
+
+            const auto stray = world.CreateEntity();
+            world.AddComponent<Memory>(stray, Memory{});
+
+            const auto graze = [](EntityId) { return EntityId{}; };
+
+            SeedMarketMemory(world, market, graze);
+
+            const auto strayMemory = world.GetComponent<Memory>(stray);
+
+            if (!strayMemory || !strayMemory->Events.empty())
             {
                 return false;
             }

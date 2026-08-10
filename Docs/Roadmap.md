@@ -147,8 +147,15 @@ Goal: the real test from the contract.
     Trade) — see Docs/Design/Behaviour.md
 [ ] World facts — Remember pushes (weather, market open/closed)
 [ ] Tuning from the Configuration service
-[ ] Arrival outcomes — ReportOutcome per species (Human → Trade with
-    the trader; Animal → Aid with the settlement)
+[✓] Food sources + arrival outcomes — per-species food sources (a dog
+    is fed by its owner when the game assigns one, else the settlement;
+    humans trade at the market) resolved at seed time; on arrival,
+    ReportOutcome per species (Human → Trade, Partial — no trade yet;
+    Child/Animal → Aid, Success — fed, gives nothing in return).
+    Implemented 2026-08-10; in-game verification pending (the arrival
+    log lines + the feeder readout prove it)
 [ ] The real test: a settler goes to market because they are hungry —
-    no script
+    no script. NOTE: nothing restores needs yet, and the core's Aid kind
+    feeds Socialize, not AcquireFood — when goals are seeded, a dog's
+    hunger loop needs a Feed kind or a core mapping change (engine ask)
 [ ] Nexus name check + publish

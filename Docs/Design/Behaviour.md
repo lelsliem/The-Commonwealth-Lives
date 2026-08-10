@@ -100,21 +100,51 @@ intentionally, not by accident.
 ## What changed
 
 - `src/Behaviour.h/.cpp` — Species, BehaviourProfile, BehaviourFor,
-  SeededNeeds(Species) (moved from Components.h, which keeps FormRef
-  and gains SpeciesTag).
+  SeededNeeds(Species), ArrivalOutcome (moved from Components.h, which
+  keeps FormRef and gains SpeciesTag).
 - `src/Serialization.cpp` — SpeciesTag serializer (registered at init).
 - `src/CoSave.cpp` — `species` in the stable type-name table.
+- `src/Market.h` — SeedMarketMemory takes a per-mind food-source
+  resolver (pure, idempotent).
 - `src/Adapter.cpp` — ClassifySpecies + per-species tag/seed at
-  translation.
-- `tests/main.cpp` — BehaviourTest: both profiles, animal seeding
-  (exactly three needs, no Social/Comfort), and the SpeciesTag
-  round-trip through capture/restore.
+  translation; OwnerEntityFor (GetOwner → sim entity); the feeder
+  resolver in SeedMarket; ReportArrival on walk arrival.
+- `tests/main.cpp` — BehaviourTest: profiles, seeding, the SpeciesTag
+  round-trip, and ArrivalOutcome per species; MarketTest: resolver
+  targeting, idempotence, and the grazer (no valid source → not
+  seeded).
 
-## What the 0.5.0 arrival leg does with this
+## Food sources and arrival outcomes (0.5.0, built 2026-08-10)
 
-When a walk completes and the adapter reports the outcome
-(`ReportOutcome`, core stone 02), it consults the profile: a Human at
-the market reports `{ trader, Trade, Result }` — trust with the merchant
-scales by result; an Animal reports `{ settlement, Aid, Result }` — fed,
-disposition toward the settlement warms, no trust ledger, no barter UI.
-That leg is the rest of 0.5.0; the table it reads is this stone.
+The market is no longer everyone's food source. The seed resolves **who
+feeds this mind** per species (`SeedMarketMemory`'s per-mind resolver):
+
+| Species | Food source (the Trade-kind memory's target) | Arrival outcome |
+|---|---|---|
+| Human | The market (trader at the workshop) | `{market, Trade, Partial}` — arrived, no trade yet |
+| Child | The settlement (or its owner if the game assigns a settler one) | `{feeder, Aid, Success}` — fed, nothing in return |
+| Animal | **Its owner** (`actor->GetOwner()` → if the owner is a translated settler entity, the dog walks to its human) else the settlement — home | `{feeder, Aid, Success}` — fed, gives nothing in return |
+
+The memory kind stays Trade for every species (the engine's hunger
+branch only finds food through Trade memories — the lie, again); the
+*target* is now species-correct, and `ArrivalOutcome(Species, feeder)`
+decides what getting there means: a human reports `Trade`/`Partial`
+(got there, didn't trade — the honest result per the outcome contract),
+a child or animal reports `Aid`/`Success` — disposition toward the
+feeder warms, no trust ledger, no barter UI. The dog trusts no one's
+books; it just likes whoever feeds it.
+
+The game-side owner readout is logged once per animal per world —
+`animal 0001CA7D is fed by its owner ... (a settler)` or `has no sim
+owner ... — fed by the settlement` — the in-game proof of who feeds
+whom (the junkyard dog's owner is likely the player, which is no
+entity, so the dog comes home to be fed).
+
+## The goals wrinkle (for the real-test stone)
+
+Nothing restores needs yet, and the core's goal map feeds `AcquireFood`
+from Trade, not Aid. So today an arrival outcome is memory +
+relationship (no goals exist to serve) — the feed is real in the
+relationship, not yet in the hunger gauge. When the real test seeds
+goals, a dog's hunger loop needs either a Feed kind or a core mapping
+change — an engine ask, noted in the roadmap.

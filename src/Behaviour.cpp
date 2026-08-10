@@ -75,4 +75,31 @@ namespace TLC
 
         return needs;
     }
+
+    LCE::Simulation::Outcome ArrivalOutcome(
+        Species a_species,
+        LCE::Simulation::EntityId a_feeder)
+    {
+        using namespace LCE::Simulation;
+
+        switch (a_species)
+        {
+        case Species::Human:
+            // Arrived at the market, but no trade happened yet — the
+            // honest result per the outcome contract (got there, didn't
+            // trade = Partial). The actual trade is the next stone's work.
+            return Outcome{
+                a_feeder, InteractionKind::Trade, OutcomeResult::Partial, 1.0f };
+
+        case Species::Child:
+        case Species::Animal:
+            // Fed by the feeder — nothing given in return: disposition
+            // warms, no trust ledger, no barter.
+            return Outcome{
+                a_feeder, InteractionKind::Aid, OutcomeResult::Success, 1.0f };
+        }
+
+        return Outcome{
+            a_feeder, InteractionKind::Trade, OutcomeResult::Partial, 1.0f };
+    }
 }
