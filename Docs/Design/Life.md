@@ -35,7 +35,7 @@ parents.
 Each stone is a buildable unit with an in-game verification. They build in
 order; each one leaves the world strictly more alive.
 
-### Stone 1 — The world keeps its books (lifecycle) — IMPLEMENTED (2026-08-10)
+### Stone 1 — The world keeps its books (lifecycle) — VERIFIED IN-GAME (2026-08-10)
 
 - **Arrivals:** every loaded, sim-relevant actor that is not yet a mind
   becomes one on the tick's one-second census — new settlers, radio
@@ -51,10 +51,18 @@ order; each one leaves the world strictly more alive.
   settler faction is removed with a goodbye line. The bond-driven
   walk-out departure (the mind decides to leave) stays with Stone 2,
   where bonds define it — the bookkeeping is ready.
-- **Verify (pending in-game):** kill a settler — the death is town news
-  (a `lifecycle: settler X died` line, no ghost walks, no resurrected
-  minds on reload); arrive at a settlement — its new settlers wake as
-  minds mid-session.
+- **Verify (in-game, 2026-08-10):** a real kill books in two passes
+  (`reads dead — first pass, not booked (confirming).` then `died — the
+  world keeps its books.` a second later); the dead do not restore and
+  never ghost-walk after save/reload; mid-session arrivals wake as new
+  minds; and a fresh new game books **zero** false deaths while already-
+  dead settlers from old saves are parked and never booked. The road
+  there took three hardenings (ADR-0011): the 3D gate (streamed-in
+  actors only), two-pass confirmation (a corpse reads dead twice, an
+  artifact once), and the alive-first rule (a death is a transition — a
+  mind must have read alive before it can be booked dead; the spawn
+  burst after a big load reads the same actors dead on first sight for
+  ~2 s, and only an alive reading un-parks them).
 
 ### Stone 2 — Bonds (relationships, good and bad)
 
