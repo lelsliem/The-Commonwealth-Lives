@@ -40,9 +40,8 @@ through **0.5.0** is in and verified in-game:
   hardenings: `DeleteGame` no longer kills a running world, and the walk
   probe reads the actor's data position instead of a lying 3D transform.
 
-The only open item before live git: the **GitHub publish** — repo
-hygiene (`.gitignore` / `README` / `LICENSE` are done), first 0.5.0
-release. Nexus comes later.
+**Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
+the 0.5.0 milestone is published. Nexus comes later.
 
 ## What this is
 
