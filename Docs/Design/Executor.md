@@ -1,12 +1,12 @@
 # Intent Executor — "The Farmer Walks"
 
 **Stone:** adapter 0.3 (after translation, verified in-game)
-**Status:** In verification — the sim ticked and logged intents in-game
-with all five candidate hooks installed, but the first proof logging
-could not attribute the ticks to a specific hook, so the per-frame path
-is not yet named. The refusal fix for targetless intents is tested
-(adapter tests 4/4). Open items: the frame hook's attribution and the
-walking call (both flagged below).
+**Status:** Implemented — the tick is **verified in-game**: per-hook fire
+counters proved two of ProcessVMTick's call sites fire once per frame
+(12,600+ frames), intents log cleanly (9 settlers at Sanctuary logged
+`decides Explore`), and the refusal fix for targetless intents is tested
+(adapter tests 4/4). One open item remains: the walking call (flagged
+below).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026
 (free functions over static classes), Law 001 (simple things; compose the
 complex). The contract's guarantee this stone honors: **an intent is a
@@ -40,43 +40,40 @@ every frame (game thread)
 
 Three pieces, all inside the adapter (the core stays untouched):
 
-### 1. The tick — a frame hook (in verification)
+### 1. The tick — a frame hook (verified in-game)
 
 The plugin's own heartbeat becomes the simulation's: a **per-frame hook on
-the game's loop**, installed once at init via the library's own mechanism
+ProcessVMTick**, installed once at init via the library's own mechanism
 (`REL::THook` registered in `FHookStore`, Init'd at `PreLoad`, enabled at
 `Load`; the trampoline comes from `F4SE::Init` with
 `{ .trampoline = true }`).
 
-The candidates, pinned to 1.11.221 (mid-function call sites are not in
-the address library — the same discipline F4SE uses for its own offsets):
+The hooks: two of ProcessVMTick's four call sites (`0x010E9F7E` and
+`0x010EA08E` — verified real `call 0x010F04A0` instructions; address
+library ID 2251368, the budget-ticked Papyrus VM queue F4SE itself hooks
+for its delay functors). Pinned to 1.11.221, the same discipline F4SE
+uses for its own offsets. The once-per-frame guard collapses the pair
+into a single tick.
 
-- **`[0..3]` ProcessVMTick's four call sites** (`0x010E9F7E`, `0x010EA08E`,
-  `0x010EA24B`, `0x010EA2F6` — verified real `call 0x010F04A0`
-  instructions; address library ID 2251368, the budget-ticked Papyrus VM
-  queue F4SE itself hooks for its delay functors).
-- **`[4]` the game driver** (`0x00C30C0A` — a call inside the 5KB driver
-  `0x00C2FD12`, no direct callers, entered via function pointer, dozens
-  of internal loops, into the update function `0x00C32450`).
+**Verified in-game (2026-08-10) by per-hook fire counters.** All five
+candidates were hooked and counted: `[0]` and `[1]` (these two sites)
+climbed at exactly the tick rate for 12,600+ frames (~2 minutes) — once
+per frame; `[2]`/`[3]` never fired (event-driven VM batch processing);
+`[4]` (a call in the game's 5KB frame driver `0x00C2FD12`) fired once at
+startup then never again. The dead three were pruned; the verified pair
+remains. Intents appeared 88ms after the world woke and logged cleanly:
+`settler 0001A4D7 decides Explore (0.59)` × 9.
 
-**Where the evidence stands.** Test 1 (VM sites only): no tick lines all
-session — the four sites were thought event-driven. Test 2 (all five,
-per-hook first-fire logging): the sim ticked and all 11 settlers logged
-`decides Explore` — but the intents appeared at the same millisecond as
-hook 1's first fire, **15s after the world started**, not within a frame
-of it, and the shared counter could not attribute its ~170 ticks/s to a
-hook. So no single path is proven per-frame yet; a single-driver-hook
-build (test 3) produced no visible tick lines, but that log had no
-attribution either. The current build restores all five with **per-hook
-fire counters** (`Tick N frames; fires: [0]=… [1]=… [2]=… [3]=… [4]=…`
-every 600 ticks) — one in-game session names the per-frame path exactly,
-then dead sites are pruned.
+The route here is worth keeping as a lesson: the first in-game test was
+read as "the tick never fires" but its log was truncated (the author
+pasted right at the heartbeat), which sent the investigation down a
+driver-hook detour that per-hook fire counters then ended in one
+session. Attribution counters are the tool; first-fire lines are not.
 
 Runs on the **game thread** — zero contention, trivially debuggable (the
-contract's threading decision for 0.4.0). The once-per-frame guard
-collapses repeated calls in one frame into a single tick with `delta` =
-**real seconds** since the last tick; the sim's "per second of simulation
-time" maps to wall time for now (time-scale is a future tuning input).
+contract's threading decision for 0.4.0). `delta` = **real seconds**
+since the last tick; the sim's "per second of simulation time" maps to
+wall time for now (time-scale is a future tuning input).
 
 ### 2. The read — intents are components
 
@@ -163,7 +160,7 @@ tests/                — plan-building suites (4/4 green)
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **Implemented — `PlanBuilderTest`** (4/4 suites green): given registry intents + injected loaded/available answers, produces the right plan and the right refusals (unloaded actor, unloaded target, busy actor, and the targetless rule — an intent without a target is never refused for one) — pure, no game required. |
-| In-game (author) | **Verified 2026-08-10:** the tick runs every frame (`Tick hook 4` fired at load, then 600 frames per ~10s at 60fps); intents appear — all 11 settlers at Sanctuary logged `decides Explore`. The targetless-refusal fix makes those lines clean (`decides Explore (0.xx)`, not refused). Remaining: a `MoveTo` executes — a settler walks. The farmer's road. |
+| In-game (author) | **Verified 2026-08-10:** per-hook fire counters proved ProcessVMTick sites `[0]`/`[1]` fire once per frame (12,600+ frames); 9 settlers at Sanctuary logged clean `decides Explore (0.5x)` lines within 88ms of the world waking. Remaining: a `MoveTo` executes — a settler walks. The farmer's road. |
 
 ## The four questions
 
@@ -179,12 +176,12 @@ tests/                — plan-building suites (4/4 green)
 
 ## Decisions (resolved)
 
-1. **Tick via a frame hook** on the game's frame driver over a Papyrus
-   timer — code-only, no content files. The first in-game test disproved
-   the original target (`ProcessVMTick` is event-driven, not per-frame —
-   its four call sites never fired during idle gameplay); the driver
-   call site (`0x00C30C0A`) was verified in-game as the per-frame path
-   and the VM sites were pruned.
+1. **Tick via a frame hook** on `ProcessVMTick` over a Papyrus timer —
+   code-only, no content files. Verified in-game: two of its four call
+   sites fire once per frame; the other two are event-driven and the
+   game-driver site (a detour candidate) fired only at startup. The
+   road here taught the tool for the next verification: per-hook fire
+   counters, not first-fire lines.
 2. **Targetless intents are never refused for a target** — the first
    in-game run showed every `Explore` (no target) refused with "target
    not loaded"; the plan builder now marks a targetless intent's target

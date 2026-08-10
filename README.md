@@ -19,12 +19,12 @@ That sentence is the test plan.
 Where this project is and where it's going: `Docs/Roadmap.md`. Four
 stones are in: the heartbeat (verified in-game), the translation (settlers
 become minds — verified at Sanctuary), the snapshot substrate, and the
-intent executor — built and tested; the sim ticked in-game and all 11
-settlers at Sanctuary logged intents, but the per-frame hook is still
-being attributed (the proof logging couldn't name the path, so the
-candidates carry fire counters). Open items: the frame hook and the
-game's walking call (the movement planner). Next: the co-save, where the
-world survives a save and a load.
+intent executor — the simulation now ticks in-game every frame (verified:
+per-hook fire counters proved the ProcessVMTick hooks fire once per
+frame, and 9 settlers at Sanctuary logged clean intent lines). One open
+item: the game's walking call (the movement planner) is pending in-game
+verification — the executor refuses rather than teleport. Next: the
+co-save, where the world survives a save and a load.
 
 ## What this is
 
@@ -94,9 +94,10 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    Every frame after that, the executor ticks the simulation and logs
    intents as they change, e.g.
    `settler 0008F3A1 decides MoveTo -> 0008F3B2 (0.82)`.
-   (In verification: 11 settlers logged `decides Explore` in-game, but
-   the per-frame hook is still being attributed via fire counters —
-   see `Docs/Design/Executor.md`.)
+   ✅ Tick verified in-game 2026-08-10: per-hook fire counters proved
+   the ProcessVMTick hooks fire once per frame; 9 settlers logged
+   `decides Explore (0.5x)`. (The walking call itself is pending
+   verification — see `Docs/Design/Executor.md`.)
 
 ## Test
 

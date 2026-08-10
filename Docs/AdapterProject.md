@@ -181,7 +181,7 @@ resolves the road.
 |---------|-------|--------|
 | 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
 | 0.2.0 | Translation | ✅ verified in-game |
-| 0.3.0 | Intent executor | in verification — per-frame hook being attributed |
+| 0.3.0 | Intent executor | implemented — tick verified in-game; walking call pending |
 | 0.4.0 | Co-save | ⬜ |
 | 0.5.0 | Living world (the market test) | ⬜ |
 
@@ -215,24 +215,26 @@ See `Docs/Roadmap.md`.
   (FormRef + seeded Needs + empty Memory/Relationships) and registers the
   serializers for the 0.4.0 snapshot. Adapter tests 3/3 green; in-game
   log confirms: `The Commonwealth wakes up: 10 settlers became minds.`
-- **Intent executor in verification (2026-08-09/10).** The read, the
-  plan, and the refusal are built and tested (pure plan builder, adapter
-  tests 4/4); the sim ticked in-game and all 11 settlers at Sanctuary
-  logged `decides Explore` with five candidate hooks installed. The
-  per-frame hook is not yet attributed: the first proof logging logged
-  only each hook's first fire, and the shared counter couldn't name the
-  path (the intents appeared 15s after the world started, at the same
-  millisecond as one hook's first fire — not within a frame of it). The
-  candidates carry per-hook fire counters now (`Tick N frames; fires:
-  [0..3]=ProcessVMTick sites, [4]=driver 0x00C30C0A`); one in-game
-  session names the path, then dead sites are pruned. Also fixed from
-  the first run: targetless intents (Explore) were wrongly refused
-  "target not loaded" — the plan builder now treats a targetless
-  intent's target as loaded by definition (tested). Open items: the
-  frame hook's attribution and the walking call
-  (`AIProcess::CreateMovementPlanner`) RVA for 1.11.221 — the
-  `Movement::WalkTo` seam refuses rather than teleports — see
-  `Docs/Design/Executor.md`.
+- **Intent executor implemented, tick verified in-game (2026-08-10).**
+  The simulation ticks inside the game: a per-frame hook on
+  `ProcessVMTick` (address library ID 2251368 — the budget-ticked
+  Papyrus VM queue F4SE itself hooks for its delay functors), two of
+  whose four call sites (`0x010E9F7E`, `0x010EA08E`) fire once per
+  frame, `Update(registry, delta)` on the game thread, then the pure
+  plan builder executes intents through the `Movement::WalkTo` seam —
+  refusing rather than teleporting. Verified in-game by per-hook fire
+  counters: the two sites fired once per frame for 12,600+ frames, and
+  9 settlers at Sanctuary logged clean `decides Explore (0.5x)` lines
+  within 88ms of the world waking. The route taught a lesson: the
+  first in-game test was misread as a dead tick (its log was
+  truncated), sending a driver-hook detour that per-hook fire counters
+  ended in one session — attribution counters are the tool. Also
+  fixed from the first run: targetless intents (Explore) were wrongly
+  refused "target not loaded" — the plan builder now treats a
+  targetless intent's target as loaded by definition (tested).
+  Adapter tests 4/4 green. The one open item: the walking call
+  (`AIProcess::CreateMovementPlanner`) RVA for 1.11.221, pending
+  in-game verification — see `Docs/Design/Executor.md`.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the banner quote slots, and the Nexus name check.
