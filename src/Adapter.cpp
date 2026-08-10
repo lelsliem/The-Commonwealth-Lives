@@ -383,7 +383,7 @@ namespace TLC
         if (!m_Started)
         {
             // Abort recovery: a PreLoadGame armed a pending load that
-            // never completed (the game's exit-save reload aborts ~9s
+            // never completed (the game's in-session load aborts ~9-12s
             // in, every session, killing the sim). Revive the world so
             // the simulation survives it.
             if (m_AwaitingLoad
@@ -391,6 +391,19 @@ namespace TLC
                     > std::chrono::seconds(12))
             {
                 m_AwaitingLoad = false;
+
+                // The aborted load's co-save snapshot (if one was read
+                // before the abort) belongs to a world that never
+                // existed — discard it, or a later, unrelated GameLoaded
+                // would restore a stale world over a fresh one.
+                if (m_PendingRestore)
+                {
+                    REX::INFO(
+                        "lifecycle: the aborted load's co-save is discarded — "
+                        "the world revives fresh.");
+                    m_PendingRestore.reset();
+                }
+
                 REX::INFO("lifecycle: the pending load aborted — reviving the world.");
                 StartWorld();
                 return;
