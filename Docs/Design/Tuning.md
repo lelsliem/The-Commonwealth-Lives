@@ -27,6 +27,7 @@ sim.goal.urgency = 0.1       ; urgency gained per second (core)
 sim.trust.gain = 0.15        ; a fair trade proves reliability (core)
 sim.disposition.gain = 0.1   ; aid and company warm feelings (core)
 sim.disposition.loss = 0.25  ; wrongs and fights sour them (core)
+sim.jitter = 0.15            ; per-tick decay spread (core stone 07)
 
 sim.hunger.decay = 0.001     ; the adapter's keys share the sim.* prefix
 sim.fatigue.decay = 0.001    ; the seeded need rhythm (a few meals a day)
@@ -84,7 +85,21 @@ Tuning::ParseConfig(text) ──► LCE::Config::Configuration
 (trust/disposition gains). `m_Settings` feeds the world-facts gate
 (*"is the market closed given the tuned hours?"*) and the need rhythm:
 `StartWorld` passes `m_Settings.Rates` into `SeededNeeds` for every
-fresh mind. `sim.sale.warmth` feeds the trade stone's `RecordSale`:
+fresh mind.
+
+### The per-tick spread — `sim.jitter` (core stone 07)
+
+`sim.jitter` (default 0.15; `0` turns it off) is a **core** key — the
+engine's per-mind decay jitter (core 0.5.0 stone 07, in the engine
+repo as `90a9d33`). When the adapter passes a seeded `Rng` to `Update`,
+every entity's needs decay at `DecayRate * Derive(id).NextFloat(1 ±
+sim.jitter)` — the herd broken at the source, on top of the adapter's
+seeded `VaryNeeds` metabolism. **Not yet active in the adapter**: the
+adapter's `Update` call passes no Rng, so decay is exactly the seeded
+rate. The adapter's half — own an `Rng`, pass it to `Update`, persist
+`rng.State()` in the co-save so a restored world resumes the same
+randomness (the engine's Seeded RNG contract, stone 05) — is the
+pending wiring. `sim.sale.warmth` feeds the trade stone's `RecordSale`:
 how much a stall-keeper's disposition toward a customer warms per sale
 (default 0.1 — a sale warms like good company). `sim.meal.price` feeds
 the economy stone's `PayForMeal`: what a meal costs in caps (default 5;
