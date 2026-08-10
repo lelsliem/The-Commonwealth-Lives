@@ -1027,6 +1027,54 @@ namespace TLC::Tests
             }
         }
 
+        //-------------------------------------------------------------------------
+        // NearestWorkshop — the per-settlement rule. Pure: position +
+        // squared distance, no game types, testable.
+        //-------------------------------------------------------------------------
+        {
+            // Three workshops in a line: Sanctuary (0,0), Red Rocket
+            // (~13000,0), Abernathy (~22000,0).
+            const std::vector<WorkshopPosition> workshops{
+                { 0x000250FE, 0.0f, 0.0f },
+                { 0x000DD0D0, 13000.0f, 0.0f },
+                { 0x000DD0D1, 22000.0f, 0.0f } };
+
+            // A settler at Sanctuary's bench finds Sanctuary.
+            if (NearestWorkshop(10.0f, 10.0f, workshops, kMarketRadius)
+                != 0x000250FE)
+            {
+                return false;
+            }
+
+            // A settler at Red Rocket finds Red Rocket (closer than
+            // Sanctuary or Abernathy).
+            if (NearestWorkshop(13000.0f, 0.0f, workshops, kMarketRadius)
+                != 0x000DD0D0)
+            {
+                return false;
+            }
+
+            // A mind at Abernathy finds Abernathy.
+            if (NearestWorkshop(22100.0f, 50.0f, workshops, kMarketRadius)
+                != 0x000DD0D1)
+            {
+                return false;
+            }
+
+            // Beyond the radius from every workshop (36 km out) — none.
+            if (NearestWorkshop(36000.0f, 0.0f, workshops, kMarketRadius)
+                != 0)
+            {
+                return false;
+            }
+
+            // Empty census — no workshops.
+            if (NearestWorkshop(0.0f, 0.0f, {}, kMarketRadius) != 0)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 

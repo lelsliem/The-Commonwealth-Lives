@@ -27,6 +27,7 @@
 #include <RE/N/NiAVObject.h>
 #include <RE/P/ProcessLists.h>
 #include <RE/S/Sky.h>
+#include <RE/T/TESDataHandler.h>
 #include <RE/T/TESForm.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
 #include <RE/T/TESObjectREFR.h>
@@ -240,15 +241,6 @@ namespace TLC
         // hug the marker (4 units ≈ 6 cm never fired: walkers stood at
         // the bench outside a 6 cm circle).
         constexpr float kArrivalRadius = 200.0f;
-
-        // The market seed's radius: only settlers within walking distance
-        // of the market remember it. ~10,000 units (≈140 m) covers all of
-        // Sanctuary village and excludes the neighboring settlements —
-        // Red Rocket is ~13,000 units away, Abernathy ~22,000. The probe
-        // proved why this matters: the process lists carry settler-faction
-        // actors from kilometers away, and every one of them was issued a
-        // walk to the Sanctuary workbench.
-        constexpr float kMarketRadius = 10000.0f;
 
         // How many settlers may walk at once. The command-mode travel
         // package flags each walker as commanded; hundreds at once (the
@@ -511,24 +503,69 @@ namespace TLC
         m_Started = false;
     }
 
-    void Adapter::EnsureMarket()
+    void Adapter::EnsureWorkshop(std::uint32_t a_formId)
     {
-        // Already known — the market entity survives within one world.
-        if (m_Translator.EntityFor(kMarketFormId).IsValid())
+        // Already known — the workshop entity survives within one world.
+        if (m_Translator.EntityFor(a_formId).IsValid())
         {
             return;
         }
 
-        // The workshop form must be a loaded reference to be walked to.
-        if (RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId) == nullptr)
+        // The workshop must be a loaded reference to be walked to.
+        if (RE::TESForm::GetFormByID<RE::TESObjectREFR>(a_formId) == nullptr)
         {
             return;
         }
 
         const auto id = m_Registry.CreateEntity();
 
-        m_Registry.AddComponent<FormRef>(id, FormRef{ kMarketFormId });
-        m_Translator.Add(kMarketFormId, id);
+        m_Registry.AddComponent<FormRef>(id, FormRef{ a_formId });
+        m_Translator.Add(a_formId, id);
+    }
+
+    void Adapter::RefreshWorkshops()
+    {
+        m_Workshops.clear();
+
+        auto* dataHandler = RE::TESDataHandler::GetSingleton();
+
+        if (dataHandler == nullptr)
+        {
+            return;
+        }
+
+        // One pass over the game's REFR form array: every placed ref
+        // whose base is the vanilla workshop workbench is a settlement
+        // market. Position comes from the ref's data record — valid even
+        // for refs in unloaded cells, so the census is complete without
+        // loading a single cell. Static per load order, so this runs
+        // once and the list survives worlds.
+        for (const auto* ref : dataHandler->GetFormArray<RE::TESObjectREFR>())
+        {
+            if (ref == nullptr)
+            {
+                continue;
+            }
+
+            const auto* base = ref->GetObjectReference();
+
+            if (base == nullptr
+                || base->GetFormID() != kWorkshopBaseFormId)
+            {
+                continue;
+            }
+
+            const auto pos = ref->GetPosition();
+
+            m_Workshops.push_back(WorkshopPosition{
+                ref->GetFormID(), pos.x, pos.y });
+        }
+
+        m_WorkshopsReady = true;
+
+        REX::INFO(
+            "settlement census: {} workshops known — markets are per settlement.",
+            m_Workshops.size());
     }
 
     LCE::Simulation::EntityId Adapter::OwnerEntityFor(
@@ -637,90 +674,183 @@ namespace TLC
 
     void Adapter::SeedMarket(bool a_announce)
     {
-        EnsureMarket();
-
-        const auto market = m_Translator.EntityFor(kMarketFormId);
-
-        if (market.IsValid())
+        // The census: one scan over the REFR form array, once per world.
+        // Static per load order, so the result survives worlds.
+        if (!m_WorkshopsReady)
         {
-            const auto* marketRef =
-                RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId);
-
-            // Only minds whose settler is within walking distance of the
-            // market remember it. The probe proved why this matters: the
-            // process lists carry settler-faction actors from settlements
-            // kilometers away (Abernathy, Warwick — each standing at its
-            // own workbench), and every one of them was issued a walk to
-            // the Sanctuary bench. A settler in Sanctuary knows the
-            // Sanctuary market; a settler at Warwick doesn't walk 3 km to
-            // trade (per-settlement markets are the refinement).
-            if (marketRef != nullptr)
-            {
-                const auto marketPos = marketRef->GetPosition();
-
-                SeedMarketMemory(
-                    m_Registry, market,
-                    [this, market](LCE::Simulation::EntityId a_entity) {
-                        // Settlers trade at the market. A child or an
-                        // animal is fed — by its owner when the game
-                        // assigns one and the owner is a sim entity, else
-                        // by the settlement (the player is no entity — a
-                        // player-owned dog comes home to be fed).
-                        const auto tag =
-                            m_Registry.GetComponent<SpeciesTag>(a_entity);
-
-                        if (tag == nullptr || tag->Value == Species::Human)
-                        {
-                            return market;
-                        }
-
-                        const auto owner = OwnerEntityFor(a_entity);
-
-                        return owner.IsValid() ? owner : market;
-                    },
-                    [this, marketPos](LCE::Simulation::EntityId a_entity) {
-                        const auto formId = m_Translator.FormFor(a_entity);
-                        const auto* actor =
-                            RE::TESForm::GetFormByID<RE::Actor>(formId);
-
-                        if (actor == nullptr)
-                        {
-                            return false;
-                        }
-
-                        const auto pos = actor->GetPosition();
-                        const auto dx = pos.x - marketPos.x;
-                        const auto dy = pos.y - marketPos.y;
-
-                        return std::sqrt(dx * dx + dy * dy) < kMarketRadius;
-                    });
-            }
-
-            if (a_announce)
-            {
-                // Hour-aware since the world-facts stone: the classic line
-                // only when the market is actually open. At night the seed
-                // still plants *where* the market is (the location memory
-                // is independent of the hours gate) — the announce just
-                // tells the truth about what the world is doing now.
-                const auto hour = CurrentGameHour();
-
-                if (WorldFacts::IsMarketClosed(
-                        hour, m_Settings.MarketOpenHour, m_Settings.MarketCloseHour))
-                {
-                    REX::INFO(
-                        "The market is remembered but closed ({}): trade resumes at {:02.0f}:00.",
-                        FormatGameHour(hour), m_Settings.MarketOpenHour);
-                }
-                else
-                {
-                    REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
-                }
-            }
+            RefreshWorkshops();
         }
-        else if (a_announce)
+
+        if (m_Workshops.empty())
         {
-            REX::INFO("The market is not loaded — settlers explore until it is.");
+            // Fallback — no census (no REFRs: an interior, a bare world).
+            // A lone known market beats no market: the sim degrades to
+            // the walking stone's single-bench behavior rather than
+            // forgetting to eat.
+            EnsureWorkshop(kMarketFormId);
+
+            const auto market = m_Translator.EntityFor(kMarketFormId);
+
+            if (market.IsValid())
+            {
+                const auto* marketRef =
+                    RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId);
+
+                // Only minds whose settler is within walking distance of
+                // the market remember it (the probe proved why: the
+                // process lists carry settler-faction actors from
+                // settlements kilometers away, and every one of them was
+                // issued a walk to the Sanctuary bench).
+                if (marketRef != nullptr)
+                {
+                    const auto marketPos = marketRef->GetPosition();
+
+                    SeedMarketMemory(
+                        m_Registry, market,
+                        [this, market](LCE::Simulation::EntityId a_entity) {
+                            // Settlers trade at the market. A child or an
+                            // animal is fed — by its owner when the game
+                            // assigns one and the owner is a sim entity,
+                            // else by the settlement.
+                            const auto tag =
+                                m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                            if (tag == nullptr
+                                || tag->Value == Species::Human)
+                            {
+                                return market;
+                            }
+
+                            const auto owner = OwnerEntityFor(a_entity);
+
+                            return owner.IsValid() ? owner : market;
+                        },
+                        [this, marketPos](LCE::Simulation::EntityId a_entity) {
+                            const auto formId = m_Translator.FormFor(a_entity);
+                            const auto* actor =
+                                RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+                            if (actor == nullptr)
+                            {
+                                return false;
+                            }
+
+                            const auto pos = actor->GetPosition();
+                            const auto dx = pos.x - marketPos.x;
+                            const auto dy = pos.y - marketPos.y;
+
+                            return std::sqrt(dx * dx + dy * dy) < kMarketRadius;
+                        });
+
+                    if (a_announce)
+                    {
+                        const auto hour = CurrentGameHour();
+
+                        if (WorldFacts::IsMarketClosed(
+                                hour, m_Settings.MarketOpenHour,
+                                m_Settings.MarketCloseHour))
+                        {
+                            REX::INFO(
+                                "The market is remembered but closed ({}): trade resumes at {:02.0f}:00.",
+                                FormatGameHour(hour), m_Settings.MarketOpenHour);
+                        }
+                        else
+                        {
+                            REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
+                        }
+                    }
+                }
+            }
+            else if (a_announce)
+            {
+                REX::INFO("The market is not loaded — settlers explore until it is.");
+            }
+
+            return;
+        }
+
+        // Per-settlement markets: every workshop is a market entity, and
+        // every mind remembers its own — the nearest workshop within
+        // range of where it stands. A settler in Sanctuary knows the
+        // Sanctuary bench; a settler at Warwick knows Warwick's; a mind
+        // in the wastes knows none and explores until it finds one.
+        for (const auto& workshop : m_Workshops)
+        {
+            EnsureWorkshop(workshop.FormId);
+        }
+
+        SeedMarketMemory(
+            m_Registry, {},
+            [this](LCE::Simulation::EntityId a_entity) {
+                // Where is this mind? Its actor must be loaded to know —
+                // restored minds load gradually, and the periodic seed
+                // catches them a second later.
+                const auto formId = m_Translator.FormFor(a_entity);
+                const auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+                if (actor == nullptr)
+                {
+                    return LCE::Simulation::EntityId{};
+                }
+
+                const auto pos = actor->GetPosition();
+                const auto nearest = NearestWorkshop(
+                    pos.x, pos.y, m_Workshops, kMarketRadius);
+
+                if (nearest == 0)
+                {
+                    return LCE::Simulation::EntityId{};   // in the wastes
+                }
+
+                const auto market = m_Translator.EntityFor(nearest);
+
+                if (!market.IsValid())
+                {
+                    return LCE::Simulation::EntityId{};
+                }
+
+                // Settlers trade at their settlement's market. A child or
+                // an animal is fed — by its owner when the game assigns
+                // one and the owner is a sim entity, else by the
+                // settlement (the player is no entity — a player-owned
+                // dog comes home to be fed).
+                const auto tag =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                if (tag == nullptr || tag->Value == Species::Human)
+                {
+                    return market;
+                }
+
+                const auto owner = OwnerEntityFor(a_entity);
+
+                return owner.IsValid() ? owner : market;
+            });
+
+        if (a_announce)
+        {
+            // Hour-aware since the world-facts stone: the classic line
+            // only when the market is actually open. At night the seed
+            // still plants *where* the market is (the location memory is
+            // independent of the hours gate) — the announce just tells
+            // the truth about what the world is doing now.
+            const auto hour = CurrentGameHour();
+
+            if (WorldFacts::IsMarketClosed(
+                    hour, m_Settings.MarketOpenHour,
+                    m_Settings.MarketCloseHour))
+            {
+                REX::INFO(
+                    "The market is remembered but closed ({}): trade resumes at {:02.0f}:00.",
+                    FormatGameHour(hour), m_Settings.MarketOpenHour);
+            }
+            else
+            {
+                REX::INFO(
+                    "The market is open: every mind remembers where its own settlement trades ({} workshops).",
+                    m_Workshops.size());
+            }
         }
     }
 

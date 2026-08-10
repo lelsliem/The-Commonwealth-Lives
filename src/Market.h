@@ -15,6 +15,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <vector>
 
 namespace TLC
 {
@@ -24,20 +25,88 @@ namespace TLC
     // adapter's job is to make sure a mind knows where to trade, so a
     // hungry settler can decide MoveTo -> market instead of Explore.
     //
-    // One constant, one seed — both free of game types, both testable.
+    // One census, one seed — both free of game types, both testable.
     //-------------------------------------------------------------------------
 
-    // The Sanctuary workshop — the settlement's market for the walking
-    // stone. kMarketFormId is the placed reference 000250FE
-    // ("SanctuaryWorkshopREF"; its base is the vanilla WorkshopWorkbench
-    // "Workshop", 000C1AEB). It must be the REFR, not the base form:
-    // walking needs a placed object with a position. Pinned by scanning
-    // Fallout4.esm — the record's EDID is SanctuaryWorkshopREF and its
-    // DATA position (−79048, 89587, far NW — the northernmost workshop)
-    // cross-checks the canonical settlement table. The runtime
-    // loaded-guard keeps a wrong pin harmless. A per-location lookup
-    // becomes the refinement after this stone proves the road.
+    // The vanilla workshop workbench base form (FURN "Workshop",
+    // 000C1AEB) — every standard settlement's workshop REFR is based on
+    // it. The settlement census (Adapter::RefreshWorkshops) scans the
+    // game's REFR form array for placed refs of this base; each one is a
+    // settlement's market. Verified 2026-08-10 (the Sanctuary market
+    // pin's base form, cross-checked against the canonical settlement
+    // table). Modded workshops sharing the base join the census;
+    // custom-base workshops (Vault 88, the Mechanist's lair) are missed
+    // and documented — their settlers explore until the nearest standard
+    // market is remembered.
+    inline constexpr std::uint32_t kWorkshopBaseFormId = 0x000C1AEBu;
+
+    // The legacy market pin — the Sanctuary workshop REFR (000250FE).
+    // With the settlement census live, the Sanctuary bench is just one
+    // workshop among many, found by base form like the rest; this
+    // constant remains only as the fallback when the census finds
+    // nothing (no REFRs loaded — an interior, a bare world): a lone
+    // known market beats no market, and the sim degrades to the walking
+    // stone's behavior rather than forgetting to eat.
     inline constexpr std::uint32_t kMarketFormId = 0x000250FEu;
+
+    // The market seed's radius: a mind only remembers a market within
+    // walking distance of where it stands. ~10,000 units (≈140 m) covers
+    // a settlement and excludes the neighbors — Red Rocket is ~13,000
+    // units from Sanctuary, Abernathy ~22,000. The probe proved why this
+    // matters: the process lists carry settler-faction actors from
+    // settlements kilometers away, and every one of them was issued a
+    // walk to the Sanctuary workbench.
+    inline constexpr float kMarketRadius = 10000.0f;
+
+    //-------------------------------------------------------------------------
+    // WorkshopPosition
+    //
+    // One settlement's market, as the pure seed sees it: a placed
+    // workshop REFR's form and its world position. The census (the
+    // edge, in Adapter.cpp) fills these from the game; the seed reasons
+    // over them without touching the game again.
+    //-------------------------------------------------------------------------
+    struct WorkshopPosition
+    {
+        std::uint32_t FormId;
+        float X;
+        float Y;
+    };
+
+    //-------------------------------------------------------------------------
+    // NearestWorkshop
+    //
+    // The settlement a mind belongs to, spatially: the nearest workshop
+    // within a_maxDistance of (a_x, a_y), or 0 when none is in range
+    // (in the wastes — no market to remember, and a hungry mind
+    // explores until it finds one). Squared distances, no sqrt. Pure:
+    // this is the whole "which settlement" rule, testable without the
+    // game.
+    //-------------------------------------------------------------------------
+    inline std::uint32_t NearestWorkshop(
+        float a_x, float a_y,
+        const std::vector<WorkshopPosition>& a_workshops,
+        float a_maxDistance) noexcept
+    {
+        const auto maxSq = a_maxDistance * a_maxDistance;
+        float bestSq = maxSq;
+        std::uint32_t best = 0;
+
+        for (const auto& workshop : a_workshops)
+        {
+            const auto dx = workshop.X - a_x;
+            const auto dy = workshop.Y - a_y;
+            const auto distSq = dx * dx + dy * dy;
+
+            if (distSq < bestSq)
+            {
+                bestSq = distSq;
+                best = workshop.FormId;
+            }
+        }
+
+        return best;
+    }
 
     //-------------------------------------------------------------------------
     // Seeds every mind's memory with its food source — the market by

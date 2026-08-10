@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, weather memory events**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, weather memory events, per-settlement markets**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -191,7 +191,13 @@ all live). Adapter progress:
    yesterday's fade, the day-turn logs. The engine grew the `Weather*`
    kinds (append-only, save-safe). Re-derived at the edge — never
    co-save state. See Docs/Design/WeatherFacts.md.
-6. **Nexus name check + publish.**
+6. ✅ **Per-settlement markets** (implemented 2026-08-10, in-game
+   verification pending) — a one-time census of the REFR form array
+   (base `000C1AEB`) finds every settlement market; each mind remembers
+   the nearest within ~140 m instead of one global Sanctuary bench. The
+   legacy single-bench fallback survives a bare census. No new pins.
+   See Docs/Design/SettlementMarkets.md.
+7. **Nexus name check + publish.**
 
 ---
 

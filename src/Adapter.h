@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Executor.h"
+#include "Market.h"
 #include "Translator.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
@@ -134,16 +135,28 @@ namespace TLC
         LCE::Simulation::SimulationTuning m_CoreTuning;
         Tuning::AdapterSettings m_Settings;
 
-        // The market: the workshop form becomes the market entity when it
-        // is loaded, so every mind can remember where to trade.
-        void EnsureMarket();
+        // The settlement census (per-settlement markets, 0.5.x): one
+        // pass over the game's REFR form array, keeping every placed ref
+        // whose base is the vanilla workshop workbench (000C1AEB). Each
+        // is a settlement's market, with a world position the seed can
+        // reason over. Static per load order, so the scan runs once (on
+        // the first seed) and the list survives worlds.
+        void RefreshWorkshops();
 
-        // The market is open: EnsureMarket, then every nearby mind
-        // remembers where to trade. Runs on every world start — fresh
-        // translations and co-save restores alike, because the seed is a
-        // fading memory event and a saved mind may have forgotten it.
-        // a_announce logs the "market is open" line; the tick's periodic
-        // refresh passes false (idempotent, silent).
+        // A workshop form becomes a market entity (a FormRef only — a
+        // target, never a mind), so minds can remember it as where to
+        // trade and the walk can resolve its position. Idempotent per
+        // form; the census calls it for every known workshop, and the
+        // legacy pin path calls it for the fallback market.
+        void EnsureWorkshop(std::uint32_t a_formId);
+
+        // The market is open: the census, then every mind remembers where
+        // its own settlement trades — the nearest workshop within range
+        // of where it stands, not a single global bench. Runs on every
+        // world start — fresh translations and co-save restores alike,
+        // because the seed is a fading memory event and a saved mind may
+        // have forgotten it. a_announce logs the "market is open" line;
+        // the tick's periodic refresh passes false (idempotent, silent).
         void SeedMarket(bool a_announce);
 
         // Rebuilds the world from a co-save snapshot: Restore the registry
@@ -155,6 +168,11 @@ namespace TLC
         LCE::Simulation::EntityRegistry m_Registry;
         Translator m_Translator;
         bool m_Started = false;
+
+        // The census result: every known settlement market, by form and
+        // world position. m_WorkshopsReady guards the one-time scan.
+        std::vector<WorkshopPosition> m_Workshops;
+        bool m_WorkshopsReady = false;
 
         // First-pass instrumentation (the walking stone's verification):
         // one-time lines that prove the tick hook fires and that a full
