@@ -146,9 +146,9 @@ namespace TLC
             case WeatherKind::Overcast:
                 return "overcast";
             case WeatherKind::Rain:
-                return "rain";
+                return "rainy";
             case WeatherKind::Fog:
-                return "fog";
+                return "foggy";
             case WeatherKind::Misty:
                 return "misty";
             case WeatherKind::Radstorm:

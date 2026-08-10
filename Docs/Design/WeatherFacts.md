@@ -86,8 +86,8 @@ day forgets the morning's rain and remembers only what the sky is now.
 ## The lines the player reads
 
 ```
-world fact: the world turns — day 12 begins with a clear sky.
-world fact: the sky turns rain (day 12) — the day's weather is remembered.
+world fact: the world turns — day 12 begins, the sky clear.
+world fact: the sky turns rainy (day 12) — the day's weather is remembered.
 world fact: the sky is unclassified — no weather memory.   (interiors etc.)
 ```
 

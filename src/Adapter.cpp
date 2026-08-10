@@ -824,7 +824,7 @@ namespace TLC
             m_WeatherSeen = 0;
 
             REX::INFO(
-                "world fact: the world turns — day {} begins with a {} sky.",
+                "world fact: the world turns — day {} begins, the sky {}.",
                 day, WorldFacts::WeatherLabel(weather));
         }
         else if (weather != m_Weather)

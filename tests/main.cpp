@@ -1206,7 +1206,8 @@ namespace TLC::Tests
         }
 
         // WeatherLabel — the player-facing word.
-        if (std::string_view(WeatherLabel(WeatherKind::Rain)) != "rain"
+        if (std::string_view(WeatherLabel(WeatherKind::Rain)) != "rainy"
+            || std::string_view(WeatherLabel(WeatherKind::Fog)) != "foggy"
             || std::string_view(WeatherLabel(WeatherKind::Radstorm)) != "a radstorm"
             || std::string_view(WeatherLabel(WeatherKind::Unknown)) != "unclassified")
         {
