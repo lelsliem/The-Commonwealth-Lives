@@ -355,6 +355,17 @@ namespace TLC
             std::uint32_t, std::chrono::steady_clock::time_point>
             m_PendingDeaths;
 
+        // Seen-alive (Stone 1 hardening, round two): form ids that have
+        // read ALIVE at least once since seeding. A death is a transition
+        // — alive, then dead — so a mind must be seen alive before it can
+        // be booked dead. The spawn burst after a big load reads certain
+        // actors dead on their very FIRST sighting for ~2s (deterministic:
+        // the same two persistent Sanctuary settlers every time, three
+        // builds in a row), and a corpse or artifact that was never seen
+        // alive must never book. Parked forever until the actor reads
+        // alive; cleared on EndWorld.
+        std::unordered_set<std::uint32_t> m_SeenAlive;
+
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
 

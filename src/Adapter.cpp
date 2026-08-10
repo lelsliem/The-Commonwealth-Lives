@@ -664,6 +664,10 @@ namespace TLC
         // dead. Stream-in artifacts read dead once — cleared the moment
         // the actor reads alive or leaves the lists. Real corpses stay
         // dead for minutes; two passes a second apart never miss one.
+        // The seen-alive rule rides along: an actor that has never read
+        // alive cannot die (a death is a transition) — the spawn burst
+        // after a big load reads the same actors dead on first sight for
+        // ~2s, and only an alive reading un-parks them.
         std::unordered_set<std::uint32_t> deadThisPass;
 
         for (const auto& scan : scans)
@@ -671,6 +675,10 @@ namespace TLC
             if (scan.Dead)
             {
                 deadThisPass.insert(scan.FormId);
+            }
+            else
+            {
+                m_SeenAlive.insert(scan.FormId);
             }
         }
 
@@ -715,6 +723,23 @@ namespace TLC
                 break;
             }
             case Lifecycle::EventKind::Death:
+                if (!m_SeenAlive.contains(event.FormId))
+                {
+                    // Never read alive — the spawn-burst artifact (or a
+                    // corpse that was already gone before the world
+                    // woke). A death is a transition; this is not one.
+                    // Parked forever, cleared the moment the actor reads
+                    // alive; never booked.
+                    m_PendingDeaths[event.FormId] =
+                        std::chrono::steady_clock::now();
+
+                    REX::DEBUG(
+                        "lifecycle: settler {:#x} reads dead before ever "
+                        "being seen alive — parked, never booked.",
+                        event.FormId);
+                    break;
+                }
+
                 if (m_PendingDeaths.contains(event.FormId))
                 {
                     // Second consecutive dead read — the death is real.
@@ -853,6 +878,7 @@ namespace TLC
         m_StallKeepers.clear();
         m_Walks.clear();
         m_PendingDeaths.clear();
+        m_SeenAlive.clear();
         m_TickCalled = false;
         m_FirstPassLogged = false;
         m_Started = false;
