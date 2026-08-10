@@ -1,0 +1,127 @@
+# The Real Test — "The Settler Goes to Market"
+
+**Stone:** adapter 0.5.0 (the contract's real test)
+**Status:** ⬜ **DESIGNED 2026-08-10 — not built.** The previous build
+(food sources + arrival outcomes, `909fd6e`) is in the user's hands for
+verification; this document is the next stone's plan so the design is
+settled before the build.
+**Related:** core 0.3.0 (Decide), 0.4.0 (snapshot), 0.5.0 stones 01–02
+(tuning, ReportOutcome), ADR-0024 (adapters translate, don't simulate).
+
+The contract's guarantee, in one sentence: **a settler goes to market
+because they are hungry — no script.** The walk exists. The arrival
+exists. What does not exist yet is the *loop*: nothing ever makes the
+settler not-hungry, so the trip never pays off.
+
+---
+
+## The loop we are closing
+
+```
+hunger decays ──▶ Decide says MoveTo → market ──▶ the adapter walks the settler
+        ▲                                                    │
+        │                                                    ▼
+  hunger restored ◀── the settler arrives and is fed ◀── arrival outcome
+```
+
+Today every leg of that loop exists except the bottom-right corner:
+needs decay, Decide produces MoveTo, the walk happens, the arrival
+reports an outcome (memory + relationship) — and then **hunger stays at
+zero and the settler walks again, forever**. The sim has no notion of
+eating. This stone adds it, and the observable test is the cycle itself:
+a settler who is hungry walks to the market, comes back fed, is not
+hungry, and only goes again when hunger rebuilds — no script fired.
+
+## What already exists (verified or built)
+
+- **Needs decay** — the tick (core). Hunger at 0.0f → most urgent.
+- **Decide → MoveTo** — the core reads the *most urgent need* and, if the
+  mind remembers a food source (Trade-kind memory), targets it. (Note:
+  `Decide` reads needs directly — goals are not consulted. The roadmap's
+  "needs decay → *goal urgency* grows → MoveTo" is ahead of the code;
+  goals today only matter to `ReportOutcome`'s goal-service.)
+- **The walk** — the pinned travel package, verified.
+- **Arrival outcomes** — `ArrivalOutcome(Species, feeder)`:
+  Human → `{market, Trade, Partial}`; Child/Animal → `{feeder, Aid,
+  Success}` ("fed, gives nothing in return"). Built, unverified.
+- **Food sources** — the per-species resolver (owner else settlement).
+
+## The one missing piece: the sim never eats
+
+No code path restores a need. `Update` only decays; `ReportOutcome`
+records memory and adjusts relationships (and serves goals, if any
+exist — none are seeded). The trip therefore never satisfies hunger.
+
+## The design (the two halves)
+
+### 1. The adapter's write-through: arrival feeds (adapter-owned)
+
+On a successful arrival, the adapter restores the hunger need of the
+arriving mind — the walk's payoff. This is the documented translation
+rule in action ("a settler's `Hunger` ↔ an ActorValue write through
+`RE::Actor`"; components ↔ game data at the edge): *the dog ate* is a
+game fact, reported by the adapter, not simulated by the core. Concretely:
+after `ReportArrival`, find the `Needs` component's `Hunger` entry and
+set it back toward 1.0 (full). Nothing to do for goals yet — the outcome
+already records the memory and the relationship.
+
+Game knowledge at the edge, sim law in the core — this stays honest with
+the boundary. The alternative (the core restoring needs on goal service)
+is sim meaning, not game fact, and is noted as an engine option below.
+
+### 2. Goal seeding (adapter-owned) + the Feed-kind question (engine ask)
+
+For the outcome's goal-service to mean anything, minds need goals.
+Seed `Goals{ AcquireFood }` at translation, per species (animals:
+AcquireFood only; humans: AcquireFood — Prosper/Socialize later). Now a
+Trade Success clears the human's AcquireFood ambition (core map:
+Trade → AcquireFood), a Partial halves it — the ambition is genuinely
+served.
+
+**The animal gap:** the core's goal map feeds `AcquireFood` from Trade,
+not Aid. A dog reported `Aid, Success` has its memory and disposition
+grow, but its AcquireFood goal is untouched. Three ways to close it —
+**decision point**:
+
+- **(a) Engine: a `Feed` kind** (or map `Aid` → serves `AcquireFood`).
+  Cleanest semantics — the sim understands "fed". Requires the engine
+  tab (a small core change + its own stone).
+- **(b) Adapter reports Trade-kind for animals.** The memory says Trade
+  anyway (the lie); the outcome would grow *trust* with the feeder —
+  "the dog trusts its human to feed it", defensible, zero core work. But
+  it stains the "no trust ledger" property the species split promised.
+- **(c) Leave goals unseeded for animals.** The dog's feed stays
+  memory + disposition; its hunger is restored by the write-through; it
+  has no ambition to serve. Simplest, and the dog's loop still closes
+  observably (hungry → walk → fed → not hungry).
+
+Recommendation: **(a) for the engine, (c) as the adapter's immediate
+path** — the adapter ships the closed loop with the write-through and
+no animal goals; the engine adds `Feed` when it can, and the adapter
+then switches the animal's outcome kind and seeds its goal.
+
+## What is NOT in this stone
+
+- **World facts** (weather, market open/closed) and **tuning from
+  Configuration** are separate roadmap items, already designed by the
+  core handoff. The real test does not need them.
+- **The actual trade interaction** (barter UI, caps) — the human's
+  arrival stays `Partial` ("arrived, no trade yet") until a later stone
+  makes trading real.
+
+## Verification (when built)
+
+The log tells the loop:
+
+```
+settler 0001CA7D decides MoveTo -> 000250FE (0.16)      ← hungry
+walk probe ... min closing ...                          ← walking
+settler 0001CA7D arrived — no trade yet (Trade, Partial) ← human arrival
+settler 0001CA7D fed: Hunger 0.00 -> 1.00               ← THE new line: the trip paid off
+settler 0001CA7D decides Explore (0.04)                 ← not hungry — no walk
+```
+
+The no-script proof: the same settler, watched over minutes, cycles
+hungry → market → fed → idle, driven entirely by the need value — and
+the moment the write-through is removed, the cycle collapses back to
+walk-forever. That contrast *is* the test.

@@ -155,7 +155,9 @@ Goal: the real test from the contract.
     Implemented 2026-08-10; in-game verification pending (the arrival
     log lines + the feeder readout prove it)
 [ ] The real test: a settler goes to market because they are hungry —
-    no script. NOTE: nothing restores needs yet, and the core's Aid kind
-    feeds Socialize, not AcquireFood — when goals are seeded, a dog's
-    hunger loop needs a Feed kind or a core mapping change (engine ask)
+    no script. DESIGNED (Docs/Design/RealTest.md) — the missing piece is
+    the write-through: arrival restores the hunger need, closing the
+    loop. Seed goals per species; the animal gap (Aid doesn't serve
+    AcquireFood) is a decision point — engine Feed kind vs adapter-side
+    path. Not built until the current build verifies.
 [ ] Nexus name check + publish
