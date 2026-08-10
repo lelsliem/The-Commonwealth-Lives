@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **species split, arrival outcomes, real test, world facts all implemented**; real test verified in-game (hungry settler walks, gets fed, stops); tuning + Nexus publish pending |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -157,22 +157,32 @@ The core has shipped everything the adapter needs (see the canonical
 handoff — tuning stone 01, outcome channel stone 02, seeded RNG stone 05
 all live). Adapter progress:
 
-1. ✅ **World facts** (implemented 2026-08-10, in-game verification
-   pending) — the market's trading hours gate the hungry walk (a
-   remembered `{ invalid, Trade }` fact makes Decide explore; the
-   refresh pattern keeps the door shut at night with no flicker) and a
-   radstorm shuts the gatherings (`{ invalid, Social }`; weather forms
-   TO-VERIFY, table inert until pinned). See Docs/Design/WorldFacts.md.
-2. ⬜ **Tuning from Configuration** — core stone 01. Feed a user-editable
-   text file to `SimulationTuning::FromConfiguration(config)`; the
-   adapter's own keys (the market hours, `WorldFacts.h`) ride in the
-   same file.
+1. ✅ **World facts** (verified in-game 2026-08-10 — the settlers stopped
+   their market walks around 22:00 and only the dog and a couple of
+   stragglers stayed visible) — the market's trading hours gate the
+   hungry walk (a remembered `{ invalid, Trade }` fact makes Decide
+   explore; the refresh pattern keeps the door shut at night with no
+   flicker) and a radstorm shuts the gatherings (`{ invalid, Social }`;
+   weather forms TO-VERIFY, table inert until pinned). See
+   Docs/Design/WorldFacts.md.
+2. ✅ **Tuning from Configuration** (implemented 2026-08-10, in-game
+   verification pending) — one text file next to the DLL
+   (`Data\F4SE\Plugins\TheLivingCommonwealth.ini`): the `sim.*` keys
+   feed `SimulationTuning::FromConfiguration`; the adapter's own keys
+   (`market.open.hour` / `market.close.hour`) ride in the same file and
+   drive the world-facts hours gate. Missing/broken lines keep defaults.
+   See Docs/Design/Tuning.md.
 3. ✅ **Arrival outcomes + the real test** (verified in-game 2026-08-10)
    — walks report per species: Human → `{ market, Trade, Partial }` (no
    trade yet), Child/Animal → `{ feeder, Aid, Success }` (fed, gives
    nothing in return); the hunger write-through closes the loop (fed:
    Hunger X -> 1.00; the fed dog decided Rest, not MoveTo, 6 ms later;
    19 feeds across the session).
+4. ✅ **Migration** (implemented 2026-08-10) — old saves load forward:
+   `Decode` accepts version ≤ current (a pre-species save restores with
+   no tag → Human) and skips unknown component names (a removed type is
+   dropped, never fatal); a newer version is refused. Pinned by
+   CoSaveTest's crafted fixtures.
 4. **The real test:** a settler goes to market because they are hungry —
    no script. Needs decay → goal urgency → `MoveTo` → the executor walks
    them (all proven pieces; this stone assembles them).

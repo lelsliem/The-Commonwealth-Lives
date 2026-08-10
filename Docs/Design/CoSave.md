@@ -140,10 +140,29 @@ Two fixes, layered:
 
 ## Migration
 
-The seam is the `kRecordVersion` switch in `Decode`. Version 1 is the
-first; when the schema changes, `Decode` gains a case that translates old
-records into the current shape instead of refusing them. Old saves load
-forward; nothing is dropped silently.
+**IMPLEMENTED 2026-08-10.** The record is self-describing — every
+component rides under its stable name — so most schema changes need no
+byte translation at all, and the seam is two small rules in `Decode`:
+
+1. **`version > kRecordVersion` refuses** (a future format is not ours
+   to guess — never half-apply); **`version <= kRecordVersion` loads.**
+   An older record simply decodes without the components the newer build
+   added, and the safe default applies (a pre-`species` save restores
+   minds with no tag, which reads as Human).
+2. **A component name this build does not know is skipped and dropped**
+   — a type a later build removed. Its bytes are consumed (the record
+   stays aligned) and the entity keeps everything else. This is how a
+   breaking *removal* migrates.
+
+The first real change in the wild was additive — `species` (the
+species/behaviour stone) — which is why the version never bumped and old
+saves kept loading: the format didn't change, the contents did. The
+version bumps only on a change to the record *format* itself.
+
+**Tested:** CoSaveTest crafts a v0 record (no `species`, plus a `legacy`
+component) → decodes, drops `legacy`, restores with the tag absent; a v2
+record → refused; the round-trip record with a `needs` name patched to
+unknown → decodes with exactly that one component dropped.
 
 ## Files
 
@@ -160,5 +179,5 @@ tests/main.cpp    — CoSaveTest (6/6 suites green)
 
 | Where | Proves |
 |-------|--------|
-| Adapter tests (on every build) | **CoSaveTest** — the full durable round-trip (world → snapshot → record → bytes → back → restore, stable names literally in the bytes), plus the refusal paths (truncated, unsupported version, unknown component name all refuse). |
+| Adapter tests (on every build) | **CoSaveTest** — the full durable round-trip (world → snapshot → record → bytes → back → restore, stable names literally in the bytes), plus the refusal paths (truncated, newer version) and the migration paths (older version loads forward; a removed component is skipped and dropped). |
 | In-game (author) | ✅ **Verified 2026-08-10**: save during play → `co-save: writing N entities (M bytes)`; load that save → `co-save: read N entities — the world will be restored on load` then `The Commonwealth wakes up: N minds restored from the co-save` — the load's completion event (`kPostLoadGame`; `kGameLoaded` alone does not fire for real loads, which is why the completion event is the trigger) applies the restore, and the settlers resume where they left off. |

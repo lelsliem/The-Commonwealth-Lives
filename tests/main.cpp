@@ -5,12 +5,14 @@
 //=============================================================================//
 
 #include "Behaviour.h"
+#include "BlobCodec.h"
 #include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
 #include "Market.h"
 #include "Serialization.h"
 #include "Translator.h"
+#include "Tuning.h"
 #include "WorldFacts.h"
 
 #include "LCE/Simulation/Behaviour.h"
@@ -38,6 +40,7 @@ namespace TLC::Tests
     bool PlanBuilderTest();
     bool MarketTest();
     bool WorldFactsTest();
+    bool TuningTest();
 }
 
 namespace
@@ -75,6 +78,7 @@ int main()
     Run("PlanBuilderTest", TLC::Tests::PlanBuilderTest);
     Run("MarketTest", TLC::Tests::MarketTest);
     Run("WorldFactsTest", TLC::Tests::WorldFactsTest);
+    Run("TuningTest", TLC::Tests::TuningTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -628,9 +632,13 @@ namespace TLC::Tests
         }
 
         {
+            // Migration (0.4.0): a component this build no longer knows —
+            // a type a later build removed — is skipped and dropped; the
+            // entity keeps everything else. The old behavior refused the
+            // whole record; the migration promise is that old saves load
+            // forward. Replace the first "needs" name with an unknown one.
             auto unknownName = record;
 
-            // Replace the first "needs" name with an unknown name.
             for (std::size_t i = 0; i + 5 <= unknownName.size(); ++i)
             {
                 bool match = true;
@@ -654,9 +662,95 @@ namespace TLC::Tests
                 }
             }
 
+            RegistrySnapshot migrated;
+
+            if (!TLC::CoSave::Decode(unknownName, migrated))
+            {
+                return false;
+            }
+
+            // Exactly one component (the patched Needs) was dropped: the
+            // round-trip snapshot carries 7 named components (farmer's
+            // six + merchant's FormRef); 6 survive.
+            std::size_t total = 0;
+
+            for (const auto& entity : migrated.Entities)
+            {
+                total += entity.Components.size();
+            }
+
+            if (total != 6)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // Migration, the real seam: an old record (version 0, from before
+        // `species` existed) loads forward — the missing component is
+        // simply absent and the safe default applies (a mind without a
+        // SpeciesTag reads as Human). A removed component type ("legacy")
+        // is skipped, not fatal. A newer record (version 2) is refused:
+        // a future format is not ours to guess.
+        //-------------------------------------------------------------------------
+        {
+            TLC::Codec::Writer writer;
+
+            writer.U32(0);                     // record version 0 (older)
+            writer.U32(0);                     // core snapshot version
+            writer.U32(1);                     // one entity
+
+            writer.U64(EntityId{ 7 }.Value());
+            writer.U32(2);                     // two components
+
+            constexpr std::string_view formName = "formref";
+            writer.U8(static_cast<std::uint8_t>(formName.size()));
+            writer.Raw(formName.data(), formName.size());
+            writer.U32(4);
+            writer.U32(0x00012345u);
+
+            constexpr std::string_view legacyName = "legacy";   // removed type
+            writer.U8(static_cast<std::uint8_t>(legacyName.size()));
+            writer.Raw(legacyName.data(), legacyName.size());
+            writer.U32(4);
+            writer.U32(0xDEADBEEFu);
+
+            RegistrySnapshot decoded;
+
+            if (!TLC::CoSave::Decode(writer.Bytes, decoded)
+                || decoded.Entities.size() != 1
+                || decoded.Entities[0].Components.size() != 1)
+            {
+                return false;   // legacy dropped, formref kept
+            }
+
+            EntityRegistry restored;
+            RegisterAllSerializers(restored);
+            restored.Restore(decoded);
+
+            const auto form = restored.GetComponent<FormRef>(EntityId{ 7 });
+
+            if (!form || form->FormId != 0x00012345u)
+            {
+                return false;
+            }
+
+            if (restored.GetComponent<SpeciesTag>(EntityId{ 7 }))
+            {
+                return false;   // a pre-species save has no tag — Human
+            }
+        }
+
+        {
+            TLC::Codec::Writer writer;
+
+            writer.U32(2);   // newer than this build — refuse, never half-apply
+            writer.U32(0);
+            writer.U32(0);
+
             RegistrySnapshot bad;
 
-            if (TLC::CoSave::Decode(unknownName, bad))
+            if (TLC::CoSave::Decode(writer.Bytes, bad))
             {
                 return false;
             }
@@ -1061,6 +1155,73 @@ namespace TLC::Tests
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    bool TuningTest()
+    {
+        //-------------------------------------------------------------------------
+        // ParseConfig — the config file's text becomes the core's
+        // Configuration service. One `key = value` per line; `;` and `#`
+        // comments, blanks, and CRLF all survive; surrounding whitespace
+        // is trimmed; malformed lines are skipped, never fatal.
+        //-------------------------------------------------------------------------
+        const auto config = Tuning::ParseConfig(
+            "; The Living Commonwealth tuning\r\n"
+            "# another comment\r\n"
+            "\r\n"
+            "sim.memory.fade = 0.25\r\n"
+            "market.open.hour = 9\r\n"
+            "market.close.hour=21\r\n"
+            "   padded.key   =   spaced   \r\n"
+            "malformed line without equals\r\n"
+            "= orphan value\r\n");
+
+        if (!config.Has("sim.memory.fade")
+            || config.Get("sim.memory.fade") != "0.25"
+            || !config.Has("market.open.hour")
+            || config.Get("market.open.hour") != "9"
+            || !config.Has("market.close.hour")
+            || config.Get("market.close.hour") != "21"
+            || !config.Has("padded.key")
+            || config.Get("padded.key") != "spaced"
+            || config.Has("malformed line without equals")
+            || config.Has("= orphan value"))
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // AdapterSettingsFrom — the adapter's own keys (market hours)
+        // override the defaults; missing keys and broken values keep them
+        // (a broken line must never break the world).
+        //-------------------------------------------------------------------------
+        const auto settings = Tuning::AdapterSettingsFrom(config);
+
+        if (settings.MarketOpenHour != 9.0f
+            || settings.MarketCloseHour != 21.0f)
+        {
+            return false;
+        }
+
+        const auto defaults = Tuning::AdapterSettingsFrom(
+            LCE::Config::Configuration{});
+
+        if (defaults.MarketOpenHour != WorldFacts::kMarketOpenHour
+            || defaults.MarketCloseHour != WorldFacts::kMarketCloseHour)
+        {
+            return false;
+        }
+
+        const auto broken = Tuning::ParseConfig(
+            "market.open.hour = not-a-number\n");
+        const auto brokenSettings = Tuning::AdapterSettingsFrom(broken);
+
+        if (brokenSettings.MarketOpenHour != WorldFacts::kMarketOpenHour)
+        {
+            return false;
         }
 
         return true;

@@ -36,7 +36,13 @@ namespace TLC::CoSave
     inline constexpr std::uint32_t kRecordType      = 0x4C434557;   // 'LCEW'
 
     // The adapter's record schema version. Bumped only on a breaking
-    // change; old versions are migrated forward on load, never dropped.
+    // change to the record *format* (the header, the per-entity layout).
+    // Additive schema changes — a new component type, like `species` —
+    // never bump: the format is self-describing (each component is
+    // stored under its stable name), so an old record simply decodes
+    // without the new component and the safe default applies (a missing
+    // SpeciesTag reads as Human). Older versions are migrated forward on
+    // load, never dropped.
     inline constexpr std::uint32_t kRecordVersion = 1;
 
     // Encodes a registry snapshot as the durable record bytes: stable
@@ -47,10 +53,13 @@ namespace TLC::CoSave
         const LCE::Simulation::RegistrySnapshot& a_snapshot);
 
     // Decodes record bytes back into a snapshot. Returns false — the load
-    // is refused, never half-applied — when the record version is
-    // unsupported, a component name is unknown (a component type the
-    // adapter no longer knows, or a corrupted record), or the bytes are
-    // truncated.
+    // is refused, never half-applied — when the record version is newer
+    // than this build (a future format is not ours to guess), or the
+    // bytes are truncated. Older versions load forward: a component name
+    // this build does not know (a type a later build removed) is skipped
+    // and dropped — the entity keeps everything else — which is how a
+    // breaking removal migrates. The migration is invisible because the
+    // format is self-describing; the version gate is the only seam.
     bool Decode(
         const std::vector<std::byte>& a_record,
         LCE::Simulation::RegistrySnapshot& a_out);

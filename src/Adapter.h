@@ -11,10 +11,12 @@
 
 #include "Executor.h"
 #include "Translator.h"
+#include "Tuning.h"
 #include "WorldFacts.h"
 
 #include "LCE/Simulation/EntityRegistry.h"
 #include "LCE/Simulation/RegistrySnapshot.h"
+#include "LCE/Simulation/Simulation.h"
 
 #include <chrono>
 #include <cstdint>
@@ -122,6 +124,15 @@ namespace TLC
             LCE::Simulation::EntityId a_entity,
             std::string a_message,
             const LogKey& a_key);
+
+        // Tuning (0.5.0): one text file next to the DLL (the core's
+        // Configuration service + the adapter's own keys — market hours).
+        // Loaded once, before any world; the file is the modder's knob,
+        // never written by the plugin.
+        void LoadConfiguration();
+
+        LCE::Simulation::SimulationTuning m_CoreTuning;
+        Tuning::AdapterSettings m_Settings;
 
         // The market: the workshop form becomes the market entity when it
         // is loaded, so every mind can remember where to trade.

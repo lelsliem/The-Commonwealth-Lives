@@ -12,6 +12,7 @@
 #include "Behaviour.h"
 #include "Components.h"
 #include "Market.h"
+#include "Tuning.h"
 #include "WorldFacts.h"
 #include "Movement.h"
 #include "Serialization.h"
@@ -43,7 +44,19 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <string>
+
+// Windows.h LAST: its macros (min/max, MEM_*, ...) collide with
+// commonlibf4's tokens (REX::W32::MEM_RELEASE, std::numeric_limits::max)
+// if it is included before them. NOMINMAX alone is not enough — the
+// MEM_* collisions are the reason for the ordering.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>   // GetModuleHandleExW/GetModuleFileNameW (config path)
 
 namespace TLC
 {
@@ -268,6 +281,13 @@ namespace TLC
         }
 
         //-------------------------------------------------------------------------
+        // The config file's anchor: its own code address locates this
+        // module (the DLL) so the INI is found next to it, regardless of
+        // how F4SE loaded us. A free function — a member function pointer
+        // cannot cast to LPCWSTR.
+        void ModuleAnchor() {}
+
+        //-------------------------------------------------------------------------
         // The game clock, read once at the edge (the world-facts stone).
         // Sky::currentGameHour is the running hour 0–24 the game itself
         // shows in the HUD clock. Formatted as HH:MM for the log lines
@@ -295,6 +315,61 @@ namespace TLC
         // Once, before any world exists; survives Clear() so Restore (the
         // co-save stone) always has its serializers.
         RegisterAllSerializers(m_Registry);
+
+        // The modder's knob (0.5.0): the config file next to the DLL.
+        // Loaded once, before the first world; missing file or broken
+        // lines keep the defaults (the core's rule: a broken line must
+        // never break the world).
+        LoadConfiguration();
+    }
+
+    void Adapter::LoadConfiguration()
+    {
+        // The file lives next to the DLL — Data\F4SE\Plugins\
+        // TheLivingCommonwealth.ini. Located via the module's own path so
+        // it works regardless of how F4SE loaded us.
+        wchar_t modulePath[MAX_PATH]{};
+        HMODULE module = nullptr;
+
+        if (!GetModuleHandleExW(
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                reinterpret_cast<LPCWSTR>(&ModuleAnchor),
+                &module)
+            || GetModuleFileNameW(module, modulePath, MAX_PATH) == 0)
+        {
+            REX::WARN("tuning: could not locate the plugin module — defaults.");
+            return;
+        }
+
+        std::filesystem::path ini{ modulePath };
+        ini.replace_extension(".ini");
+
+        std::error_code error;
+
+        if (!std::filesystem::exists(ini, error))
+        {
+            REX::INFO(
+                "tuning: no config file ({} expected) — defaults. "
+                "Create it to change the sim's feel.",
+                ini.string());
+            return;
+        }
+
+        std::ifstream stream(ini);
+        std::stringstream buffer;
+        buffer << stream.rdbuf();
+
+        const auto config = Tuning::ParseConfig(buffer.str());
+
+        m_CoreTuning =
+            LCE::Simulation::SimulationTuning::FromConfiguration(config);
+        m_Settings = Tuning::AdapterSettingsFrom(config);
+
+        REX::INFO(
+            "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00.",
+            ini.string(),
+            m_Settings.MarketOpenHour,
+            m_Settings.MarketCloseHour);
     }
 
     void Adapter::GameLoaded()
@@ -520,7 +595,7 @@ namespace TLC
 
         const auto outcome = ArrivalOutcome(species, feeder);
 
-        ReportOutcome(m_Registry, a_entity, outcome);
+        ReportOutcome(m_Registry, a_entity, outcome, m_CoreTuning);
 
         const auto formId = m_Translator.FormFor(a_entity);
         const auto* label = species == Species::Human
@@ -629,11 +704,12 @@ namespace TLC
                 // tells the truth about what the world is doing now.
                 const auto hour = CurrentGameHour();
 
-                if (WorldFacts::IsMarketClosed(hour, WorldFacts::kMarketOpenHour, WorldFacts::kMarketCloseHour))
+                if (WorldFacts::IsMarketClosed(
+                        hour, m_Settings.MarketOpenHour, m_Settings.MarketCloseHour))
                 {
                     REX::INFO(
                         "The market is remembered but closed ({}): trade resumes at {:02.0f}:00.",
-                        FormatGameHour(hour), WorldFacts::kMarketOpenHour);
+                        FormatGameHour(hour), m_Settings.MarketOpenHour);
                 }
                 else
                 {
@@ -675,8 +751,8 @@ namespace TLC
         using namespace LCE::Simulation;
 
         const auto hour = CurrentGameHour();
-        const bool closed =
-            WorldFacts::IsMarketClosed(hour, WorldFacts::kMarketOpenHour, WorldFacts::kMarketCloseHour);
+        const bool closed = WorldFacts::IsMarketClosed(
+            hour, m_Settings.MarketOpenHour, m_Settings.MarketCloseHour);
 
         const auto* sky = RE::Sky::GetSingleton();
         const bool radstorm =
@@ -693,7 +769,7 @@ namespace TLC
             {
                 REX::INFO(
                     "world fact: the market is closed ({}) — trade unavailable until {:02.0f}:00.",
-                    FormatGameHour(hour), WorldFacts::kMarketOpenHour);
+                    FormatGameHour(hour), m_Settings.MarketOpenHour);
             }
             else
             {
@@ -812,8 +888,9 @@ namespace TLC
         }
 
         // The core's stateless tick: needs decay, memory fade, goal
-        // urgency, then one Intent per mind. All of it on the game thread.
-        Update(m_Registry, a_deltaSeconds);
+        // urgency, then one Intent per mind. All of it on the game thread,
+        // with the modder's tuning (the config file) when present.
+        Update(m_Registry, a_deltaSeconds, m_CoreTuning);
 
         // The read + the table. "Already acting" is a future refinement —
         // every loaded settler is available for now.

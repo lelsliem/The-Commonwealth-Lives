@@ -139,9 +139,9 @@ namespace TLC::CoSave
             return false;
         }
 
-        if (reader.U32() != kRecordVersion)
+        if (reader.U32() > kRecordVersion)
         {
-            return false;   // unsupported — future versions migrate forward
+            return false;   // a newer format is not ours to guess — refuse
         }
 
         a_out.Version = reader.U32();
@@ -183,11 +183,6 @@ namespace TLC::CoSave
 
                 const auto type = TypeForName(name);
 
-                if (type == typeid(void))
-                {
-                    return false;   // unknown component — refuse the record
-                }
-
                 if (reader.Remaining() < 4)
                 {
                     return false;
@@ -201,6 +196,16 @@ namespace TLC::CoSave
                 }
 
                 auto data = reader.Raw(dataLength);
+
+                if (type == typeid(void))
+                {
+                    // A component this build no longer knows — a removed
+                    // type from an older record (migration, 0.4.0). Its
+                    // bytes are consumed and dropped; the entity keeps
+                    // everything else. A newer record never reaches here:
+                    // the version gate above refuses it.
+                    continue;
+                }
 
                 entity.Components.push_back(
                     SnapshotComponent{ type, std::move(data) });

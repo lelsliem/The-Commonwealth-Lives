@@ -127,8 +127,16 @@ ticking its first pass.
     Restore (applied on the load's completion event — kPostLoadGame,
     deduped against kGameLoaded); PreLoadGame/DeleteGame/new game →
     Clear (serializers survive)
-[ ] Migration — old saves load forward (the version seam is in
-    CoSave::Decode; the first schema change exercises it)
+[✓] Migration — old saves load forward. The record is
+    self-describing (each component under its stable name), so the seam
+    is two rules in Decode: version > current refuses (a future format
+    is not ours to guess), version ≤ current loads — an older record
+    decodes without the components a newer build added, and the safe
+    default applies (a pre-species save restores minds with no tag →
+    Human); a component name this build does not know (a removed type)
+    is skipped and dropped, never fatal. The first real change in the
+    wild was additive (species) — no bump needed. Implemented
+    2026-08-10, pinned by CoSaveTest's crafted v0/v2 fixtures
 
 ═══════════════════════════════════════════════
 
@@ -156,7 +164,15 @@ Goal: the real test from the contract.
     when it reopens. Implemented 2026-08-10; in-game verification
     pending (the transition lines + settlers stopping at night) — see
     Docs/Design/WorldFacts.md
-[ ] Tuning from the Configuration service
+[✓] Tuning from the Configuration service — one text file next to the
+    DLL (Data\F4SE\Plugins\TheLivingCommonwealth.ini): the sim.* keys
+    feed SimulationTuning::FromConfiguration (memory fade, drift, trust,
+    ...); the adapter's own keys (market.open.hour / market.close.hour)
+    ride in the same file, replacing the WorldFacts.h constants as the
+    hours gate's source. Missing/broken lines keep defaults — a broken
+    line never breaks the world. Implemented 2026-08-10; in-game
+    verification pending (the `tuning: loaded` line + an hours override
+    actually moving when settlers stop) — see Docs/Design/Tuning.md
 [✓] Food sources + arrival outcomes — per-species food sources (a dog
     is fed by its owner when the game assigns one, else the settlement;
     humans trade at the market) resolved at seed time; on arrival,
