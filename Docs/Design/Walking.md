@@ -1,14 +1,16 @@
 # Walking — "The Farmer Walks to Market"
 
 **Stone:** adapter 0.3.1 (after the executor, verified in-game pending)
-**Status:** Implemented — the walking call is **pinned and verified
-statically** (name anchors + disassembly against Fallout4.exe 1.11.221,
-described below; the first pin, 0xD77440, was wrong — the runtime byte
-check refused it in-game and disassembly confirmed the error); the
-decision half is unit-tested (MarketTest, 5/5 suites green); the walk
-itself is **pending in-game verification** — the same discipline as the
-tick stone: a runtime byte check guards the call, and one log line tells
-the truth.
+**Status:** Blocked on a game-side prerequisite — the walking call is
+**pinned and verified statically** (name anchors + disassembly against
+Fallout4.exe 1.11.221, described below; the first pin, 0xD77440, was
+wrong — the runtime byte check refused it in-game and disassembly
+confirmed the error), but **calling the verified function cold crashed
+the game** (heap corruption, 0xC0000409 — it needs the game's
+command-mode state, which the adapter doesn't drive). `WalkTo` now
+refuses with a logged reason; the next stone is the command sequence or
+a pathing primitive. The decision half is unit-tested (MarketTest, 5/5
+suites green).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026.
 The contract's guarantee this stone honors: **an intent is a hint, not a
 command — the adapter decides how to walk the settler, and may refuse.**
@@ -90,24 +92,52 @@ the game's own "make this actor walk to that refr".
   calls it on the **settler**, with the market refr and `kMove` — the same
   shape the game uses when the player sends someone somewhere.
 
-So `WalkTo` is now exactly one call: the command-mode travel package
-(0xC6BE90, the order — sandbox cannot override it) with `kMove`; the
-function itself sets the command state, writes the destination, and
-evaluates the package. The earlier hand-rolled planner + `SetCommandType`
-steps are gone — the travel package does all of it internally.
+So `WalkTo`'s intended call is exactly one: the command-mode travel
+package (0xC6BE90, the order — sandbox cannot override it) with `kMove`;
+the function itself sets the command state, writes the destination, and
+evaluates the package.
 
-Not in CommonLibF4, not in the current address library — pinned here with
-a byte check against the user's exe, the same discipline F4SE uses for
-its offsets.
+### The call crashed — the game's command state is a prerequisite
+
+The first in-game run with the real pin crashed the game on load
+(`CTD upon trying to load`, every run). Two pieces of evidence pin the
+cause:
+
+- **The plugin log stops mid-first-pass.** The plan always orders the
+  MoveTo (0001CA7D) right after the Explore lines; the log ends on the
+  last Explore with no `decides MoveTo`, no `first pass complete` — the
+  crash is inside the travel call.
+- **The crash signature is heap corruption, not a null deref.** Windows
+  Event Viewer: `ucrtbase.dll`, `0xC0000409` (STATUS_STACK_BUFFER_OVERRUN
+  — the CRT's fail-fast, raised on detected heap corruption) at the same
+  offset in both the flood crash and the load crash.
+
+Why: the travel function reads a global commander/commanded-actor pointer
+and writes through it (`mov edx,[rbx+0x20]` / `mov [rbx+0x20],edx`),
+state the game only establishes in its command-mode flow
+(`Actor::InitiateCommandMode`, 0xC6AA80 — the twin function the dispatch
+uses before travel). Calling travel cold, without that state, wrote
+through a stale pointer and corrupted the heap.
+
+**Decision: `WalkTo` now refuses** (with a logged reason) until the
+adapter either (a) drives the full command sequence — player command-mode
+entry with the settler as target, then travel — which needs internal
+command-target state we can't safely set, or (b) switches to a pathing
+primitive that needs no command state: compute a path with the game's
+pathing API (`BSPathingRequest` → waypoints) and feed the waypoints into
+the movement planner (`DoSetPlannerDirectControl`, 0xDC92F0) — the
+planner calls never crashed; they just lost to the sandbox package, and
+the waypoint path is the piece that was missing. Refusing is the
+contract: never crash, never teleport, and the log names the blocker.
 
 ### The guard
 
 `WalkTo` byte-verifies the pinned travel package (prologue
 `48 89 5C 24 18 57 41 54` — `mov [rsp+0x18],rbx; push rdi; push r12`)
-against the pinned value at runtime before calling. A wrong pin → refuse
-(never teleport) + an ERROR line printing the truth, so a layout surprise
-is diagnosed in one in-game session (the tick stone's lesson:
-attribution, not assumption).
+against the pinned value at runtime before refusing, so the refusal is
+grounded in the real exe. A wrong pin → refuse (never teleport) + an
+ERROR line printing the truth, so a layout surprise is diagnosed in one
+in-game session (the tick stone's lesson: attribution, not assumption).
 
 ### The walk session
 
@@ -185,7 +215,7 @@ tests/               — MarketTest (5/5 suites green): seeded mind decides
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **MarketTest** — a hungry settler seeded with the market memory decides `MoveTo` after `Update`; the same mind without it explores. The decision half of the farmer's road. |
-| In-game (author) | Pending: deploy the DLL, load Sanctuary, stay in the game ~30s, paste the tail. Only nearby minds get the market memory (radius-scoped: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected: `LCE: WalkTo — command-mode travel package issued` then `walk probe settler X -> 000250FE d = ... m (min ... m) [live]` lines as the settler moves (≥1 m of progress, 2s apart) with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. Closing d → the travel package drives the walk; **silence after the first probe line** → the package didn't take (next: the commanded-actor state on the player, or `PlayerCharacter::EvaluateAndSetCommandTypeForTarget`). Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. **The game's exit-save reload kills the sim**: a PreLoadGame fires ~0.1s after the world wakes (loading the Exitsave left by the previous quit) and aborts ~9s later without a GameLoaded — EndWorld runs and the sim stays dead, which read as "nobody walks". The adapter now revives the world when a pending load never completes (`lifecycle: the pending load aborted — reviving the world.` ~12s after PreLoadGame), and every GameLoaded rebuilds fresh. **The revival world after an abort can seed 600+ settler-faction actors** (the aborted load's temp actors), all within the market radius — a flood of walks. The executor caps concurrent walks (16) and a refused walk now erases its session (the old reset left a zombie session that ProbeWalks logged as an instant "ended" every frame — the flood that preceded the crash). Failure modes are logged: `market not loaded`, the pin-mismatch ERROR, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
+| In-game (author) | Pending: deploy the DLL, load Sanctuary, stay in the game ~30s, paste the tail. Only nearby minds get the market memory (radius-scoped: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected (once a safe walk mechanism is in): `LCE: WalkTo — command-mode travel package issued` then `walk probe settler X -> 000250FE d = ... m (min ... m) [live]` lines as the settler moves (≥1 m of progress, 2s apart) with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. **Current state: `WalkTo` refuses by design** — the travel call crashed the game (heap corruption, 0xC0000409) because it needs the game's command-mode state; the next stone is the command sequence or the pathing waypoint approach (see above). Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. **The game's exit-save reload kills the sim**: a PreLoadGame fires ~0.1s after the world wakes (loading the Exitsave left by the previous quit) and aborts ~9s later without a GameLoaded — EndWorld runs and the sim stays dead, which read as "nobody walks". The adapter now revives the world when a pending load never completes (`lifecycle: the pending load aborted — reviving the world.` ~12s after PreLoadGame), and every GameLoaded rebuilds fresh. **The revival world after an abort can seed 600+ settler-faction actors** (the aborted load's temp actors), all within the market radius — a flood of walks. The executor caps concurrent walks (16) and a refused walk now erases its session (the old reset left a zombie session that ProbeWalks logged as an instant "ended" every frame — the flood that preceded the crash). Failure modes are logged: `market not loaded`, the pin-mismatch ERROR, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
 
 ## Decisions (resolved)
 

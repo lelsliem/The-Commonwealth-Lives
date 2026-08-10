@@ -57,9 +57,12 @@ namespace
     // Not wrapped in CommonLibF4 nor present in the current address
     // library — pinned here with a byte check against Fallout4.exe
     // 1.11.221. A wrong pin refuses (never teleports) and logs the truth.
+    //
+    // IMPORTANT — the call is currently REFUSED (see WalkTo): invoking the
+    // function cold, without the game's command-mode state, crashed the
+    // game. The pin is kept as the verified, ready-to-use entry for the
+    // next mechanism (the command sequence or the pathing primitive).
     constexpr std::uintptr_t kTravelPackageRva = 0xC6BE90;   // Actor::InitiateCommandModeTravelPackage
-
-    using InitiateTravelFn = void (*)(RE::Actor* a_actor, RE::TESObjectREFR* a_target, RE::COMMAND_TYPE a_type);
 
     // The first eight bytes in 1.11.221: mov [rsp+0x18],rbx; push rdi;
     // push r12.
@@ -90,8 +93,8 @@ namespace TLC::Movement
             return false;
         }
 
-        // Byte-verify the pin before use: a wrong pin (runtime changed,
-        // address library mismatch) must refuse, never crash.
+        // Byte-verify the pin so this refusal is grounded in the real
+        // exe — a wrong pin would mean the whole analysis is off.
         if (!Matches(kTravelPackageRva, kTravelPrologue))
         {
             REX::ERROR(
@@ -101,19 +104,22 @@ namespace TLC::Movement
             return false;
         }
 
-        // The order: the command-mode travel package — the game's real
-        // "move here" (kMove), which outranks the sandbox package. The
-        // function does the rest itself: the destination, the command
-        // state, and the package evaluation.
-        const auto initiateTravel = *reinterpret_cast<InitiateTravelFn*>(
+        // The travel package is the game's real "move here" — pinned and
+        // byte-verified — but it assumes the command state the game sets
+        // up in its command-mode flow (InitiateCommandMode): it reads a
+        // global commander/commanded-actor pointer and writes through it.
+        // Calling it cold, without that state, wrote through a stale
+        // pointer and corrupted the heap — the game fail-fasted
+        // (0xC0000409 in ucrtbase, the CRT's heap-corruption abort) on the
+        // first MoveTo, every run. Until the adapter either drives the
+        // full command sequence (command-mode entry → travel) or switches
+        // to a pathing primitive that needs no command state (BSPathing
+        // waypoints into the movement planner — which never crashed),
+        // WalkTo refuses: never crash, never teleport.
+        REX::ERROR(
+            "LCE: WalkTo refused — travel package needs the game's command "
+            "state (not yet driven); pin verified at {:#x}; intent dropped.",
             REL::Offset{ kTravelPackageRva }.address());
-
-        initiateTravel(a_actor, a_target, RE::COMMAND_TYPE::kMove);
-
-        REX::DEBUG(
-            "LCE: WalkTo — command-mode travel package issued for target {:#010x}.",
-            a_target->GetFormID());
-
-        return true;
+        return false;
     }
 }
