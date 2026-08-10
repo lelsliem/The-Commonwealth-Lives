@@ -14,7 +14,8 @@ of the conversation that built it.
 
 **Design docs in this repo** (`Docs/Design/`): `Translation.md` (form ↔
 entity), `Executor.md` (the tick + intent executor), `Walking.md` (the
-walk), `CoSave.md` (the co-save record — v3), `Behaviour.md` (the
+walk), `CoSave.md` (the co-save record — v4; v3's stall section
+still rides), `Behaviour.md` (the
 species split), `Market.h`'s sibling `SettlementMarkets.md` (the census
 + per-settlement markets), `Trade.md` (the stall-keeper trade),
 `Economy.md` (cap pouches), `Tuning.md` (the INI), `WorldFacts.md`
@@ -52,7 +53,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3)**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4 — the weather-day stamps now survive save/load)**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -80,7 +81,8 @@ src/Market.h           the census (persistent-cell scan) + per-settlement
 src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …, SpeciesTag,
                        CapPouch)
 src/CoSave.h/.cpp     the durable co-save record (stable names, versioning;
-                       v3 carries the stall-keepers section)
+                       v4 — v3's stall section still rides, and the memory
+                       payload now carries each event's world day)
 src/BlobCodec.h       little-endian byte codec
 src/Components.h      FormRef + SpeciesTag + CapPouch (adapter components)
 src/Tuning.h          the INI — sim.* decay rates, meal price, market hours
@@ -262,6 +264,19 @@ all live). Adapter progress:
     FormRefs. A saved market reopens under the same keeper; a pre-v3
     save re-derives each stall on first arrival. Record v3, the second
     real format bump (after v2's Rng header). See Docs/Design/CoSave.md.
+11b. ✅ **Memory world-days survive save/load** (implemented 2026-08-10,
+    verified by the harness) — engine stone 06 (WorldTime +
+    MemoryEvent::Day) shipped in the canonical handoff with the ⚠
+    note: the memory serializer must carry the world day, or a saved
+    weather fact loses the day it happened. The adapter's serializer
+    was dropping `Day` (the weather facts stamp it — WorldFacts.h — so
+    save/load really did lose it). Fixed: the serializer writes/reads
+    `event.Day`, and the record bumped to **v4** (third real format
+    bump). Pre-v4 records migrate at decode: memory events read back
+    with `Day = 0` — "time immemorial", honest for facts saved before
+    the calendar. Proven by CoSaveTest: a crafted v3 record with an
+    old-format memory blob loads forward, and the round-trip keeps
+    `Day = 42`.
 12. **Nexus name check + publish.**
 
 ---
@@ -273,7 +288,7 @@ all live). Adapter progress:
 - **F4SE** — runtime-only; CommonLibF4 replaces it as the static dependency.
 - **LCE.Core** — linked statically, built by its own CMake via the
   `lce.core` rule into `Build/core` (never touching the core repo's
-  `Build/`). The rule pins the core version (refuses below 0.4.0).
+  `Build/`). The rule pins the core version (refuses below 0.5.0).
   Point at another checkout with `LCE_CORE_PATH`.
 - **spdlog** — the local clone feeds the core build's v1.16.0; the mod
   logs through LCE's API and `REX::LOG`, never spdlog directly.

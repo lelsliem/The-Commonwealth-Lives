@@ -237,6 +237,45 @@ namespace TLC::CoSave
 
                 auto data = reader.Raw(dataLength);
 
+                // v4 (the world-calendar stone): MemoryEvent now carries
+                // its world day, and the memory component's payload
+                // gained a U64 day after the weight. A pre-v4 record's
+                // blobs predate the field — migrate them here so the
+                // version-blind component deserializer never sees two
+                // formats. Day = 0 is "time immemorial": the sim treats
+                // an unstamped fact as ancient, which is honest for a
+                // memory saved before the calendar existed.
+                if (recordVersion < 4 && name == "memory")
+                {
+                    Codec::Reader legacy{ data };
+
+                    if (legacy.Remaining() < 4)
+                    {
+                        return false;
+                    }
+
+                    const auto eventCount = legacy.U32();
+                    Codec::Writer migrated;
+                    migrated.U32(eventCount);
+
+                    for (std::uint32_t k = 0; k < eventCount; ++k)
+                    {
+                        // Old layout: U64 other + U32 kind + F weight
+                        // (8 + 4 + 4 = 16 bytes).
+                        if (legacy.Remaining() < 16)
+                        {
+                            return false;
+                        }
+
+                        migrated.U64(legacy.U64());
+                        migrated.U32(legacy.U32());
+                        migrated.F(legacy.F());
+                        migrated.U64(0);   // no day in the old format
+                    }
+
+                    data = std::move(migrated.Bytes);
+                }
+
                 if (type == typeid(void))
                 {
                     // A component this build no longer knows — a removed

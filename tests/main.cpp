@@ -552,7 +552,7 @@ namespace TLC::Tests
         source.AddComponent<FormRef>(merchant, FormRef{ 0x00012346u });
         source.AddComponent<Needs>(farmer, SeededNeeds(Species::Human));
         source.AddComponent<Memory>(farmer, Memory{
-            { MemoryEvent{ merchant, InteractionKind::Trade, 1.0f } }
+            { MemoryEvent{ merchant, InteractionKind::Trade, 1.0f, 42 } }
         });
         source.AddComponent<Relationships>(farmer, Relationships{
             { { merchant, Relationship{ 0.4f, 0.6f } } }
@@ -607,7 +607,8 @@ namespace TLC::Tests
         if (!memory || memory->Events.size() != 1
             || memory->Events[0].Other != merchant
             || memory->Events[0].Kind != InteractionKind::Trade
-            || memory->Events[0].Weight != 1.0f)
+            || memory->Events[0].Weight != 1.0f
+            || memory->Events[0].Day != 42)
         {
             return false;
         }
@@ -985,7 +986,7 @@ namespace TLC::Tests
         {
             TLC::Codec::Writer writer;
 
-            writer.U32(4);   // newer than this build — refuse, never half-apply
+            writer.U32(5);   // newer than this build — refuse, never half-apply
             writer.U32(0);
             writer.U32(0);
 
@@ -1031,6 +1032,70 @@ namespace TLC::Tests
                 || !stalls.empty())   // v1 predates the stall section
             {
                 return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // Migration across the memory payload (v3 → v4): a v3 record —
+        // saved before the world-calendar stone — has no world day in its
+        // memory events. It loads forward; the migrated events read
+        // Day = 0 ("time immemorial"), which is honest: those facts
+        // predate the calendar. A v3 record also carries the Rng header
+        // (v2+) and the stall section (v3+), so the fixture must too.
+        //-------------------------------------------------------------------------
+        {
+            TLC::Codec::Writer writer;
+
+            writer.U32(3);   // the pre-calendar record version
+            writer.U32(0);   // core snapshot version
+            writer.U32(1);   // one entity
+
+            writer.U64(0x1234ull);   // v2+ header: the Rng state
+            writer.U64(EntityId{ 11 }.Value());
+            writer.U32(1);   // one component
+
+            constexpr std::string_view memoryName = "memory";
+            writer.U8(static_cast<std::uint8_t>(memoryName.size()));
+            writer.Raw(memoryName.data(), memoryName.size());
+
+            // The memory blob in the OLD format: count, then
+            // (U64 other, U32 kind, F weight) — no day.
+            TLC::Codec::Writer memoryBlob;
+            memoryBlob.U32(1);
+            memoryBlob.U64(EntityId{ 12 }.Value());
+            memoryBlob.U32(
+                static_cast<std::uint32_t>(InteractionKind::Trade));
+            memoryBlob.F(1.0f);
+
+            writer.U32(
+                static_cast<std::uint32_t>(memoryBlob.Bytes.size()));
+            writer.Raw(memoryBlob.Bytes.data(), memoryBlob.Bytes.size());
+
+            writer.U32(0);   // v3+ stall section — none
+
+            RegistrySnapshot decoded;
+            std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
+
+            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState, stalls)
+                || decoded.Entities.size() != 1)
+            {
+                return false;
+            }
+
+            EntityRegistry restored;
+            RegisterAllSerializers(restored);
+            restored.Restore(decoded);
+
+            const auto memory = restored.GetComponent<Memory>(EntityId{ 11 });
+
+            if (!memory || memory->Events.size() != 1
+                || memory->Events[0].Other != EntityId{ 12 }
+                || memory->Events[0].Kind != InteractionKind::Trade
+                || memory->Events[0].Weight != 1.0f
+                || memory->Events[0].Day != 0)
+            {
+                return false;   // migrated, unstamped — time immemorial
             }
         }
 

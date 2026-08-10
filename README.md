@@ -1,6 +1,6 @@
 # The Living Commonwealth — Fallout 4 Adapter
 
-**Fallout 4 adapter for the [Living Commonwealth Engine (LCE)](https://github.com/) — an F4SE plugin that makes the Commonwealth *live*.**
+**Fallout 4 adapter for the [Living Commonwealth Engine (LCE)](https://github.com/lelsliem/Living-Commonwealth-Engine-LCE-) — an F4SE plugin that makes the Commonwealth *live*.**
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
@@ -27,8 +27,9 @@ through **0.5.0** is in and verified in-game:
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
 - **0.3** the intent executor — the sim ticks every frame and settlers walk.
-- **0.4** the co-save — the world rides inside the save file (record **v3**:
-  entities, the Rng stream, and who runs each market's stall).
+- **0.4** the co-save — the world rides inside the save file (record **v4**:
+  entities, the Rng stream, who runs each market's stall, and each
+  memory's world day — the timestamp survives save/load).
 - **0.5** the living world — species split (children and animals don't
   barter), world facts, market hours, weather memory events,
   per-settlement markets (a persistent-cell census — FO4 never fills the
@@ -79,7 +80,7 @@ Build/             build output (gitignored)
 ## Build
 
 Requirements: xmake 3.0+, CMake 3.28+, Visual Studio 2022 (MSVC v143),
-and a checkout of the core at **0.4.0+** at `C:\LivingCommonwealthEngine`
+and a checkout of the core at **0.5.0+** at `C:\LivingCommonwealthEngine`
 (override with the `LCE_CORE_PATH` environment variable; the build refuses
 a stale core with a clear message).
 

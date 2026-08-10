@@ -47,10 +47,11 @@ types cross them, so they are testable without the game (CoSaveTest).
 - **Type / UID:** `'LCEW'` (0x4C434557) — the UID is a placeholder for
   the F4SE-assigned one (the author-handle TODO in `xmake.lua` is the
   same open item).
-- **Version:** `kRecordVersion = 3`, the adapter's schema version. Bumped
-  only on a breaking change to the record *format* (the header or a
-  trailing section); old versions are migrated forward, never dropped.
-- **Layout (v3), all little-endian:**
+- **Version:** `kRecordVersion = 4`, the adapter's schema version. Bumped
+  only on a breaking change to the record *format* (the header, a
+  trailing section, or a component payload); old versions are migrated
+  forward, never dropped.
+- **Layout (v4), all little-endian:**
 
   ```
   u32 recordVersion
@@ -63,7 +64,12 @@ types cross them, so they are testable without the game (CoSaveTest).
       u32 componentCount
       per component:
           u8  nameLength, name bytes   ← the stable names below
-          u32 blobLength, blob bytes   ← the core's opaque component data
+          u32 blobLength, blob bytes   ← the core's opaque component data;
+                                         the memory blob's payload is
+                                         (u64 other, u32 kind, f weight,
+                                         u64 day) — day is the world day
+                                         (v4; pre-v4 blobs had none and
+                                         are rewritten at decode)
   u32 stallCount                ← v3 (the stall-keepers stone): who runs
   per stall:                       each market's stall, in form ids —
       u32 marketFormId             stable across sessions, unlike the
@@ -180,17 +186,24 @@ why the version never bumped and old saves kept loading: the format
 didn't change, the contents did. The version bumped only when the
 *format* itself changed: v2 (the decay-jitter wiring) added the `Rng`
 state to the header, and v3 (the stall-keepers stone) added the stall
-section after the entities.
+section after the entities. v4 (the world-calendar stone) was the first
+*per-component* format change: memory events gained their world day.
+Pre-v4 memory blobs are migrated at decode — rewritten with `Day = 0`
+("time immemorial"), which is honest for facts saved before the
+calendar existed — so the version-blind component deserializer never
+sees two formats.
 
 **Tested:** CoSaveTest crafts a v0 record (no `species`, plus a `legacy`
 component) → decodes, drops `legacy`, restores with the tag absent, the
 caller's default Rng stream untouched, and the stall list empty; a v1
 record (no `Rng` state) → decodes with the default stream standing and
-no stall section; a v4 record → refused; the round-trip record with a
-`needs` name patched to unknown → decodes with exactly that one
-component dropped; the v3 round-trip → the encoded Rng state handed
-back exactly and the (market, keeper) stall pair round-tripping as
-form ids.
+no stall section; a crafted v3 record with an old-format memory blob →
+decodes with the migrated events reading `Day = 0` and the stall list
+empty; a v5 record → refused; the round-trip record with a `needs`
+name patched to unknown → decodes with exactly that one component
+dropped; the v4 round-trip → the encoded Rng state handed back
+exactly, the (market, keeper) stall pair round-tripping as form ids,
+and a memory's `Day = 42` surviving the trip.
 
 ## Files
 

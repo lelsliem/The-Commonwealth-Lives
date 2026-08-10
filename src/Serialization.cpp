@@ -80,6 +80,13 @@ namespace TLC
                         writer.U64(event.Other.Value());
                         writer.U32(static_cast<std::uint32_t>(event.Kind));
                         writer.F(event.Weight);
+
+                        // v4 (the world-calendar stone): the world day
+                        // this was remembered — a restored memory keeps
+                        // its day, so "the age of a fact" survives
+                        // save/load. Pre-v4 records migrate in CoSave
+                        // (day = 0 — time immemorial).
+                        writer.U64(event.Day);
                     }
 
                     return writer.Bytes;
@@ -96,7 +103,8 @@ namespace TLC
                         memory.Events.push_back(MemoryEvent{
                             EntityId{ reader.U64() },
                             static_cast<InteractionKind>(reader.U32()),
-                            reader.F() });
+                            reader.F(),
+                            reader.U64() });
                     }
 
                     return memory;
