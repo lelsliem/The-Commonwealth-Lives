@@ -1,16 +1,18 @@
 # Walking — "The Farmer Walks to Market"
 
-**Stone:** adapter 0.3.1 (after the executor, verified in-game pending)
-**Status:** In verification — the walking call is **pinned and verified
-statically** (name anchors + disassembly against Fallout4.exe 1.11.221,
-described below; the first pin, 0xD77440, was wrong — the runtime byte
-check refused it in-game and disassembly confirmed the error). The
-crashes blamed on the call were later proven to be a **corrupt save**
-(identical signature across builds where the call never executed and a
-run with the DLL removed; a stable save runs smooth), so `WalkTo` now
-issues the call — one invocation of the command-mode travel package
-(0xC6BE90) with `kMove` — and this is its real test. The decision half
-is unit-tested (MarketTest, 5/5 suites green).
+**Stone:** adapter 0.3.1 (after the executor)
+**Status:** ✅ **VERIFIED in-game 2026-08-10** — every MoveTo issued the
+command-mode travel package and live probe distances closed steadily
+(min 85.6→47.8, 118.1→60.9, 722.7→524.7, …); settlers, traders included,
+walked to the Sanctuary workshop (000250FE), observed in-game, and the
+session ended with no crash. The pin is byte-verified statically (name
+anchors + disassembly against Fallout4.exe 1.11.221, described below;
+the first pin, 0xD77440, was wrong — the runtime byte check refused it
+in-game and disassembly confirmed the error). The crashes blamed on the
+call were proven to be a **corrupt save** (identical signature across
+builds where the call never executed and a run with the DLL removed);
+DisableExitSave prevents the exit-save cycle that produced it. The
+decision half is unit-tested (MarketTest, 5/5 suites green).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026.
 The contract's guarantee this stone honors: **an intent is a hint, not a
 command — the adapter decides how to walk the settler, and may refuse.**
@@ -222,7 +224,7 @@ tests/               — MarketTest (5/5 suites green): seeded mind decides
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **MarketTest** — a hungry settler seeded with the market memory decides `MoveTo` after `Update`; the same mind without it explores. The decision half of the farmer's road. |
-| In-game (author) | Pending: deploy the DLL, load Sanctuary, stay in the game ~30s, paste the tail. Only nearby minds get the market memory (radius-scoped: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected (once a safe walk mechanism is in): `LCE: WalkTo — command-mode travel package issued` then `walk probe settler X -> 000250FE d = ... m (min ... m) [live]` lines as the settler moves (≥1 m of progress, 2s apart) with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. **Current state: `WalkTo` refuses by design** — the travel call crashed the game (heap corruption, 0xC0000409) because it needs the game's command-mode state; the next stone is the command sequence or the pathing waypoint approach (see above). Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. **The game's exit-save reload kills the sim**: a PreLoadGame fires ~0.1s after the world wakes (loading the Exitsave left by the previous quit) and aborts ~9s later without a GameLoaded — EndWorld runs and the sim stays dead, which read as "nobody walks". The adapter now revives the world when a pending load never completes (`lifecycle: the pending load aborted — reviving the world.` ~12s after PreLoadGame), and every GameLoaded rebuilds fresh. **The revival world after an abort can seed 600+ settler-faction actors** (the aborted load's temp actors), all within the market radius — a flood of walks. The executor caps concurrent walks (16) and a refused walk now erases its session (the old reset left a zombie session that ProbeWalks logged as an instant "ended" every frame — the flood that preceded the crash). Failure modes are logged: `market not loaded`, the pin-mismatch ERROR, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
+| In-game (author) | ✅ **Verified 2026-08-10**: deploy the DLL, load a stable save, stay in-game. Only nearby minds get the market memory (radius-scoped). The log shows `LCE: WalkTo — command-mode travel package issued` for every MoveTo, then `walk probe settler X -> 000250FE d = ... m (min ... m) [live]` lines with **d closing** — verified live: min 85.6→47.8, 118.1→60.9, 722.7→524.7, … — and settlers, traders included, walked to the Sanctuary workshop (observed in-game, no crash). A `reached` line awaits an arrival-radius refinement (closest was ~48 units when the session ended). Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. **The game's exit-save reload kills the sim**: a PreLoadGame fires ~0.1s after the world wakes (loading the Exitsave left by the previous quit) and aborts ~9s later without a GameLoaded — EndWorld runs and the sim stays dead, which read as "nobody walks". The adapter revives the world when a pending load never completes, and the **DisableExitSave mod now prevents the cycle at the source** (the corrupt exit save was the crash: identical ucrtbase 0xC0000409 in runs without the DLL). The revival world after an abort can seed 600+ settler-faction actors — the executor caps concurrent walks (16) and a refused walk erases its session. Failure modes are logged: `market not loaded`, the pin-mismatch ERROR, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
 
 ## Decisions (resolved)
 

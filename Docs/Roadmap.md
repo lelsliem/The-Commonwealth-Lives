@@ -71,8 +71,7 @@ Sanctuary.
 
 Goal: the simulation ticks in-game, and intents become game actions.
 
-STATUS: IMPLEMENTED — tick verified in-game; walking pinned, walk
-pending in-game verification
+STATUS: IMPLEMENTED — tick and walking verified in-game (2026-08-10)
 
 [✓] Design — Docs/Design/Executor.md, Docs/Design/Walking.md
 [✓] Per-frame tick — a hook on ProcessVMTick (ID 2251368): two of its
@@ -99,9 +98,14 @@ pending in-game verification
     entity when loaded,
     and the Trade seed makes hungry settlers decide MoveTo
     (MarketTest, 5/5 suites green)
-[ ] Walking in-game — a MoveTo executes and a settler walks to market;
-    the intent lines themselves are verified (all 11 settlers at
-    Sanctuary logged decides Explore)
+[✓] Walking in-game — a MoveTo executes and a settler walks to market;
+    verified 2026-08-10: the command-mode travel package (0xC6BE90)
+    issued for every MoveTo and live probe distances closed steadily
+    (min 85.6→47.8, 118.1→60.9, 722.7→524.7, ...) — settlers walked to
+    the Sanctuary workshop, observed in-game ("everyone, even traders")
+    — and the session ended with no crash; the crash blamed on the call
+    earlier was a corrupt save (same signature in no-DLL runs), now
+    prevented by DisableExitSave
 
 ═══════════════════════════════════════════════
 

@@ -181,7 +181,7 @@ resolves the road.
 |---------|-------|--------|
 | 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
 | 0.2.0 | Translation | ✅ verified in-game |
-| 0.3.0 | Intent executor | implemented — tick verified in-game; walking pinned, in-game walk pending |
+| 0.3.0 | Intent executor | ✅ verified in-game — tick and walking (settlers walked to market, 2026-08-10) |
 | 0.4.0 | Co-save | ⬜ |
 | 0.5.0 | Living world (the market test) | ⬜ |
 
@@ -256,18 +256,21 @@ See `Docs/Roadmap.md`.
   workbench within meters), so the market seed is now radius-scoped
   (~10,000 units: only minds whose settler is within walking distance
   remember the market).
-- **The walk is now the game's command system (2026-08-10, later).** A
-  live 60s probe run proved planner + `kMove` command type do NOT walk:
-  distances stayed flat `[live]` for every walker. The missing piece is
-  the game's own "move here" — `Actor::InitiateCommandModeTravelPackage`
-  (named by both the old address database and the FO4 public PDB;
-  1.11.221 pair 0xD77440 / 0xD77680, 0x240 apart like the named pair).
-  `Movement::WalkTo` now issues the command-mode travel package (the
-  order — sandbox cannot override it), then the pinned planner
-  destination, then `SetCommandType(kMove)`. Pins are byte-verified at
-  runtime (prologue 55 53 56 57 41 54 41 55; controller vtable
-  0x2567B68). Open: the walk itself in-game — see
-  `Docs/Design/Walking.md`.
+- **The walk is the game's command system, verified in-game
+  (2026-08-10).** A live probe run proved planner + `kMove` command type
+  do NOT walk: distances stayed flat `[live]`. The missing piece is the
+  game's own "move here" — `Actor::InitiateCommandModeTravelPackage`
+  (named by the old address database and the FO4 public PDB; located in
+  1.11.221 at 0xC6BE90 by name-anchoring across address-library eras —
+  the first pin, 0xD77440, was wrong and the runtime byte check refused
+  it; see `Docs/Design/Walking.md`). `Movement::WalkTo` issues exactly
+  that call (byte-verified prologue `48 89 5C 24 18 57 41 54`) with
+  `kMove`. Verified in-game: every MoveTo issued the package and live
+  probe distances closed steadily (min 85.6→47.8, 118.1→60.9, …) —
+  settlers, traders included, walked to the Sanctuary workshop. The
+  crash blamed on this call was a corrupt save (identical signature in
+  runs without the DLL); DisableExitSave now prevents the exit-save
+  cycle that produced it.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the banner quote slots, and the Nexus name check.
