@@ -37,4 +37,47 @@ namespace TLC
     {
         Species Value = Species::Human;
     };
+
+    //-------------------------------------------------------------------------
+    // CapPouch — the economy stone (0.5.x): a mind's few caps. Humans are
+    // born with a small pouch (SeedPouch) and pay for their meals at the
+    // market (PayForMeal); the seller's pouch grows. A missing pouch reads
+    // as 0 caps — a pre-economy save restores broke and is fed on the
+    // settlement's credit. Children and animals never carry one (they
+    // never barter — the species profile decides who trades). Persisted
+    // in the co-save like FormRef and SpeciesTag.
+    //-------------------------------------------------------------------------
+    struct CapPouch
+    {
+        std::uint32_t Caps = 0;
+    };
+
+    //-------------------------------------------------------------------------
+    // SeedPouch — a human mind's born wealth: a deterministic pouch from
+    // the entity id (the IdJitter span pattern), so a saved mind's purse
+    // survives restore exactly. 40 ± 20 caps: a few meals, not a fortune.
+    //-------------------------------------------------------------------------
+    inline std::uint32_t SeedPouch(LCE::Simulation::EntityId a_id) noexcept
+    {
+        const auto caps = 40.0f + IdJitter(a_id, 20.0f);
+        return static_cast<std::uint32_t>(caps < 0.0f ? 0.0f : caps);
+    }
+
+    //-------------------------------------------------------------------------
+    // PayForMeal — the physical exchange (the economy stone). The buyer
+    // pays what they can afford up to the price; the seller receives it.
+    // Returns the caps that changed hands — 0 means the settlement
+    // covered the meal (broke customers are still fed, never starved).
+    // Pure: the caller resolves the two pouches at the edge.
+    //-------------------------------------------------------------------------
+    inline std::uint32_t PayForMeal(
+        CapPouch& a_buyer, CapPouch& a_seller, std::uint32_t a_price) noexcept
+    {
+        const auto paid = a_buyer.Caps < a_price ? a_buyer.Caps : a_price;
+
+        a_buyer.Caps -= paid;
+        a_seller.Caps += paid;
+
+        return paid;
+    }
 }

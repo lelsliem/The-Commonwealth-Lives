@@ -360,6 +360,63 @@ namespace TLC::Tests
             return false;
         }
 
+        //-------------------------------------------------------------------------
+        // The economy stone — SeedPouch and PayForMeal.
+        //-------------------------------------------------------------------------
+        {
+            // A born pouch is deterministic (same id, same purse) and
+            // modest: a few meals, not a fortune.
+            const auto idA = EntityId{ 0x1010101010101010ull };
+            const auto idB = EntityId{ 0x2020202020202020ull };
+
+            const auto pouchA = SeedPouch(idA);
+            const auto pouchB = SeedPouch(idB);
+
+            if (pouchA != SeedPouch(idA)
+                || pouchA < 20 || pouchA > 60
+                || pouchB < 20 || pouchB > 60)
+            {
+                return false;
+            }
+
+            // The exchange: the buyer pays the full price when they can
+            // afford it, and the seller's pouch grows.
+            CapPouch rich{ 50 };
+            CapPouch seller{ 10 };
+
+            const auto full = PayForMeal(rich, seller, 5);
+
+            if (full != 5 || rich.Caps != 45 || seller.Caps != 15)
+            {
+                return false;
+            }
+
+            // A broke buyer pays what they have — never into debt — and
+            // the meal is still covered (paid < price means the
+            // settlement's credit).
+            CapPouch broke{ 3 };
+            CapPouch stall{ 0 };
+
+            const auto partial = PayForMeal(broke, stall, 5);
+
+            if (partial != 3 || broke.Caps != 0 || stall.Caps != 3)
+            {
+                return false;
+            }
+
+            // A penniless buyer pays nothing; the seller gains nothing;
+            // nobody goes negative.
+            CapPouch empty{ 0 };
+            CapPouch quiet{ 7 };
+
+            const auto none = PayForMeal(empty, quiet, 5);
+
+            if (none != 0 || empty.Caps != 0 || quiet.Caps != 7)
+            {
+                return false;
+            }
+        }
+
         // The hunger loop's payoff: arriving at the market restores the
         // Hunger need and reports what it was.
         auto needs = SeededNeeds(Species::Animal);
@@ -504,6 +561,7 @@ namespace TLC::Tests
             GoalType::AcquireFood, 0.5f } });
         source.AddComponent<Intent>(farmer, Intent{
             ActionType::MoveTo, merchant, 0.82f });
+        source.AddComponent<CapPouch>(farmer, CapPouch{ 33 });
 
         const auto snapshot = source.Capture();
 
@@ -575,6 +633,13 @@ namespace TLC::Tests
             return false;
         }
 
+        const auto pouch = restored.GetComponent<CapPouch>(farmer);
+
+        if (!pouch || pouch->Caps != 33)
+        {
+            return false;
+        }
+
         // The merchant owns only its FormRef — nothing was invented.
         if (restored.GetComponent<Needs>(merchant))
         {
@@ -610,6 +675,7 @@ namespace TLC::Tests
             GoalType::AcquireFood, 0.5f } });
         source.AddComponent<Intent>(farmer, Intent{
             ActionType::MoveTo, merchant, 0.82f });
+        source.AddComponent<CapPouch>(farmer, CapPouch{ 33 });
 
         const auto snapshot = source.Capture();
         const auto record = TLC::CoSave::Encode(snapshot);
@@ -642,7 +708,8 @@ namespace TLC::Tests
 
         if (!contains(record, "needs")
             || !contains(record, "intent")
-            || !contains(record, "formref"))
+            || !contains(record, "formref")
+            || !contains(record, "cappouch"))
         {
             return false;
         }
@@ -707,6 +774,13 @@ namespace TLC::Tests
         if (!intent || intent->Action != ActionType::MoveTo
             || intent->Target != merchant
             || intent->Confidence != 0.82f)
+        {
+            return false;
+        }
+
+        const auto pouch = restored.GetComponent<CapPouch>(farmer);
+
+        if (!pouch || pouch->Caps != 33)
         {
             return false;
         }
@@ -794,8 +868,9 @@ namespace TLC::Tests
             }
 
             // Exactly one component (the patched Needs) was dropped: the
-            // round-trip snapshot carries 7 named components (farmer's
-            // six + merchant's FormRef); 6 survive.
+            // round-trip snapshot carries 8 named components (farmer's
+            // seven — including the cap pouch — + merchant's FormRef);
+            // 7 survive.
             std::size_t total = 0;
 
             for (const auto& entity : migrated.Entities)
@@ -803,7 +878,7 @@ namespace TLC::Tests
                 total += entity.Components.size();
             }
 
-            if (total != 6)
+            if (total != 7)
             {
                 return false;
             }
@@ -1458,6 +1533,7 @@ namespace TLC::Tests
             "sim.social.decay = 0.005\r\n"
             "sim.comfort.decay = 0.006\r\n"
             "sim.sale.warmth = 0.25\r\n"
+            "sim.meal.price = 3\r\n"
             "market.open.hour = 9\r\n"
             "market.close.hour=21\r\n"
             "   padded.key   =   spaced   \r\n"
@@ -1492,7 +1568,8 @@ namespace TLC::Tests
             || settings.Rates.Safety != 0.004f
             || settings.Rates.Social != 0.005f
             || settings.Rates.Comfort != 0.006f
-            || settings.SaleWarmth != 0.25f)
+            || settings.SaleWarmth != 0.25f
+            || settings.MealPrice != 3.0f)
         {
             return false;
         }
@@ -1507,7 +1584,8 @@ namespace TLC::Tests
             || defaults.Rates.Safety != 0.1f
             || defaults.Rates.Social != 0.1f
             || defaults.Rates.Comfort != 0.1f
-            || defaults.SaleWarmth != 0.1f)
+            || defaults.SaleWarmth != 0.1f
+            || defaults.MealPrice != 5.0f)
         {
             return false;
         }

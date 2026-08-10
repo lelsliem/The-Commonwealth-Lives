@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -221,7 +221,15 @@ all live). Adapter progress:
    toward them; sim.sale.warmth). The buyer's memory of the merchant
    then beats the bench, so the next hungry walk resolves to the
    person. No engine change, no new pins. See Docs/Design/Trade.md.
-10. **Nexus name check + publish.**
+10. ✅ **The economy stone** (implemented 2026-08-10, in-game
+    verification pending) — the exchange is physical: every human mind
+    carries a CapPouch (40 ± 20 caps, deterministic per id); a buyer
+    pays what they can afford up to sim.meal.price (default 5) and the
+    seller's pouch grows; a broke buyer is fed on the settlement's
+    credit. The pouch is a co-save component (stable name cappouch) —
+    a saved purse restores exactly, pre-economy saves are back-filled
+    on restore. No engine change, no new pins. See Docs/Design/Economy.md.
+11. **Nexus name check + publish.**
 
 ---
 

@@ -200,6 +200,16 @@ namespace TLC
                     registry.AddComponent<Memory>(id, Memory{});
                     registry.AddComponent<Relationships>(id, Relationships{});
 
+                    // The economy stone: a human is born with a small
+                    // pouch (deterministic per entity id — a saved purse
+                    // restores exactly). Children and animals never carry
+                    // one: they never barter.
+                    if (species == Species::Human)
+                    {
+                        registry.AddComponent<CapPouch>(
+                            id, CapPouch{ SeedPouch(id) });
+                    }
+
                     translator.Add(formId, id);
                     ++count;
                 }
@@ -430,6 +440,22 @@ namespace TLC
             [this](LCE::Simulation::EntityId a_entity, FormRef& a_formRef)
             {
                 m_Translator.Add(a_formRef.FormId, a_entity);
+            });
+
+        // The economy stone: a restored human without a pouch predates
+        // the economy — the record had no caps to carry. Back-fill the
+        // seed so a pre-economy save wakes into a living market instead of
+        // a world where everyone is broke (a human mind always has a
+        // pouch; children and animals never do).
+        m_Registry.ForEachWithComponent<SpeciesTag>(
+            [this](LCE::Simulation::EntityId a_entity, SpeciesTag& a_tag)
+            {
+                if (a_tag.Value == Species::Human
+                    && !m_Registry.GetComponent<CapPouch>(a_entity))
+                {
+                    m_Registry.AddComponent<CapPouch>(
+                        a_entity, CapPouch{ SeedPouch(a_entity) });
+                }
             });
 
         // The market was saved with the world (it owns a FormRef); now
@@ -728,11 +754,47 @@ namespace TLC
                         a_entity, m_Settings.SaleWarmth);
                 }
 
+                // The physical exchange (the economy stone): the buyer
+                // pays what they can afford up to the meal's price and
+                // the seller's pouch grows. A broke buyer pays nothing
+                // and is still fed — the settlement covers the meal.
+                // Price is whole caps, minimum 1 (a free meal is not a
+                // market).
+                std::uint32_t paid = 0;
+                std::uint32_t buyerCaps = 0;
+                std::uint32_t sellerCaps = 0;
+
+                auto buyerPouch = m_Registry.GetComponent<CapPouch>(a_entity);
+                auto sellerPouch =
+                    m_Registry.GetComponent<CapPouch>(counterparty);
+
+                if (buyerPouch && sellerPouch)
+                {
+                    const auto price = static_cast<std::uint32_t>(
+                        m_Settings.MealPrice > 1.0f
+                            ? m_Settings.MealPrice
+                            : 1.0f);
+
+                    paid = PayForMeal(*buyerPouch, *sellerPouch, price);
+                    buyerCaps = buyerPouch->Caps;
+                    sellerCaps = sellerPouch->Caps;
+                }
+
                 const auto traderFormId = m_Translator.FormFor(counterparty);
 
-                REX::INFO(
-                    "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed, trust earned.",
-                    formId, traderFormId, marketFormId);
+                if (paid > 0)
+                {
+                    REX::INFO(
+                        "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed, {} caps change hands ({} left, {} now).",
+                        formId, traderFormId, marketFormId,
+                        paid, buyerCaps, sellerCaps);
+                }
+                else
+                {
+                    REX::INFO(
+                        "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed on the settlement's credit (no caps).",
+                        formId, traderFormId, marketFormId);
+                }
             }
             else
             {

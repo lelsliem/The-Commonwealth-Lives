@@ -239,4 +239,13 @@ Goal: the real test from the contract.
     person, not the bench. Implemented 2026-08-10; in-game verification
     pending (the `trades with settler` / `sets up the stall` lines) —
     see Docs/Design/Trade.md
+[✓] The economy stone — the exchange is physical: every human mind
+    carries a CapPouch (40 ± 20 caps, deterministic per id), a buyer
+    pays what they can afford up to sim.meal.price (default 5) and the
+    seller's pouch grows; a broke buyer is fed on the settlement's
+    credit, never starved. The pouch is a co-save component (stable
+    name cappouch), so a saved purse restores exactly; pre-economy
+    saves are back-filled on restore. Implemented 2026-08-10; in-game
+    verification pending (the trade lines name the caps; sellers' pouches
+    grow while buyers' shrink) — see Docs/Design/Economy.md
 [ ] Nexus name check + publish

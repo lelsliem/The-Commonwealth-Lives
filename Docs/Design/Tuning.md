@@ -34,6 +34,7 @@ sim.safety.decay = 0.001
 sim.social.decay = 0.001
 sim.comfort.decay = 0.001
 sim.sale.warmth = 0.1        ; a stall-keeper's warmth toward a customer
+sim.meal.price = 5           ; what a meal costs at the market (caps)
 
 market.open.hour = 8         ; the adapter's own keys ride along
 market.close.hour = 20
@@ -85,7 +86,9 @@ Tuning::ParseConfig(text) ──► LCE::Config::Configuration
 `StartWorld` passes `m_Settings.Rates` into `SeededNeeds` for every
 fresh mind. `sim.sale.warmth` feeds the trade stone's `RecordSale`:
 how much a stall-keeper's disposition toward a customer warms per sale
-(default 0.1 — a sale warms like good company).
+(default 0.1 — a sale warms like good company). `sim.meal.price` feeds
+the economy stone's `PayForMeal`: what a meal costs in caps (default 5;
+whole caps, minimum 1 — a free meal is not a market).
 
 The startup log lines:
 

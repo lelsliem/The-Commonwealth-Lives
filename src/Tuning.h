@@ -139,6 +139,11 @@ namespace TLC::Tuning
         // Matches the core's DispositionGain default (0.1) so a sale
         // warms like good company.
         float SaleWarmth = 0.1f;
+
+        // The physical exchange (the economy stone): a meal's price in
+        // caps. A buyer pays what they can afford up to this; the rest
+        // the settlement covers. 5 caps, a modest market.
+        float MealPrice = 5.0f;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -179,6 +184,7 @@ namespace TLC::Tuning
             read("sim.comfort.decay", settings.Rates.Comfort);
 
         settings.SaleWarmth = read("sim.sale.warmth", settings.SaleWarmth);
+        settings.MealPrice = read("sim.meal.price", settings.MealPrice);
 
         return settings;
     }

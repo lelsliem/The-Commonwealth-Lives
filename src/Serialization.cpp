@@ -236,6 +236,25 @@ namespace TLC
                 }
             };
         }
+
+        ComponentSerializer<CapPouch> MakeCapPouchSerializer()
+        {
+            return {
+                [](const CapPouch& pouch)
+                {
+                    Codec::Writer writer;
+                    writer.U32(pouch.Caps);
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+
+                    return CapPouch{ reader.U32() };
+                }
+            };
+        }
     }
 
     void RegisterAllSerializers(EntityRegistry& registry)
@@ -247,5 +266,6 @@ namespace TLC
         registry.RegisterSerializer<Intent>(MakeIntentSerializer());
         registry.RegisterSerializer<FormRef>(MakeFormRefSerializer());
         registry.RegisterSerializer<SpeciesTag>(MakeSpeciesTagSerializer());
+        registry.RegisterSerializer<CapPouch>(MakeCapPouchSerializer());
     }
 }
