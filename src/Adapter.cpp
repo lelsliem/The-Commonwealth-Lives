@@ -324,9 +324,13 @@ namespace TLC
                 m_Translator.Add(a_formRef.FormId, a_entity);
             });
 
-        // The market was saved with the world (it owns a FormRef);
-        // EnsureMarket is a no-op when it is already known.
-        EnsureMarket();
+        // The market was saved with the world (it owns a FormRef); now
+        // that the world is back, every mind must remember where to trade
+        // again. The seed is a fading memory event (weight 1.0, forgotten
+        // in seconds) — a mind saved long after its world woke has already
+        // forgotten the market, and without the seed a restored world is
+        // market-blind: starving minds Explore instead of walking.
+        SeedMarket();
 
         REX::INFO(
             "The Commonwealth wakes up: {} minds restored from the co-save.",
@@ -368,6 +372,57 @@ namespace TLC
         // and every mind remembers where to trade (ADR-0024 — the adapter
         // reports events; the simulation gives them meaning). A mind that
         // knows the market can decide MoveTo; one that doesn't explores.
+        SeedMarket();
+
+        REX::INFO("The Commonwealth wakes up: {} settlers became minds.", count);
+        LCE::Logging::Info(
+            "The Commonwealth wakes up: " + std::to_string(count) + " settlers became minds.");
+        LCE::Logging::Flush();
+
+        m_Started = true;
+    }
+
+    void Adapter::EndWorld()
+    {
+        if (!m_Started)
+        {
+            return;
+        }
+
+        // Clear keeps the serializers (registered once at init) so the
+        // next StartWorld can translate fresh. The co-save stone will
+        // replace this with Capture/Restore.
+        m_Registry.Clear();
+        m_Translator.Clear();
+        m_LastLogged.clear();
+        m_Walks.clear();
+        m_TickCalled = false;
+        m_FirstPassLogged = false;
+        m_Started = false;
+    }
+
+    void Adapter::EnsureMarket()
+    {
+        // Already known — the market entity survives within one world.
+        if (m_Translator.EntityFor(kMarketFormId).IsValid())
+        {
+            return;
+        }
+
+        // The workshop form must be a loaded reference to be walked to.
+        if (RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId) == nullptr)
+        {
+            return;
+        }
+
+        const auto id = m_Registry.CreateEntity();
+
+        m_Registry.AddComponent<FormRef>(id, FormRef{ kMarketFormId });
+        m_Translator.Add(kMarketFormId, id);
+    }
+
+    void Adapter::SeedMarket()
+    {
         EnsureMarket();
 
         const auto market = m_Translator.EntityFor(kMarketFormId);
@@ -415,52 +470,6 @@ namespace TLC
         {
             REX::INFO("The market is not loaded — settlers explore until it is.");
         }
-
-        REX::INFO("The Commonwealth wakes up: {} settlers became minds.", count);
-        LCE::Logging::Info(
-            "The Commonwealth wakes up: " + std::to_string(count) + " settlers became minds.");
-        LCE::Logging::Flush();
-
-        m_Started = true;
-    }
-
-    void Adapter::EndWorld()
-    {
-        if (!m_Started)
-        {
-            return;
-        }
-
-        // Clear keeps the serializers (registered once at init) so the
-        // next StartWorld can translate fresh. The co-save stone will
-        // replace this with Capture/Restore.
-        m_Registry.Clear();
-        m_Translator.Clear();
-        m_LastLogged.clear();
-        m_Walks.clear();
-        m_TickCalled = false;
-        m_FirstPassLogged = false;
-        m_Started = false;
-    }
-
-    void Adapter::EnsureMarket()
-    {
-        // Already known — the market entity survives within one world.
-        if (m_Translator.EntityFor(kMarketFormId).IsValid())
-        {
-            return;
-        }
-
-        // The workshop form must be a loaded reference to be walked to.
-        if (RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId) == nullptr)
-        {
-            return;
-        }
-
-        const auto id = m_Registry.CreateEntity();
-
-        m_Registry.AddComponent<FormRef>(id, FormRef{ kMarketFormId });
-        m_Translator.Add(kMarketFormId, id);
     }
 
     void Adapter::Tick(double a_deltaSeconds)

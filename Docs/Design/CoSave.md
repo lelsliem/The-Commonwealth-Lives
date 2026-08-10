@@ -111,6 +111,19 @@ Restored settlers whose forms aren't loaded in the new session sit idle
 and are refused by the plan builder ("actor not loaded") until they load
 — the same path as any unloaded actor, no special case.
 
+## The restore re-seeds the market (a walking bug, fixed 2026-08-10)
+
+A restored world was **market-blind**: the restore rebuilt entities and
+the translator but never re-ran the market seed, and the seed itself is a
+fading memory event (weight 1.0, `MemoryFadeRate` 0.2/s — forgotten in
+seconds). A save made long after its world woke contains minds that have
+already forgotten the market; restoring them produced a world where
+starving minds Explore instead of deciding `MoveTo`. The fix: `SeedMarket`
+is a shared helper called from **both** `StartWorld` and `ApplyRestore` —
+the market is open on every world start, fresh or restored. (The log
+tells it: restored worlds never printed "market is open" before the fix;
+now they do, and walks issue again.)
+
 ## Migration
 
 The seam is the `kRecordVersion` switch in `Decode`. Version 1 is the

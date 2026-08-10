@@ -120,6 +120,12 @@ namespace TLC
         // is loaded, so every mind can remember where to trade.
         void EnsureMarket();
 
+        // The market is open: EnsureMarket, then every nearby mind
+        // remembers where to trade. Runs on every world start — fresh
+        // translations and co-save restores alike, because the seed is a
+        // fading memory event and a saved mind may have forgotten it.
+        void SeedMarket();
+
         // Rebuilds the world from a co-save snapshot: Restore the registry
         // (identities preserved), rebuild the translator from the restored
         // FormRef components (the edge's memory is adapter state, never
