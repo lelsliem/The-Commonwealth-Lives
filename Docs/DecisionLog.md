@@ -138,3 +138,34 @@ the adapter is its own artifact with its own milestone rhythm: on milestone
 completion, bump the version in `xmake.lua`, the README badge, and the
 plugin version data (generated from `set_version`), then commit after the
 author approves.
+
+## 0009 — The census scans persistent cells, not the REFR form array
+
+**Accepted · 2026-08-10**
+
+Fallout 4 never populates `TESDataHandler::formArrays[REFR]` the way
+Skyrim does — `GetFormArray<TESObjectREFR>()` returned 0 across retries
+in-game (two world starts), so the per-settlement census silently ran
+its single-bench fallback for every session since the stone landed. The
+census now enumerates each worldspace's **persistent cell**
+(`TESWorldSpace::persistentCell` → `ForEachReference`) and keeps refs
+whose base is the workshop workbench (`000C1AEB`): every settlement
+workbench is a persistent ref, and persistent refs are loaded at world
+start, so one pass finds all 28 markets with valid positions. Verified
+in-game: `13 worldspaces, 28 workshops known`.
+
+## 0010 — DeleteGame never tears down a running world; the walk probe reads data positions
+
+**Accepted · 2026-08-10**
+
+Two session-killing bugs from the Diamond City test, both fixed at the
+source. `kDeleteGame` fires when a save FILE is deleted — an autosave
+rotation did it mid-world — and the handler called `EndWorld`, killing
+the sim with no pending load armed to revive it (later saves wrote 0
+entities until a full restart). It is now a no-op: a new game or a load
+owns the world's life through PreLoadGame/GameLoaded. And the walk probe
+read the actor's 3D node world transform, which lies for streaming
+actors (post-fast-travel walkers measured 120,000+ units from where they
+stood, so arrivals never registered); it now reads the actor's **data
+position**, skips readings beyond a sanity gate, and the session timeout
+grew to 120s so slow walkers across the market radius can finish.

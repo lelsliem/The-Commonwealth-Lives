@@ -12,9 +12,14 @@ of the conversation that built it.
   Law 001: *simple things; compose the complex*
 - `Docs/LearningPath.md` — how the engine works
 
-**Design docs in this repo** (`Docs/Design/`): `Executor.md` (the tick +
-intent executor), `Walking.md` (the walk), `CoSave.md` (the co-save
-record), `Behaviour.md` (the species split). Each is flipped to
+**Design docs in this repo** (`Docs/Design/`): `Translation.md` (form ↔
+entity), `Executor.md` (the tick + intent executor), `Walking.md` (the
+walk), `CoSave.md` (the co-save record — v3), `Behaviour.md` (the
+species split), `Market.h`'s sibling `SettlementMarkets.md` (the census
++ per-settlement markets), `Trade.md` (the stall-keeper trade),
+`Economy.md` (cap pouches), `Tuning.md` (the INI), `WorldFacts.md`
+(the gates: market hours + weather), `WeatherFacts.md` (weather memory
+events), `RealTest.md` (the live log evidence). Each is flipped to
 **verified in-game** as its stone lands; the ones that aren't verified
 yet say so.
 
@@ -52,7 +57,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **8/8 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **9/9 suites green.**
 
 ---
 
@@ -70,11 +75,16 @@ src/Behaviour.h/.cpp   Species + BehaviourProfile — who trades, who is fed
                        (Human/Child/Animal); SeededNeeds(Species)
 src/Executor.h/.cpp    pure plan builder — refusals are the contract
 src/Movement.h/.cpp    WalkTo: the pinned Actor::InitiateCommandModeTravelPackage
-src/Market.h           the market seed (Sanctuary workshop REFR 000250FE)
-src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …, SpeciesTag)
-src/CoSave.h/.cpp     the durable co-save record (stable names, versioning)
+src/Market.h           the census (persistent-cell scan) + per-settlement
+                       market seeding (nearest workshop within ~140 m)
+src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …, SpeciesTag,
+                       CapPouch)
+src/CoSave.h/.cpp     the durable co-save record (stable names, versioning;
+                       v3 carries the stall-keepers section)
 src/BlobCodec.h       little-endian byte codec
-src/Components.h      FormRef + SpeciesTag (adapter-defined components)
+src/Components.h      FormRef + SpeciesTag + CapPouch (adapter components)
+src/Tuning.h          the INI — sim.* decay rates, meal price, market hours
+src/WorldFacts.h      the gates: market hours (closed at night) + weather
 src/Tick.h/.cpp       the per-frame VM-tick hooks
 ```
 
@@ -85,7 +95,7 @@ src/Tick.h/.cpp       the per-frame VM-tick hooks
 | `kGameLoaded` (startup) | `StartWorld`: translate loaded sim-relevant actors into entities (tagged by species, seeded per species); seed the market memory |
 | `kPostLoadGame` (a save finished loading) | Apply the co-save restore (or start fresh) — **the load's completion event; `kGameLoaded` alone does not fire for real loads** |
 | `kPreLoadGame` | `EndWorld` (Clear; serializers survive); arm abort recovery (60s) |
-| `kDeleteGame` | `EndWorld` |
+| `kDeleteGame` (a save FILE was deleted) | nothing — a running world survives (an autosave rotation once killed it mid-world; `EndWorld` here is a no-op now) |
 | serialization save callback | `CaptureWorld` → `CoSave::Encode` → `WriteRecord` |
 | serialization load callback | read record → `CoSave::Decode` → `QueueRestore` (applied on `kPostLoadGame`) |
 | new game (revert callback) | `EndWorld` |

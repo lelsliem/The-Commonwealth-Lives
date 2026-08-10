@@ -4,31 +4,42 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.2.0--alpha-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.5.0-emerald.svg)](Docs/Roadmap.md)
 
-The setters aren't on quest scripts — they're **hungry**, they **remember**
-who cheated them, they **flee** when raiders come, and the market closes on
-rainy days. The game does nothing but show the result.
+The settlers aren't on quest scripts — they're **hungry**, they **remember**
+where to trade, they walk to **their own settlement's market** when they're
+hungry, and the exchange is physical: caps change hands, the stall-keeper's
+purse grows, trust is earned. The market has **hours** — it closes at night
+and nobody walks to a closed bench — and the day's **weather** is
+remembered. The game does nothing but show the result.
 
 > A settler goes to market because they are hungry — no script.
 
-That sentence is the test plan.
+That sentence is the test plan. In-game verified end to end: hungry
+settlers decide `MoveTo`, walk to the bench, arrive, trade, and the world
+survives save/load.
 
 ## Roadmap
 
-Where this project is and where it's going: `Docs/Roadmap.md`. Four
-stones are in: the heartbeat (verified in-game), the translation (settlers
-become minds — verified at Sanctuary), the snapshot substrate, and the
-intent executor — the simulation now ticks in-game every frame (verified:
-per-hook fire counters proved the ProcessVMTick hooks fire once per
-frame, and 9 settlers at Sanctuary logged clean intent lines). The
-walking stone is built: every mind remembers where the market is (the
-Sanctuary workshop REFR 000250FE), hungry settlers decide
-`MoveTo -> 000250FE`, and `Movement::WalkTo` calls the game's own
-walk-to-point machinery (the movement controller's DoSetPlanner slot,
-pinned to 1.11.221 by RTTI chain, guarded at runtime) — the walk itself
-is pending in-game verification. Next: the co-save, where the world
-survives a save and a load.
+Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
+through **0.5.0** is in and verified in-game:
+
+- **0.1** the heartbeat — the plugin loads and breathes.
+- **0.2** the translation — settler-faction actors become minds.
+- **0.3** the intent executor — the sim ticks every frame and settlers walk.
+- **0.4** the co-save — the world rides inside the save file (record **v3**:
+  entities, the Rng stream, and who runs each market's stall).
+- **0.5** the living world — species split (children and animals don't
+  barter), world facts, market hours, weather memory events,
+  per-settlement markets (a persistent-cell census — FO4 never fills the
+  REFR form array), the trade stone (a stall-keeper per market, the
+  buyer remembers the merchant), the economy stone (cap pouches that
+  round-trip), per-mind decay desync (`VaryNeeds`) plus the engine's
+  per-tick decay jitter (a seeded `Rng`, persisted in the co-save), and
+  hardenings: `DeleteGame` no longer kills a running world, and the walk
+  probe reads the actor's data position instead of a lying 3D transform.
+
+The only open item before live git: the **Nexus name check + publish**.
 
 ## What this is
 
@@ -50,11 +61,17 @@ The contract lives in the core repo:
 
 ```
 xmake.lua          build (xmake; drives the core's CMake via the lce.core rule)
+                   — stamps every build with the git short hash (the banner
+                   line says "loaded (build <hash>)" so the log always names
+                   the DLL that ran)
 src/               the plugin: main (lifecycle), Adapter (the world object),
-                   Translator (form ↔ entity), Serialization, SimRelevant
-                   (the settler predicate), Components, BlobCodec
+                   Translator (form ↔ entity), Serialization + CoSave (the
+                   durable record), Behaviour (species rules), Market
+                   (census + seeding), Movement (the walk), SimRelevant
+                   (the settler predicate), Tuning (the INI), WorldFacts
+                   (weather + market hours), Components, BlobCodec
 tests/             the adapter's test harness (links LCE.Core only, no game)
-Docs/              handoff doc, decisions, design
+Docs/              handoff doc, decisions, design, roadmap
 Depends/           local third-party clones — study/build inputs, not committed
 Build/             build output (gitignored)
 ```
@@ -73,8 +90,7 @@ xmake
 
 The build does three things:
 
-1. Builds **CommonLibF4** from the local clone in `Depends/` (xmake fetches
-   its own spdlog via xrepo — first build needs network).
+1. Builds **CommonLibF4** from the local clone in `Depends/`.
 2. Builds **LCE.Core** with its own CMake into `Build/core` (the core repo's
    own `Build/` is never touched).
 3. Links the plugin DLL.
@@ -86,24 +102,51 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
 1. Install **F4SE** and the **Address Library for F4SE** (the plugin uses
    the address library; `F4SEPlugin_Version` declares runtime 1.11.221).
 2. Put `TheLivingCommonwealth.dll` in `Data/F4SE/Plugins/` (or install via
-   your mod manager — `xmake install` with `XSE_FO4_GAME_PATH` /
-   `XSE_FO4_MODS_PATH` does this directly).
-3. Launch through F4SE. The heartbeat:
-   `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`
-   → `The Living Commonwealth heartbeat: the world is awake.`
-   ✅ Verified in-game 2026-08-09 (F4SE 0.7.8, runtime 1.11.221).
-   On GameLoaded the translation stone logs
-   `The Commonwealth wakes up: N settlers became minds.`
-   ✅ Verified in-game 2026-08-09: 10 settlers at Sanctuary.
-   Every frame after that, the executor ticks the simulation and logs
-   intents as they change, e.g.
-   `settler 0008F3A1 decides MoveTo -> 000250FE (0.82)`.
-   ✅ Tick verified in-game 2026-08-10: per-hook fire counters proved
-   the ProcessVMTick hooks fire once per frame; 9 settlers logged
-   `decides Explore (0.5x)`. With the market seeded, settlers now
-   decide `MoveTo -> 000250FE` (the Sanctuary workshop) and the
-   executor walks them through the pinned DoSetPlanner call —
-   pending in-game verification, see `Docs/Design/Walking.md`.
+   your mod manager).
+3. Launch through F4SE. The log is
+   `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`. The first lines
+   prove which build ran:
+
+   ```
+   The Living Commonwealth v0.5.0.0
+   The Living Commonwealth v0.5.0.0 loaded (build 43c4e4f).   ← the git short hash
+   ```
+
+   Then the world wakes and the sim lives:
+
+   ```
+   tuning: no config file (...) — defaults. Create it to change the sim's feel.
+   settlement census: 13 worldspaces, 28 workshops known (base 0xc1aeb) — markets are per settlement.
+   The Commonwealth wakes up: 11 settlers became minds.
+   settler 0001CA7D decides MoveTo -> 000250FE (0.20)
+   LCE: settler 0001CA7D sets up the stall at market 000250FE — trade begins when customers come.
+   LCE: settler 0001A4D7 trades with settler 0001CA7D at market 000250FE — fed, 5 caps change hands (38 left, 27 now).
+   co-save: writing 665 entities (169877 bytes).
+   co-save: read 665 entities, 1 stall-keepers — the world will be restored on load.
+   ```
+
+   Distances in walk probes are **game units** (`u`), not meters (200 u ≈ 2.8 m).
+
+## Tuning
+
+One text file next to the DLL, `Data\F4SE\Plugins\TheLivingCommonwealth.ini`.
+Unknown keys are ignored; missing, empty, or unparsable values keep the
+default — a broken line never breaks the world.
+
+```ini
+; The Living Commonwealth tuning
+sim.memory.fade = 0.2        ; core key: memory fade rate
+sim.jitter = 0.15            ; core key: per-tick decay spread (0 = off)
+sim.hunger.decay = 0.002     ; a few meals a day instead of a constant stream
+sim.fatigue.decay = 0.002
+sim.safety.decay = 0.002
+sim.social.decay = 0.002
+sim.comfort.decay = 0.002
+sim.sale.warmth = 0.1        ; how much a stall-keeper warms to a customer
+sim.meal.price = 5           ; caps per meal (a broke buyer is still fed)
+market.open.hour = 8         ; the market's hours — closed at night
+market.close.hour = 20
+```
 
 ## Test
 
@@ -111,9 +154,11 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
 xmake run TheLivingCommonwealth.Tests
 ```
 
-Runs the adapter's harness (translator tables, seeding, snapshot
-round-trip, plan builder, market decision) — links LCE.Core only, no
-game required. 5/5 suites green.
+Runs the adapter's harness (translator tables, seeding, snapshot and
+co-save round-trips — including the v3 stall-keepers section and the
+migration paths, plan builder, market decision, species rules, pouch
+economy, tuning) — links LCE.Core only, no game required. **9/9 suites
+green.**
 
 ## License
 

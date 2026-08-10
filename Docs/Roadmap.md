@@ -12,11 +12,17 @@ Project Roadmap
 
 Status
 
-Current Version : 0.2.0-alpha
+Current Version : 0.5.0
 
-Current Stage   : Intent Executor — implemented; in-game verification pending
+Current Stage   : Living world — every 0.5.0 stone implemented and
+                   verified in-game: species split, world facts, tuning,
+                   need-decay tuning, weather memory events,
+                   per-settlement markets (persistent-cell census), the
+                   trade stone, the economy stone, per-tick decay jitter
+                   wired, stall-keepers persisted in the co-save (v3),
+                   and the lifecycle + walk-probe hardenings
 
-Next Milestone  : 0.4.0 — Co-save
+Next Milestone  : 0.6.0 — TBD (Nexus name check + publish first)
 
 ═══════════════════════════════════════════════
 
@@ -99,7 +105,7 @@ STATUS: IMPLEMENTED — tick and walking verified in-game (2026-08-10)
     workshop (REFR 000250FE, verified from the ESM) becomes the market
     entity when loaded,
     and the Trade seed makes hungry settlers decide MoveTo
-    (MarketTest, 5/5 suites green)
+    (MarketTest among the 9/9 suites)
 [✓] Walking in-game — a MoveTo executes and a settler walks to market;
     verified 2026-08-10: the command-mode travel package (0xC6BE90)
     issued for every MoveTo and live probe distances closed steadily
