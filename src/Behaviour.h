@@ -14,6 +14,9 @@
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Outcome.h"
 
+#include <algorithm>
+#include <cstdint>
+
 namespace TLC
 {
     //-------------------------------------------------------------------------
@@ -65,6 +68,56 @@ namespace TLC
     //-------------------------------------------------------------------------
     [[nodiscard]]
     LCE::Simulation::Needs SeededNeeds(Species a_species);
+
+    //-------------------------------------------------------------------------
+    // The deterministic per-mind jitter behind VaryNeeds: a value in
+    // [-a_span, +a_span) derived from the entity id (FNV-1a of the id
+    // scaled). Same id, same jitter, forever.
+    //-------------------------------------------------------------------------
+    inline float IdJitter(
+        LCE::Simulation::EntityId a_id, float a_span) noexcept
+    {
+        auto hash = std::uint64_t{ 14695981039346656037ull };
+        auto value = a_id.Value();
+
+        for (int i = 0; i < 8; ++i)
+        {
+            hash ^= (value & 0xFF);
+            hash *= 1099511628211ull;
+            value >>= 8;
+        }
+
+        const auto unit =
+            static_cast<float>(hash & 0xFFFFFF) / static_cast<float>(0x1000000);
+
+        return (unit - 0.5f) * 2.0f * a_span;
+    }
+
+    //-------------------------------------------------------------------------
+    // VaryNeeds — the desync stone (0.5.x). Every mind's needs are born
+    // slightly different: a small deterministic jitter on each need's
+    // initial value and decay rate. Hunger therefore arrives at different
+    // times for different minds — the settlement stops marching to the
+    // market in lockstep. The decay-rate jitter is a *metabolism*: the
+    // stagger persists after every feed and grows as the session runs.
+    // The core decays need.Value -= need.DecayRate * dt, and the co-save
+    // serializes the rate, so a mind's rhythm survives restore. The
+    // jitter is shared across a mind's needs (one id, one temperament),
+    // which keeps each mind's internal urgency ordering sensible.
+    //-------------------------------------------------------------------------
+    inline void VaryNeeds(
+        LCE::Simulation::Needs& a_needs,
+        LCE::Simulation::EntityId a_id) noexcept
+    {
+        const auto valueJitter = IdJitter(a_id, 0.10f);
+        const auto rateFactor = 1.0f + IdJitter(a_id, 0.40f);
+
+        for (auto& need : a_needs.List)
+        {
+            need.Value = std::clamp(need.Value + valueJitter, 0.0f, 1.0f);
+            need.DecayRate = std::max(0.0f, need.DecayRate * rateFactor);
+        }
+    }
 
     //-------------------------------------------------------------------------
     // The arrival outcome (0.5.0): what reaching the food source means,

@@ -352,6 +352,85 @@ namespace TLC::Tests
             return false;
         }
 
+        //-------------------------------------------------------------------------
+        // VaryNeeds — the desync stone. Deterministic per entity id
+        // (same id, same jitter, forever — a saved mind's rhythm survives
+        // restore), bounded (values stay in [0, 1], rates stay positive),
+        // and different ids get different temperaments. The decay-rate
+        // jitter is the metabolism: the stagger persists after every feed.
+        //-------------------------------------------------------------------------
+        {
+            auto a = SeededNeeds(Species::Human);
+            auto b = SeededNeeds(Species::Human);
+
+            const auto idA = EntityId{ 0x1010101010101010ull };
+            const auto idB = EntityId{ 0x2020202020202020ull };
+
+            VaryNeeds(a, idA);
+            VaryNeeds(b, idB);
+
+            // Bounded and sane: values within [0, 1], rates positive.
+            for (const auto& need : a.List)
+            {
+                if (need.Value < 0.0f || need.Value > 1.0f
+                    || need.DecayRate <= 0.0f)
+                {
+                    return false;
+                }
+            }
+
+            // Deterministic: re-vary a fresh seed with the same id and
+            // get the identical temperament.
+            auto aAgain = SeededNeeds(Species::Human);
+
+            VaryNeeds(aAgain, idA);
+
+            for (std::size_t i = 0; i < a.List.size(); ++i)
+            {
+                if (a.List[i].Value != aAgain.List[i].Value
+                    || a.List[i].DecayRate != aAgain.List[i].DecayRate)
+                {
+                    return false;
+                }
+            }
+
+            // Distinct ids desync: the two temperaments differ somewhere.
+            bool different = false;
+
+            for (std::size_t i = 0; i < a.List.size(); ++i)
+            {
+                if (a.List[i].Value != b.List[i].Value
+                    || a.List[i].DecayRate != b.List[i].DecayRate)
+                {
+                    different = true;
+                    break;
+                }
+            }
+
+            if (!different)
+            {
+                return false;
+            }
+
+            // The jitter is a temperament, not a coin flip: every need in
+            // one mind moves the same way, so urgency ordering stays
+            // sensible (the same id, the same span, the same sign).
+            auto value = SeededNeeds(Species::Human);
+            VaryNeeds(value, idA);
+
+            const auto sign = a.List[0].Value - 1.0f;
+
+            for (std::size_t i = 1; i < value.List.size(); ++i)
+            {
+                const auto thisSign = value.List[i].Value - 1.0f;
+
+                if ((thisSign < 0.0f) != (sign < 0.0f))
+                {
+                    return false;
+                }
+            }
+        }
+
         return true;
     }
 

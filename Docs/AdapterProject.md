@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, weather memory events, per-settlement markets**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, weather memory events, per-settlement markets, desync**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -197,7 +197,13 @@ all live). Adapter progress:
    the nearest within ~140 m instead of one global Sanctuary bench. The
    legacy single-bench fallback survives a bare census. No new pins.
    See Docs/Design/SettlementMarkets.md.
-7. **Nexus name check + publish.**
+7. ✅ **Desync the herd** (implemented 2026-08-10, in-game verification
+   pending) — `VaryNeeds` jitters each mind's seeded needs
+   (deterministic per entity id): hunger arrives at different times, and
+   the decay-rate jitter is a metabolism that persists after every feed.
+   The co-save already serializes the rate — no engine change, no new
+   pins. See the Behaviour.md desync section.
+8. **Nexus name check + publish.**
 
 ---
 

@@ -184,9 +184,17 @@ Goal: the real test from the contract.
     and explores until it finds one. The legacy single-bench fallback
     (000250FE) survives when the census finds nothing (an interior, a
     bare world). Implemented 2026-08-10; in-game verification pending
-    (the `settlement census:` log line + each workshop's formid in the
-    MoveTo decisions; a settler at Tenpines should walk to Tenpines'
+    (the `settlement census:` log line + each workshop's formid in    the MoveTo decisions; a settler at Tenpines should walk to Tenpines'
     bench, not Sanctuary's) — see Docs/Design/SettlementMarkets.md
+[✓] Desync the herd — every mind's needs are born slightly different
+    (VaryNeeds: a deterministic per-entity jitter on each need's value
+    and decay rate). Hunger arrives at different times, so the
+    settlement stops marching to the market in lockstep; the decay-rate
+    jitter is a metabolism, so the stagger persists after every feed and
+    grows as the session runs. The co-save already serializes the rate,
+    so a mind's rhythm survives restore. Implemented 2026-08-10;
+    in-game verification pending (the fed line + MoveTo confidences now
+    spread instead of matching; walks trickle instead of wave)
 [✓] Tuning from the Configuration service — one text file next to the
     DLL (Data\F4SE\Plugins\TheLivingCommonwealth.ini): the sim.* keys
     feed SimulationTuning::FromConfiguration (memory fade, drift, trust,

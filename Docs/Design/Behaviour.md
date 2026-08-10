@@ -148,3 +148,21 @@ relationship (no goals exist to serve) — the feed is real in the
 relationship, not yet in the hunger gauge. When the real test seeds
 goals, a dog's hunger loop needs either a Feed kind or a core mapping
 change — an engine ask, noted in the roadmap.
+
+## Desync the herd (0.5.x, built 2026-08-10)
+
+Every mind's needs are born slightly different: `VaryNeeds` applies a
+deterministic per-entity jitter (FNV-1a of the entity id) to each need's
+initial value (±0.10) and decay rate (×[0.6, 1.4]). The core decays
+`need.Value -= need.DecayRate * dt`, and the co-save serializes the
+rate — so the metabolism survives restore with no engine change and no
+new pin.
+
+The point is rhythm: all minds used to share one hunger clock, get
+hungry on the same tick, and march to the market in a wave. Now hunger
+arrives at different times for different minds, the wave becomes a
+trickle, and because the decay-rate jitter is a per-mind metabolism the
+stagger persists after every feed instead of re-synchronizing at
+`fed: Hunger 0.00 -> 1.00`. The jitter is shared across a mind's needs
+(one id, one temperament), so each mind's internal urgency ordering
+stays sensible — a mind never becomes "fast-hunger, slow-fatigue."

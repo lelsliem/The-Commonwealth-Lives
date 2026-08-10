@@ -184,9 +184,17 @@ namespace TLC
                     const auto species = ClassifySpecies(actor->race);
                     const auto id = registry.CreateEntity();
 
+                    // The desync stone: every mind's needs are born
+                    // slightly different (VaryNeeds — deterministic per
+                    // entity id), so hunger arrives at different times and
+                    // the settlement doesn't march to the market in
+                    // lockstep.
+                    auto needs = SeededNeeds(species);
+                    VaryNeeds(needs, id);
+
                     registry.AddComponent<FormRef>(id, FormRef{ formId });
                     registry.AddComponent<SpeciesTag>(id, SpeciesTag{ species });
-                    registry.AddComponent<Needs>(id, SeededNeeds(species));
+                    registry.AddComponent<Needs>(id, std::move(needs));
                     registry.AddComponent<Goals>(id, SeededGoals(species));
                     registry.AddComponent<Memory>(id, Memory{});
                     registry.AddComponent<Relationships>(id, Relationships{});
