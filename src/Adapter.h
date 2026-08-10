@@ -70,21 +70,24 @@ namespace TLC
             std::chrono::steady_clock::time_point Issued{};
 
             // The walk probe (verification instrument): distance to the
-            // destination every few seconds, the closest approach so far,
-            // and whether arrival was ever logged. The log, not the
-            // player's eyes, proves whether the walk happened.
+            // destination as the settler moves (≥1 m of progress, 2s
+            // apart — silence means standing still), the closest approach
+            // so far, and whether arrival was ever logged. The log, not
+            // the player's eyes, proves whether the walk happened.
             std::chrono::steady_clock::time_point LastProbe{};
+            float LastDistance = -1.0f;   // -1 = nothing logged yet
             float MinDistance = std::numeric_limits<float>::max();
             bool Reached = false;
         };
 
         void ExecutePlan(const std::vector<PlanEntry>& a_plan);
 
-        // Measures every active walk session every few seconds: distance to
-        // the target, closest approach, and a one-time "reached" line. The
-        // verification instrument of the walking stone — runs independent
-        // of the current intent, because the Trade memory fades (~4.5s)
-        // long before the walk completes.
+        // Measures every active walk session as the settler moves: distance
+        // to the target (≥1 m of progress, 2s apart), closest approach, and
+        // a one-time "reached" line. Silence means the settler isn't moving
+        // — the sandbox-override verdict. Runs independent of the current
+        // intent, because the Trade memory fades (~4.5s) long before the
+        // walk completes.
         void ProbeWalks();
 
         void LogPlanEntry(

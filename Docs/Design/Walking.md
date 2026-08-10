@@ -79,11 +79,13 @@ on its own — the walk completes even after the memory fades.
 
 The session **outlives the intent**: the memory fades long before the
 walk finishes, so the session is kept after the mind moves on, and
-`ProbeWalks` measures it in its own pass — distance every 5s, closest
-approach, and a one-time "reached" line. (First probe build ran the probe
-inside the MoveTo case, so it died with the memory after ~4.5s — one line,
-no trend; that's fixed.) A refused walk, a logged arrival, 60s passing,
-or a world end clears the session.
+`ProbeWalks` measures it in its own pass — distance as the settler moves
+(≥1 m of progress, 2s apart; **silence means standing still** — the
+sandbox-override verdict), closest approach, and a one-time "reached"
+line. (First probe build ran the probe inside the MoveTo case, so it died
+with the memory after ~4.5s — one line, no trend; that's fixed.) A
+refused walk, a logged arrival, 60s passing, or a world end clears the
+session.
 
 ---
 
@@ -134,7 +136,7 @@ tests/               — MarketTest (5/5 suites green): seeded mind decides
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **MarketTest** — a hungry settler seeded with the market memory decides `MoveTo` after `Update`; the same mind without it explores. The decision half of the farmer's road. |
-| In-game (author) | Pending: load Sanctuary, wait ~60s, paste the WHOLE log. Now only nearby minds get the market memory (the first radius-scoped run: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected: `walk probe settler X -> 000250FE d = ... m (min ... m)` every 5s with **d closing** (the probe now outlives the fading memory, so the trend actually appears) — then one `settler X reached the market (d = 1.2 m)` line. Distance closing → the pinned planner drives the walk; flat or rising d → sandbox overrides, fix is the command system. Failure modes are logged: `market not loaded`, the vtable-mismatch ERROR (prints the real vtable), or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — a persistent null AI process, logged but harmless). |
+| In-game (author) | Pending: load Sanctuary, stay in the game ~30s, paste the tail. Only nearby minds get the market memory (radius-scoped: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected: `walk probe settler X -> 000250FE d = ... m (min ... m)` lines as the settler moves (≥1 m of progress, 2s apart) with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. Closing d → the pinned planner drives the walk; **silence after the first probe line** → standing still (sandbox override), fix is the command system. Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. Failure modes are logged: `market not loaded`, the vtable-mismatch ERROR, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
 
 ## Decisions (resolved)
 

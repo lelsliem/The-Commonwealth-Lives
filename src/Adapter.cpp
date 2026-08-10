@@ -559,9 +559,12 @@ namespace TLC
                     "LCE: settler {} reached the market (d = {:.1f} m).",
                     FormatHex8(actorFormId), d);
             }
-            else if (now - session.LastProbe >= std::chrono::seconds(5))
+            else if (now - session.LastProbe >= std::chrono::seconds(2)
+                && (session.LastDistance < 0.0f
+                    || std::fabs(d - session.LastDistance) >= 1.0f))
             {
                 session.LastProbe = now;
+                session.LastDistance = d;
                 REX::DEBUG(
                     "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m).",
                     FormatHex8(actorFormId), FormatHex8(session.Target), d,
