@@ -39,18 +39,18 @@ namespace
         // spdlog directly.
         LCE::Logging::Info(Heartbeat);
 
-        g_Adapter.StartWorld();
+        g_Adapter.GameLoaded();
         LCE::Logging::Flush();
     }
 
     void OnPreLoadGame()
     {
-        g_Adapter.EndWorld();
+        g_Adapter.PreLoadGame();
     }
 
     void OnDeleteGame()
     {
-        g_Adapter.EndWorld();
+        g_Adapter.DeleteGame();
     }
 }
 

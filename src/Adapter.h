@@ -28,9 +28,14 @@ namespace TLC
     // hidden global). Holds the core's registry and the translator, and
     // maps the game's life events onto the simulation:
     //
-    //   GameLoaded   -> StartWorld : settlers become minds
-    //   PreLoadGame  -> EndWorld   : the world ends before the next loads
-    //   DeleteGame   -> EndWorld   : and when a save is deleted
+    //   GameLoaded  -> EndWorld + StartWorld : every completed load is a
+    //                   fresh world (settlers become minds)
+    //   PreLoadGame -> EndWorld, and arm the abort recovery: the game
+    //                   sometimes starts a load that never completes (the
+    //                   exit-save reload aborts ~9s in, every session) —
+    //                   if no GameLoaded follows within 12s, the world
+    //                   revives itself in Tick
+    //   DeleteGame  -> EndWorld, no recovery (nothing is loading)
     //
     // Serializers are registered in the constructor — once, before any
     // world exists (core 0.4.0 contract: they survive Clear()).
@@ -40,6 +45,9 @@ namespace TLC
     public:
         Adapter();
 
+        void GameLoaded();
+        void PreLoadGame();
+        void DeleteGame();
         void StartWorld();
         void EndWorld();
 
@@ -108,6 +116,13 @@ namespace TLC
         // pass (Update → plan → execute → probe) completed.
         bool m_TickCalled = false;
         bool m_FirstPassLogged = false;
+
+        // Abort recovery: armed by PreLoadGame, cleared by GameLoaded or
+        // the recovery itself. The game's exit-save reload starts a load
+        // ~0.1s after the world wakes and aborts it ~9s later without a
+        // GameLoaded — without this, the sim dies every session.
+        bool m_AwaitingLoad = false;
+        std::chrono::steady_clock::time_point m_WorldEndedAt{};
 
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;

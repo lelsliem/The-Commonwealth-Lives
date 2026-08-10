@@ -188,6 +188,28 @@ namespace TLC
         RegisterAllSerializers(m_Registry);
     }
 
+    void Adapter::GameLoaded()
+    {
+        // Every completed load is a fresh world: end whatever was running
+        // (covers the abort-recovery revive) and translate anew.
+        EndWorld();
+        StartWorld();
+        m_AwaitingLoad = false;
+    }
+
+    void Adapter::PreLoadGame()
+    {
+        EndWorld();
+        m_AwaitingLoad = true;
+        m_WorldEndedAt = std::chrono::steady_clock::now();
+    }
+
+    void Adapter::DeleteGame()
+    {
+        EndWorld();
+        m_AwaitingLoad = false;
+    }
+
     void Adapter::StartWorld()
     {
         if (m_Started)
@@ -300,6 +322,20 @@ namespace TLC
     {
         if (!m_Started)
         {
+            // Abort recovery: a PreLoadGame armed a pending load that
+            // never completed (the game's exit-save reload aborts ~9s
+            // in, every session, killing the sim). Revive the world so
+            // the simulation survives it.
+            if (m_AwaitingLoad
+                && std::chrono::steady_clock::now() - m_WorldEndedAt
+                    > std::chrono::seconds(12))
+            {
+                m_AwaitingLoad = false;
+                REX::INFO("lifecycle: the pending load aborted — reviving the world.");
+                StartWorld();
+                return;
+            }
+
             // One-time proof the tick hook fires even before a world
             // exists (the hooks install at Load; worlds start on
             // GameLoaded). If neither this nor the first-pass line ever
