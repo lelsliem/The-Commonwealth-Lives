@@ -131,13 +131,21 @@ namespace TLC
             std::chrono::steady_clock::time_point Issued{};
 
             // The walk probe (verification instrument): distance to the
-            // destination as the settler moves (≥1 m of progress, 2s
-            // apart — silence means standing still), the closest approach
-            // so far, and whether arrival was ever logged. The log, not
-            // the player's eyes, proves whether the walk happened.
+            // destination (in game units) as the settler moves (≥1 u of
+            // progress, 2s apart — silence means standing still), the
+            // closest approach so far, and whether arrival was ever
+            // logged. The log, not the player's eyes, proves whether the
+            // walk happened.
             std::chrono::steady_clock::time_point LastProbe{};
             float LastDistance = -1.0f;   // -1 = nothing logged yet
             float MinDistance = std::numeric_limits<float>::max();
+
+            // The distance at the first probe (units) — the sanity gate
+            // for the probe: a reading absurdly far beyond it is a
+            // stream artifact (cell teardown after a fast travel), not
+            // progress, and is skipped.
+            float StartDistance = 0.0f;
+
             bool Reached = false;
         };
 

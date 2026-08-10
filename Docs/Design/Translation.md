@@ -42,7 +42,9 @@ governs engine state; a plugin's single world is its root).
 
 ```
 Adapter::StartWorld()   — kGameLoaded / kNewGame
-Adapter::EndWorld()     — kPreLoadGame / kDeleteGame
+Adapter::EndWorld()     — kPreLoadGame / kNewGame only (kDeleteGame — a
+                          save FILE being deleted — must not tear down a
+                          running world; it killed the sim mid-world once)
 Adapter::Tick()         — deferred to the executor stone
 ```
 

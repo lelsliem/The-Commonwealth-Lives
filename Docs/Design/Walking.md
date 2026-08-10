@@ -153,28 +153,31 @@ in-game session (the tick stone's lesson: attribution, not assumption).
 While the Trade memory lasts (~4.5s at the core's fade), the intent stays
 `MoveTo` and would re-issue the planner every frame. The executor tracks a
 per-entity walk session (target + when issued) and issues each walk once
-(60s window). The game's planner then walks the settler to the destination
-on its own — the walk completes even after the memory fades.
+(120s window). The game's planner then walks the settler to the
+destination on its own — the walk completes even after the memory fades.
 
 The session **outlives the intent**: the memory fades long before the
 walk finishes, so the session is kept after the mind moves on, and
-`ProbeWalks` measures it in its own pass — distance as the settler moves
-(≥1 m of progress, 2s apart; **silence means standing still** — the
-sandbox-override verdict), closest approach, and a one-time "reached"
-line. (First probe build ran the probe inside the MoveTo case, so it died
-with the memory after ~4.5s — one line, no trend; that's fixed.) A
-refused walk, a logged arrival, 60s passing, or a world end clears the
-session.
+`ProbeWalks` measures it in its own pass — distance (in game units) as
+the settler moves (≥1 u of progress, 2s apart; **silence means standing
+still** — the sandbox-override verdict), closest approach, and a
+one-time "reached" line. (First probe build ran the probe inside the
+MoveTo case, so it died with the memory after ~4.5s — one line, no
+trend; that's fixed.) A refused walk, a logged arrival, 120s passing, or
+a world end clears the session.
 
-The walker's position is read live from its **3D node** (`Get3D()` →
-`GetWorldTransform().translate`) when available, falling back to
-`GetPosition()` (the stored `data.location`) and **tagging which one was
-used** (`[live]` / `[stored]`). A hard skip on a missing 3D node once
-silenced the probe entirely — the fallback guarantees a reading every
-tick. (`GetPosition()` is the save-time position and never changes while
-an actor moves; it's also why the cross-map distances matched settlement
-workbenches so exactly — those were saved positions of settlers standing
-at their own workbenches.)
+The walker's position is read from its **data position** (`GetPosition()`
+— `data.location`). The 3D node's world transform was the original
+source and it lied: after a fast travel, streaming actors reported
+positions 120,000+ units from where they stood (a walker ~700 units from
+the bench "moved" 1.7 km in a frame), so arrivals never registered and
+sessions died at the timeout. The data position tracks the actor while
+loaded and stays sane (last known) when the cell unloads. A sanity gate
+skips any reading beyond ~8× the session's first reading plus a 5,000
+unit margin — a stream artifact is never counted as progress and never
+corrupts the closest-approach minimum. The timeout is 120s so a slow
+walk across the market radius (≈10,000 units ≈ 140 m) can finish; the
+old 60s killed walkers mid-path.
 
 ---
 

@@ -103,7 +103,11 @@ types cross them, so they are testable without the game (CoSaveTest).
 PreSaveGame ──► CaptureWorld() ──► CoSave::Encode ──► WriteRecord
 load         ──► ReadRecord ──► CoSave::Decode ──► QueueRestore(snapshot, rngState)
 kGameLoaded  ──► pending? ApplyRestore(snapshot, rngState) : StartWorld() fresh
-PreLoadGame / DeleteGame / new game ──► EndWorld() (Clear; serializers survive)
+PreLoadGame / new game ──► EndWorld() (Clear; serializers survive)
+DeleteGame (a save FILE was deleted) ──► nothing — the world keeps
+running. EndWorld here killed the sim mid-world once: an autosave
+rotation deleted a save, the world ended, and no pending load existed to
+revive it — later saves wrote 0 entities until a full restart.
 ```
 
 The F4SE serialization callbacks (`SetSaveCallback` / `SetLoadCallback` /

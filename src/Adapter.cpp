@@ -572,8 +572,13 @@ namespace TLC
 
     void Adapter::DeleteGame()
     {
-        EndWorld();
-        m_AwaitingLoad = false;
+        // A save FILE was deleted — not a world teardown. The sim must
+        // keep running: in-game, an autosave rotation deleted a save
+        // mid-world and EndWorld killed the sim with no pending load to
+        // revive it (m_AwaitingLoad was false, so the 60s abort-revival
+        // never fired) — every later save wrote 0 entities and the world
+        // stayed dead until a full restart. A new game or a load goes
+        // through PreLoadGame/GameLoaded, which own the world's life.
     }
 
     void Adapter::StartWorld()
@@ -1532,7 +1537,7 @@ namespace TLC
                 bool walked = false;
 
                 if (session.Target == targetFormId
-                    && now - session.Issued < std::chrono::seconds(60))
+                    && now - session.Issued < std::chrono::seconds(120))
                 {
                     walked = true;   // already walking that way
                 }
@@ -1637,15 +1642,19 @@ namespace TLC
                 continue;
             }
 
-            // A session ends 60s after issue — the walk is issued once and
-            // the game's planner carries it from there; 60s covers the
-            // market radius (≈140 m) even at a slow walk.
-            if (now - session.Issued >= std::chrono::seconds(60))
+            // A session ends 120s after issue — the walk is issued once
+            // and the game's planner carries it from there. 120s covers
+            // the market radius (≈10,000 units ≈ 140 m) even at a slow
+            // walk; the old 60s killed slow walkers mid-path (the radius
+            // needs 60-100s at walk speed, and pathing detours stretch
+            // it further). The sim re-decides on its own, so a live
+            // session outliving its intent is harmless.
+            if (now - session.Issued >= std::chrono::seconds(120))
             {
                 if (!session.Reached)
                 {
                     REX::DEBUG(
-                        "LCE: walk session settler {} ended (closest approach {:.1f} m).",
+                        "LCE: walk session settler {} ended (closest approach {:.1f} u).",
                         FormatHex8(m_Translator.FormFor(it->first)),
                         session.MinDistance);
                 }
@@ -1673,26 +1682,34 @@ namespace TLC
                 continue;
             }
 
-            // Live position: prefer the 3D node (the render position —
-            // always current); some actors report no 3D from Get3D(), so
-            // try GetFullyLoaded3D() too, then fall back to the stored
-            // position (a hard skip once silenced the probe entirely).
-            // The reading is tagged so the source is interpretable.
-            const auto* node = actor->Get3D();
-
-            if (node == nullptr)
-            {
-                node = actor->GetFullyLoaded3D();
-            }
-
-            const auto from = node != nullptr
-                ? node->GetWorldTransform().translate
-                : actor->GetPosition();
-            const bool live = node != nullptr;
+            // Distance (units) from the actor's DATA position to the
+            // destination. The 3D node's world transform was the old
+            // source, and it lied: after a fast travel, streaming actors
+            // reported positions 120,000+ units from where they stood
+            // (a walker ~700 units from the bench "moved" 1.7 km in a
+            // frame), so arrival never registered. The data position
+            // tracks the actor while loaded and stays sane (last known)
+            // when the cell unloads.
+            const auto from = actor->GetPosition();
             const auto to = target->GetPosition();
             const auto dx = from.x - to.x;
             const auto dy = from.y - to.y;
             const auto d = std::sqrt(dx * dx + dy * dy);
+
+            // The first reading is the baseline. A walker cannot plausibly
+            // stray beyond ~8× its starting distance plus a margin — a
+            // reading that absurd is a stream artifact (cell teardown),
+            // not progress: skip it without touching the minimum or the
+            // arrival check, so a blip cannot corrupt a healthy walk.
+            if (session.StartDistance <= 0.0f)
+            {
+                session.StartDistance = d;
+            }
+            else if (d > session.StartDistance * 8.0f + 5000.0f)
+            {
+                ++it;
+                continue;
+            }
 
             if (d < session.MinDistance)
             {
@@ -1704,7 +1721,7 @@ namespace TLC
                 session.Reached = true;
                 ReportArrival(it->first, session.Target);
                 REX::INFO(
-                    "LCE: settler {} arrived (d = {:.1f} m).",
+                    "LCE: settler {} arrived (d = {:.1f} u).",
                     FormatHex8(actorFormId), d);
             }
             else if (now - session.LastProbe >= std::chrono::seconds(2)
@@ -1714,9 +1731,9 @@ namespace TLC
                 session.LastProbe = now;
                 session.LastDistance = d;
                 REX::DEBUG(
-                    "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m){}.",
+                    "LCE: walk probe settler {} -> {} d = {:.1f} u (min {:.1f} u).",
                     FormatHex8(actorFormId), FormatHex8(session.Target), d,
-                    session.MinDistance, live ? " [live]" : " [stored]");
+                    session.MinDistance);
             }
 
             ++it;

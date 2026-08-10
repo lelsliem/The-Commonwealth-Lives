@@ -51,7 +51,9 @@ relationships inside the core's registry.
 STATUS: COMPLETE ✅ (verified in-game 2026-08-09)
 
 [✓] Adapter world object — registry + translator, lifecycle wired
-    to GameLoaded / PreLoadGame / DeleteGame
+    to GameLoaded / PreLoadGame / DeleteGame (DeleteGame — a save FILE
+    being deleted — is now a no-op: it used to EndWorld the sim
+    mid-world, killing it with no load pending to revive it)
 [✓] Settler predicate — WorkshopNPCFaction (0x000337F3, extracted
     from the game's Fallout4.esm), player excluded
 [✓] Seeded minds — FormRef + satisfied Needs + empty Memory and
@@ -105,7 +107,13 @@ STATUS: IMPLEMENTED — tick and walking verified in-game (2026-08-10)
     the Sanctuary workshop, observed in-game ("everyone, even traders")
     — and the session ended with no crash; the crash blamed on the call
     earlier was a corrupt save (same signature in no-DLL runs), now
-    prevented by DisableExitSave
+    prevented by DisableExitSave. Hardenings (2026-08-10): the probe now
+    reads the actor's DATA position instead of the 3D node's world
+    transform (streaming actors reported 120,000+ unit positions after a
+    fast travel, so arrivals never registered), a sanity gate skips
+    absurd readings, the session timeout grew 60s → 120s (the old one
+    killed slow walkers mid-path across the market radius), and log
+    distances are labeled in units (u), not meters
 
 ═══════════════════════════════════════════════
 
@@ -125,8 +133,9 @@ ticking its first pass.
     — CoSaveTest 6/6 suites green)
 [✓] Lifecycle — PreSaveGame → Capture → record; load → record →
     Restore (applied on the load's completion event — kPostLoadGame,
-    deduped against kGameLoaded); PreLoadGame/DeleteGame/new game →
-    Clear (serializers survive)
+    deduped against kGameLoaded); PreLoadGame/new game → Clear
+    (serializers survive); DeleteGame (a save file was deleted) never
+    touches the running world
 [✓] Migration — old saves load forward. The record is
     self-describing (each component under its stable name), so the seam
     is two rules in Decode: version > current refuses (a future format
