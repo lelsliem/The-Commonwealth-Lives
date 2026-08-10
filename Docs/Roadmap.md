@@ -155,11 +155,11 @@ Goal: the real test from the contract.
     Implemented 2026-08-10; in-game verification pending (the arrival
     log lines + the feeder readout prove it)
 [✓] The real test: a settler goes to market because they are hungry —
-    no script. IMPLEMENTED 2026-08-10 — the hunger write-through on
-    arrival (fed: Hunger X -> 1.00) closes the loop: needs decay →
-    MoveTo → walk → arrive → fed → not hungry → no walk. Goals seeded
-    per species (Human: AcquireFood; Child/Animal: none — their loop
-    closes on the feed alone). Pending in-game verification — see
-    Docs/Design/RealTest.md. Engine ask remains: a Feed kind (or Aid
+    no script. VERIFIED in-game 2026-08-10: the hunger write-through
+    on arrival (fed: Hunger X -> 1.00) closes the loop — needs decay →
+    MoveTo → walk → arrive → fed → not hungry → no walk (the fed dog
+    decided Rest, not MoveTo, 6 ms after feeding; 19 feeds, both
+    animals cycling). Goals seeded per species (Human: AcquireFood;
+    Child/Animal: none). Engine ask remains: a Feed kind (or Aid
     serving AcquireFood) so animal goals can be served when wired.
 [ ] Nexus name check + publish

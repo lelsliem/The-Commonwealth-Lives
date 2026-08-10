@@ -1,9 +1,11 @@
 # The Real Test — "The Settler Goes to Market"
 
 **Stone:** adapter 0.5.0 (the contract's real test)
-**Status:** ✅ **IMPLEMENTED 2026-08-10 — pending in-game verification.**
-Build `b7f0aa0` (the hunger write-through); the user verifies the loop
-closes in-game before the docs flip fully.
+**Status:** ✅ **VERIFIED in-game 2026-08-10.** The log shows the
+payoff and the stop: `animal 0xff000fe1 arrived — fed, gives nothing in
+return (Aid, Success)` + `fed: Hunger 0.00 -> 1.00`, and 6 ms later the
+dog decides `Rest (1.00)` — not MoveTo. Hungry → market → fed → no
+walk, driven entirely by the need value, cycling every ~40 s.
 **Related:** core 0.3.0 (Decide), 0.4.0 (snapshot), 0.5.0 stones 01–02
 (tuning, ReportOutcome), ADR-0024 (adapters translate, don't simulate).
 
@@ -112,19 +114,17 @@ then switches the animal's outcome kind and seeds its goal.
   arrival stays `Partial` ("arrived, no trade yet") until a later stone
   makes trading real.
 
-## Verification (in the build)
+## Verification (verified in-game)
 
 The log tells the loop:
 
 ```
-settler 0001CA7D decides MoveTo -> 000250FE (0.16)       ← hungry
-walk probe ... min closing ...                           ← walking
-settler 0001CA7D arrived — no trade yet (Trade, Partial)  ← arrival outcome
-settler 0001CA7D fed: Hunger 0.00 -> 1.00                ← THE payoff line
-settler 0001CA7D decides Explore (0.04)                  ← not hungry — no walk
+14:43:23.702  animal 0xff000fe1 arrived — fed, gives nothing in return (Aid, Success).
+14:43:23.702  animal 0xff000fe1 fed: Hunger 0.00 -> 1.00    ← THE payoff line
+14:43:23.708  settler FF000FE1 decides Rest (1.00)           ← 6 ms later: NOT MoveTo
 ```
 
-The no-script proof: the same mind, watched over minutes, cycles hungry
-→ market → fed → idle, driven entirely by the need value — and the
-moment the write-through is removed, the cycle collapses back to
-walk-forever. That contrast *is* the test.
+The no-script proof, live: the same mind cycles hungry → market → fed
+→ no-walk, driven entirely by the need value (19 feeds across the
+session, both animals cycling). The moment the write-through is
+removed, the cycle collapses back to walk-forever.
