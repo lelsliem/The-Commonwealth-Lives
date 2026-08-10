@@ -71,9 +71,10 @@ Sanctuary.
 
 Goal: the simulation ticks in-game, and intents become game actions.
 
-STATUS: IMPLEMENTED — tick verified in-game; walking call pending
+STATUS: IMPLEMENTED — tick verified in-game; walking pinned, walk
+pending in-game verification
 
-[✓] Design — Docs/Design/Executor.md
+[✓] Design — Docs/Design/Executor.md, Docs/Design/Walking.md
 [✓] Per-frame tick — a hook on ProcessVMTick (ID 2251368): two of its
     four call sites (0x010E9F7E, 0x010EA08E), once per frame on the
     game thread, real delta. Verified in-game 2026-08-10 by per-hook
@@ -87,9 +88,17 @@ STATUS: IMPLEMENTED — tick verified in-game; walking call pending
 [✓] Action table — MoveTo through the Movement::WalkTo seam (never
     teleport); Rest/Socialize/Explore/Work/Flee → table slots + log
     lines
-[ ] Walking call — the AIProcess::CreateMovementPlanner RVA for
-    1.11.221 is pending in-game verification (one constant in
-    src/Movement.cpp); until then WalkTo refuses, never teleports
+[✓] Walking call — pinned statically against Fallout4.exe 1.11.221 by
+    RTTI chain: the movement controller's DoSetPlannerDirectControl
+    (NPC subobject vtable 0x2567B68, slot [2] = 0xdc92f0, this =
+    controller+0x138), guarded by a runtime vtable check that refuses
+    rather than teleport; WalkTo no longer refuses by default
+    (src/Movement.cpp, Docs/Design/Walking.md)
+[✓] The market — every mind remembers where to trade: the Sanctuary
+    workshop (REFR 000250FE, verified from the ESM) becomes the market
+    entity when loaded,
+    and the Trade seed makes hungry settlers decide MoveTo
+    (MarketTest, 5/5 suites green)
 [ ] Walking in-game — a MoveTo executes and a settler walks to market;
     the intent lines themselves are verified (all 11 settlers at
     Sanctuary logged decides Explore)

@@ -181,7 +181,7 @@ resolves the road.
 |---------|-------|--------|
 | 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
 | 0.2.0 | Translation | ✅ verified in-game |
-| 0.3.0 | Intent executor | implemented — tick verified in-game; walking call pending |
+| 0.3.0 | Intent executor | implemented — tick verified in-game; walking pinned, in-game walk pending |
 | 0.4.0 | Co-save | ⬜ |
 | 0.5.0 | Living world (the market test) | ⬜ |
 
@@ -232,9 +232,25 @@ See `Docs/Roadmap.md`.
   fixed from the first run: targetless intents (Explore) were wrongly
   refused "target not loaded" — the plan builder now treats a
   targetless intent's target as loaded by definition (tested).
-  Adapter tests 4/4 green. The one open item: the walking call
-  (`AIProcess::CreateMovementPlanner`) RVA for 1.11.221, pending
-  in-game verification — see `Docs/Design/Executor.md`.
+  Adapter tests 4/4 green.
+- **Walking stone implemented, pending in-game verification
+  (2026-08-10).** The walking call is pinned against Fallout4.exe
+  1.11.221 — and the earlier assumption of a function named
+  `AIProcess::CreateMovementPlanner` was wrong: FO4's walk-to-point is
+  the movement controller's `DoSetPlannerDirectControl` (the NPC
+  subobject vtable 0x2567B68, slot [2] = 0xdc92f0, `this` =
+  controller+0x138 — RTTI chain: name → type descriptor → COL →
+  vtable → slot). `Movement::WalkTo` calls it with a runtime vtable
+  guard that refuses (never teleports) and prints the real vtable on a
+  mismatch. The market half: every mind is seeded with a Trade memory
+  pointing at the Sanctuary workshop (REFR 000250FE, verified from
+  Fallout4.esm — the record's EDID is SanctuaryWorkshopREF and its
+  position cross-checks the canonical settlement table; base 000C1AEB),
+  so hungry settlers decide `MoveTo -> 000250FE`; a per-entity walk
+  session issues each walk once while the memory lasts. MarketTest proves the decision half
+  (seeded mind → MoveTo; bare mind → Explore). Adapter tests 5/5
+  green. Open: the walk itself in-game — see
+  `Docs/Design/Walking.md`.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the banner quote slots, and the Nexus name check.

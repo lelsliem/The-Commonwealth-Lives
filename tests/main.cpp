@@ -6,6 +6,7 @@
 
 #include "Components.h"
 #include "Executor.h"
+#include "Market.h"
 #include "Serialization.h"
 #include "Translator.h"
 
@@ -15,6 +16,7 @@
 #include "LCE/Simulation/Memory.h"
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Relationships.h"
+#include "LCE/Simulation/Simulation.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -25,6 +27,7 @@ namespace TLC::Tests
     bool SeedingTest();
     bool SerializationTest();
     bool PlanBuilderTest();
+    bool MarketTest();
 }
 
 namespace
@@ -58,6 +61,7 @@ int main()
     Run("SeedingTest", TLC::Tests::SeedingTest);
     Run("SerializationTest", TLC::Tests::SerializationTest);
     Run("PlanBuilderTest", TLC::Tests::PlanBuilderTest);
+    Run("MarketTest", TLC::Tests::MarketTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -395,6 +399,58 @@ namespace TLC::Tests
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    bool MarketTest()
+    {
+        //-------------------------------------------------------------------------
+        // The walking stone's decision half: a hungry settler who
+        // remembers the market decides MoveTo -> market. The market is the
+        // Sanctuary workshop (REFR 000250FE); the seed is the adapter's
+        // report (ADR-0024: the adapter reports events, the simulation
+        // gives them meaning).
+        //-------------------------------------------------------------------------
+        EntityRegistry registry;
+
+        const auto settler = registry.CreateEntity();
+        const auto market = registry.CreateEntity();
+
+        registry.AddComponent<Needs>(settler, SeededNeeds());
+        registry.AddComponent<Memory>(settler, Memory{});
+        registry.AddComponent<FormRef>(market, FormRef{ kMarketFormId });
+
+        SeedMarketMemory(registry, market);
+
+        Update(registry, 1.0);
+
+        const auto intent = registry.GetComponent<Intent>(settler);
+
+        if (!intent
+            || intent->Action != ActionType::MoveTo
+            || intent->Target != market)
+        {
+            return false;
+        }
+
+        // The same hungry mind WITHOUT the market memory has nowhere to
+        // trade — it explores instead of moving.
+        EntityRegistry bare;
+
+        const auto wanderer = bare.CreateEntity();
+
+        bare.AddComponent<Needs>(wanderer, SeededNeeds());
+        bare.AddComponent<Memory>(wanderer, Memory{});
+
+        Update(bare, 1.0);
+
+        const auto other = bare.GetComponent<Intent>(wanderer);
+
+        if (!other || other->Action == ActionType::MoveTo)
+        {
+            return false;
         }
 
         return true;

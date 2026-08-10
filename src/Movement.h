@@ -19,14 +19,17 @@ namespace TLC
 {
     //-------------------------------------------------------------------------
     // Movement — the adapter's walk. One seam, one truth: the game already
-    // knows how to walk NPCs; the adapter invokes it. The core never names a
-    // game action and never appears here (ADR-0024).
+    // knows how to walk NPCs; the adapter invokes it (the movement
+    // controller's DoSetPlannerDirectControl, pinned to 1.11.221 in
+    // Movement.cpp). The core never names a game action and never appears
+    // here (ADR-0024).
     //-------------------------------------------------------------------------
     namespace Movement
     {
         // Walks the actor to the destination using the game's own movement
-        // machinery. Returns false when walking is unavailable — the intent
-        // is dropped and the sim re-decides next tick. Never teleports.
+        // machinery. Returns false when walking is unavailable or the
+        // runtime verification fails — the intent is dropped and the sim
+        // re-decides next tick. Never teleports.
         bool WalkTo(RE::Actor* a_actor, const RE::NiPoint3& a_destination);
     }
 }

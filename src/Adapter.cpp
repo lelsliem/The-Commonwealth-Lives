@@ -10,6 +10,7 @@
 #include "Adapter.h"
 
 #include "Components.h"
+#include "Market.h"
 #include "Movement.h"
 #include "Serialization.h"
 #include "SimRelevant.h"
@@ -181,6 +182,25 @@ namespace TLC
 
         const auto count = TranslateLoadedActors(m_Registry, m_Translator);
 
+        // The market: if the workshop form is loaded it becomes an entity,
+        // and every mind remembers where to trade (ADR-0024 — the adapter
+        // reports events; the simulation gives them meaning). A mind that
+        // knows the market can decide MoveTo; one that doesn't explores.
+        EnsureMarket();
+
+        const auto market = m_Translator.EntityFor(kMarketFormId);
+
+        if (market.IsValid())
+        {
+            SeedMarketMemory(m_Registry, market);
+
+            REX::INFO("The market is open: every mind remembers where to trade (000250FE — the Sanctuary workshop).");
+        }
+        else
+        {
+            REX::INFO("The market is not loaded — settlers explore until it is.");
+        }
+
         REX::INFO("The Commonwealth wakes up: {} settlers became minds.", count);
         LCE::Logging::Info(
             "The Commonwealth wakes up: " + std::to_string(count) + " settlers became minds.");
@@ -202,7 +222,28 @@ namespace TLC
         m_Registry.Clear();
         m_Translator.Clear();
         m_LastLogged.clear();
+        m_Walks.clear();
         m_Started = false;
+    }
+
+    void Adapter::EnsureMarket()
+    {
+        // Already known — the market entity survives within one world.
+        if (m_Translator.EntityFor(kMarketFormId).IsValid())
+        {
+            return;
+        }
+
+        // The workshop form must be a loaded reference to be walked to.
+        if (RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId) == nullptr)
+        {
+            return;
+        }
+
+        const auto id = m_Registry.CreateEntity();
+
+        m_Registry.AddComponent<FormRef>(id, FormRef{ kMarketFormId });
+        m_Translator.Add(kMarketFormId, id);
     }
 
     void Adapter::Tick(double a_deltaSeconds)
@@ -243,6 +284,8 @@ namespace TLC
             // dropped intent is simply re-decided next tick — nothing queued.
             if (!entry.ActorLoaded)
             {
+                m_Walks.erase(entry.Entity);
+
                 LogPlanEntry(
                     entry.Entity,
                     "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
@@ -253,6 +296,8 @@ namespace TLC
 
             if (!entry.TargetLoaded)
             {
+                m_Walks.erase(entry.Entity);
+
                 LogPlanEntry(
                     entry.Entity,
                     "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
@@ -263,6 +308,8 @@ namespace TLC
 
             if (!entry.Available)
             {
+                m_Walks.erase(entry.Entity);
+
                 LogPlanEntry(
                     entry.Entity,
                     "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
@@ -291,7 +338,35 @@ namespace TLC
 
                 // The adapter walks the settler; the core never does
                 // (ADR-0024). Refusal leaves the sim to re-decide.
-                const auto walked = Movement::WalkTo(actor, target->GetPosition());
+                //
+                // The walk session: while the Trade memory lasts the intent
+                // stays MoveTo and would re-issue the planner every frame.
+                // Issue each walk once per session; the game's planner keeps
+                // walking the settler to the destination on its own.
+                auto& session = m_Walks[entry.Entity];
+                const auto now = std::chrono::steady_clock::now();
+
+                bool walked = false;
+
+                if (session.Target == targetFormId
+                    && now - session.Issued < std::chrono::seconds(30))
+                {
+                    walked = true;   // already walking that way
+                }
+                else
+                {
+                    walked = Movement::WalkTo(actor, target->GetPosition());
+
+                    if (walked)
+                    {
+                        session.Target = targetFormId;
+                        session.Issued = now;
+                    }
+                    else
+                    {
+                        session = {};   // a refused walk ends the session
+                    }
+                }
 
                 char confidence[16];
                 std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
@@ -311,6 +386,10 @@ namespace TLC
             case ActionType::Work:
             case ActionType::Flee:
             {
+                // A mind that decides something else is no longer walking
+                // to market — its walk session ends.
+                m_Walks.erase(entry.Entity);
+
                 char confidence[16];
                 std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
 

@@ -21,10 +21,14 @@ stones are in: the heartbeat (verified in-game), the translation (settlers
 become minds — verified at Sanctuary), the snapshot substrate, and the
 intent executor — the simulation now ticks in-game every frame (verified:
 per-hook fire counters proved the ProcessVMTick hooks fire once per
-frame, and 9 settlers at Sanctuary logged clean intent lines). One open
-item: the game's walking call (the movement planner) is pending in-game
-verification — the executor refuses rather than teleport. Next: the
-co-save, where the world survives a save and a load.
+frame, and 9 settlers at Sanctuary logged clean intent lines). The
+walking stone is built: every mind remembers where the market is (the
+Sanctuary workshop REFR 000250FE), hungry settlers decide
+`MoveTo -> 000250FE`, and `Movement::WalkTo` calls the game's own
+walk-to-point machinery (the movement controller's DoSetPlanner slot,
+pinned to 1.11.221 by RTTI chain, guarded at runtime) — the walk itself
+is pending in-game verification. Next: the co-save, where the world
+survives a save and a load.
 
 ## What this is
 
@@ -93,11 +97,13 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    ✅ Verified in-game 2026-08-09: 10 settlers at Sanctuary.
    Every frame after that, the executor ticks the simulation and logs
    intents as they change, e.g.
-   `settler 0008F3A1 decides MoveTo -> 0008F3B2 (0.82)`.
+   `settler 0008F3A1 decides MoveTo -> 000250FE (0.82)`.
    ✅ Tick verified in-game 2026-08-10: per-hook fire counters proved
    the ProcessVMTick hooks fire once per frame; 9 settlers logged
-   `decides Explore (0.5x)`. (The walking call itself is pending
-   verification — see `Docs/Design/Executor.md`.)
+   `decides Explore (0.5x)`. With the market seeded, settlers now
+   decide `MoveTo -> 000250FE` (the Sanctuary workshop) and the
+   executor walks them through the pinned DoSetPlanner call —
+   pending in-game verification, see `Docs/Design/Walking.md`.
 
 ## Test
 
@@ -106,8 +112,8 @@ xmake run TheLivingCommonwealth.Tests
 ```
 
 Runs the adapter's harness (translator tables, seeding, snapshot
-round-trip, plan builder) — links LCE.Core only, no game required.
-4/4 suites green.
+round-trip, plan builder, market decision) — links LCE.Core only, no
+game required. 5/5 suites green.
 
 ## License
 
