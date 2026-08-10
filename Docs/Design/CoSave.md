@@ -113,6 +113,9 @@ and are refused by the plan builder ("actor not loaded") until they load
 
 ## The restore re-seeds the market (a walking bug, fixed 2026-08-10)
 
+**Verified in-game:** after the fix, a restored world's junkyard dog
+walks to the workbench when hungry — restored worlds walk again.
+
 A restored world was **market-blind**: the restore rebuilt entities and
 the translator but never re-ran the market seed, and the seed itself is a
 fading memory event (weight 1.0, `MemoryFadeRate` 0.2/s — forgotten in
