@@ -146,6 +146,15 @@ namespace TLC
         // game's arrival stop is typically 1-3 m from the marker.
         constexpr float kArrivalRadius = 4.0f;
 
+        // The market seed's radius: only settlers within walking distance
+        // of the market remember it. ~10,000 units (≈140 m) covers all of
+        // Sanctuary village and excludes the neighboring settlements —
+        // Red Rocket is ~13,000 units away, Abernathy ~22,000. The probe
+        // proved why this matters: the process lists carry settler-faction
+        // actors from kilometers away, and every one of them was issued a
+        // walk to the Sanctuary workbench.
+        constexpr float kMarketRadius = 10000.0f;
+
         // The entity's form, or null when the form is unknown.
         RE::TESForm* FormFor(const Translator& a_translator, LCE::Simulation::EntityId a_entity)
         {
@@ -197,9 +206,42 @@ namespace TLC
 
         if (market.IsValid())
         {
-            SeedMarketMemory(m_Registry, market);
+            const auto* marketRef =
+                RE::TESForm::GetFormByID<RE::TESObjectREFR>(kMarketFormId);
 
-            REX::INFO("The market is open: every mind remembers where to trade (000250FE — the Sanctuary workshop).");
+            // Only minds whose settler is within walking distance of the
+            // market remember it. The probe proved why this matters: the
+            // process lists carry settler-faction actors from settlements
+            // kilometers away (Abernathy, Warwick — each standing at its
+            // own workbench), and every one of them was issued a walk to
+            // the Sanctuary bench. A settler in Sanctuary knows the
+            // Sanctuary market; a settler at Warwick doesn't walk 3 km to
+            // trade (per-settlement markets are the refinement).
+            if (marketRef != nullptr)
+            {
+                const auto marketPos = marketRef->GetPosition();
+
+                SeedMarketMemory(
+                    m_Registry, market,
+                    [this, marketPos](LCE::Simulation::EntityId a_entity) {
+                        const auto formId = m_Translator.FormFor(a_entity);
+                        const auto* actor =
+                            RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+                        if (actor == nullptr)
+                        {
+                            return false;
+                        }
+
+                        const auto pos = actor->GetPosition();
+                        const auto dx = pos.x - marketPos.x;
+                        const auto dy = pos.y - marketPos.y;
+
+                        return std::sqrt(dx * dx + dy * dy) < kMarketRadius;
+                    });
+            }
+
+            REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
         }
         else
         {

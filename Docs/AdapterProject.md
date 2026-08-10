@@ -249,7 +249,13 @@ See `Docs/Roadmap.md`.
   so hungry settlers decide `MoveTo -> 000250FE`; a per-entity walk
   session issues each walk once while the memory lasts. MarketTest proves the decision half
   (seeded mind → MoveTo; bare mind → Explore). Adapter tests 5/5
-  green. Open: the walk itself in-game — see
+  green. A distance probe (per-entity, every 5s) was added so arrival
+  is proven in the log, not by eye — and its first run found the walk
+  orders were going to settler-faction actors at settlements
+  kilometers away (Abernathy, Warwick — each matched to its own
+  workbench within meters), so the market seed is now radius-scoped
+  (~10,000 units: only minds whose settler is within walking distance
+  remember the market). Open: the walk itself in-game — see
   `Docs/Design/Walking.md`.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),

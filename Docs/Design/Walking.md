@@ -92,8 +92,18 @@ decides something else, a refused walk, or a world end clears the session.
   with a position (and `EnsureMarket`'s loaded check requires a REFR).
   The settlement's trade/food hub is its market for this stone.
 - At `StartWorld`, if the form is loaded it becomes an entity (FormRef +
-  translator entry), and every mind's Memory is seeded with
-  `{ Trade, market, 1.0f }` (`SeedMarketMemory`, pure, in `src/Market.h`).
+  translator entry), and every mind *within walking distance* of it
+  (~10,000 units ≈ 140 m — all of Sanctuary village, excluding Red
+  Rocket's ~13,000 and Abernathy's ~22,000) has its Memory seeded with
+  `{ Trade, market, 1.0f }` (`SeedMarketMemory` with an include
+  predicate; pure, in `src/Market.h`).
+- The radius is the probe's lesson, not a guess: the first probe run
+  showed walk orders issued to settler-faction actors standing at
+  settlements kilometers away (Abernathy 22,017 units, Warwick 215,004 —
+  each matched to its own workbench within meters), and all of them were
+  being sent to the Sanctuary bench. A settler in Sanctuary knows the
+  Sanctuary market; a settler at Warwick doesn't walk 3 km to trade
+  (per-settlement markets are the refinement).
 - If the form is not loaded (different settlement), the log says so and
   settlers explore until it is — the TargetLoaded refusal already handles
   the rest.
@@ -117,7 +127,7 @@ tests/               — MarketTest (5/5 suites green): seeded mind decides
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **MarketTest** — a hungry settler seeded with the market memory decides `MoveTo` after `Update`; the same mind without it explores. The decision half of the farmer's road. |
-| In-game (author) | Pending: load Sanctuary → every settler logs `decides MoveTo -> 000250FE`, and the **walk probe** settles it in the log, not by eye: `walk probe settler X -> 000250FE d = 42.3 m (min 41.8 m)` every 5s, then one `settler X reached the market (d = 1.2 m)` line. Distance closing → the pinned planner drives the walk. Flat or rising d → the settler's sandbox package is overriding the destination, and the fix is the game's command system (which outranks sandbox). Failure modes are logged: `market not loaded`, the vtable-mismatch ERROR (prints the real vtable), or `WalkTo refused — no actor or no AI process` (transient — the next tick re-attempts). |
+| In-game (author) | Pending: load Sanctuary, wait ~60s, paste the WHOLE log (the probe trend needs the lines after the first tick). Now only nearby minds get the market memory, so the walkers are Sanctuary settlers only. Expected: `walk probe settler X -> 000250FE d = ... m (min ... m)` every 5s with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. Distance closing → the pinned planner drives the walk; flat or rising d → sandbox overrides, fix is the command system. Failure modes are logged: `market not loaded`, the vtable-mismatch ERROR (prints the real vtable), or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — a persistent null AI process, logged but harmless). |
 
 ## Decisions (resolved)
 

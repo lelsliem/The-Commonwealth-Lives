@@ -14,6 +14,7 @@
 #include "LCE/Simulation/Memory.h"
 
 #include <cstdint>
+#include <functional>
 
 namespace TLC
 {
@@ -39,19 +40,27 @@ namespace TLC
     inline constexpr std::uint32_t kMarketFormId = 0x000250FEu;
 
     //-------------------------------------------------------------------------
-    // Seeds every mind's memory with the market as a trade source. A mind
-    // that remembers the market — and is hungry — decides to move to it.
-    // Pure: registry + entity id, no game types. The weight is the core's
-    // default seed; it fades (MemoryFadeRate 0.2/s, forgotten below 0.1)
-    // unless arrival reinforces it — the next stone's work.
+    // Seeds every mind's memory with the market as a trade source — or,
+    // when a_include is given, only the minds it accepts. A mind that
+    // remembers the market — and is hungry — decides to move to it.
+    // Pure: registry + entity id + predicate, no game types. The weight is
+    // the core's default seed; it fades (MemoryFadeRate 0.2/s, forgotten
+    // below 0.1) unless arrival reinforces it — the next stone's work.
     //-------------------------------------------------------------------------
     inline void SeedMarketMemory(
         LCE::Simulation::EntityRegistry& a_registry,
-        LCE::Simulation::EntityId a_market)
+        LCE::Simulation::EntityId a_market,
+        const std::function<bool(LCE::Simulation::EntityId)>& a_include = {})
     {
         a_registry.ForEachWithComponent<LCE::Simulation::Memory>(
-            [a_market](LCE::Simulation::EntityId, LCE::Simulation::Memory& a_memory)
+            [a_market, &a_include](
+                LCE::Simulation::EntityId a_entity, LCE::Simulation::Memory& a_memory)
             {
+                if (a_include && !a_include(a_entity))
+                {
+                    return;   // not near the market — no market memory
+                }
+
                 a_memory.Events.push_back(LCE::Simulation::MemoryEvent{
                     a_market, LCE::Simulation::InteractionKind::Trade, 1.0f });
             });
