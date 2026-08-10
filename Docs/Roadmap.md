@@ -310,13 +310,20 @@ Goal: settlers are born, live, and die; they make friends and enemies;
 and quests happen because life happens — no scripts. The quest is the
 behaviour, visible in the world and the log.
 
-STATUS: IN PROGRESS — plan written (2026-08-10, Docs/Design/Life.md);
-no 0.6.0 code yet. Full plan + the engine hand-over in Life.md and the
-engine's AdapterProject.md.
+STATUS: IN PROGRESS — Stone 1 built (2026-08-10); the rest planned in
+Docs/Design/Life.md. The engine hand-over (Requests A–C) is in the
+engine's AdapterProject.md — the engine has since shipped stone 08
+(RelationshipChangedEvent + sim.bond.threshold.*) and stone 09
+(Society — Groups & Traits), and gained InteractionKind::Death for this
+stone.
 
-[ ] Stone 1 — The world keeps its books: arrivals become minds
-    mid-session, deaths destroy the mind and write the death fact,
-    departures walk out with a goodbye
+[x] Stone 1 — The world keeps its books: the per-second census
+    (Lifecycle::Diff, pure + tested) — arrivals become minds mid-session
+    (one SeedMind path with the wake seed), deaths destroy the mind,
+    clean its book entries (walk, log, feeder, stall), and write the
+    death fact to every survivor (core gained InteractionKind::Death),
+    and faction-left departures are removed with a goodbye. In-game
+    verification pending
 [ ] Stone 2 — Bonds: named relationship states (friend / sweetheart /
     spouse / rival / enemy) from Disposition/Trust thresholds,
     persisted in the co-save (record v5)

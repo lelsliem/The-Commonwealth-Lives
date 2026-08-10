@@ -169,3 +169,27 @@ actors (post-fast-travel walkers measured 120,000+ units from where they
 stood, so arrivals never registered); it now reads the actor's **data
 position**, skips readings beyond a sanity gate, and the session timeout
 grew to 120s so slow walkers across the market radius can finish.
+
+## 0011 — Deaths are detected by the census sweep, not an event hook; the core gained InteractionKind::Death
+
+**Accepted · 2026-08-10**
+
+Stone 1 ("the world keeps its books") needed to know when a mind is
+gone. Two candidate signals: a game death event (none is exposed in the
+dependency — commonlibf4 has no Character/actor death event source), or
+a poll. The poll won: the tick's existing one-second census reads the
+game's own markers — a killer handle (`myKiller`, set the moment an
+actor is killed), the corpse-cleanup timer (`checkMyDeadBodyTimer`), or
+a deleted ref — all offset-pinned members in the dependency, no
+hard-coded form ids. The classification is a pure, tested function
+(`Lifecycle::Diff`: unknown+relevant → arrival; known+dead → death;
+known+alive+out-of-faction → departure), keeping the game read at the
+edge like every other ADR-0024 seam.
+
+The death fact needs a way to say "died" in memory; the core's
+`InteractionKind` had none. The adapter asked for one small append-only
+enum value (`Death`, ordinal 11 — the co-save writes raw ordinals, so
+old saves decode unchanged). It is a fact, never a door: Decide gates
+only Trade and Social, so a death never blocks a walk or a trade. The
+settlement remembers who is gone; the dead are simply absent and never
+restore. Grief (Stone 2) reads the fact.

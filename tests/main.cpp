@@ -9,6 +9,7 @@
 #include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
+#include "Lifecycle.h"
 #include "Market.h"
 #include "Serialization.h"
 #include "Translator.h"
@@ -27,6 +28,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -41,6 +43,7 @@ namespace TLC::Tests
     bool MarketTest();
     bool WorldFactsTest();
     bool TuningTest();
+    bool LifecycleTest();
 }
 
 namespace
@@ -79,6 +82,7 @@ int main()
     Run("MarketTest", TLC::Tests::MarketTest);
     Run("WorldFactsTest", TLC::Tests::WorldFactsTest);
     Run("TuningTest", TLC::Tests::TuningTest);
+    Run("LifecycleTest", TLC::Tests::LifecycleTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -1756,6 +1760,97 @@ namespace TLC::Tests
             || animal.List[0].DecayRate != 0.1f)
         {
             return false;
+        }
+
+        return true;
+    }
+
+    bool LifecycleTest()
+    {
+        // Empty world: a relevant, alive settler arrives; a dead or
+        // irrelevant actor never becomes a mind.
+        {
+            const std::unordered_set<std::uint32_t> known;
+
+            const std::vector<Lifecycle::Scan> scans{
+                { 0x00000101u, true,  false },   // relevant + alive -> arrival
+                { 0x00000102u, false, false },   // not relevant      -> nothing
+                { 0x00000103u, true,  true  },   // dead              -> nothing
+            };
+
+            const auto events = Lifecycle::Diff(known, scans);
+
+            if (events.size() != 1
+                || events[0].Kind != Lifecycle::EventKind::Arrival
+                || events[0].FormId != 0x00000101u)
+            {
+                return false;
+            }
+        }
+
+        // A known mind that dies is a death — even if it also left the
+        // faction (a corpse is a death, not a departure).
+        {
+            const std::unordered_set<std::uint32_t> known{ 0x00000101u };
+
+            const std::vector<Lifecycle::Scan> scans{
+                { 0x00000101u, false, true },   // dead    -> death
+                { 0x00000102u, true,  false },  // new     -> arrival
+            };
+
+            const auto events = Lifecycle::Diff(known, scans);
+
+            if (events.size() != 2
+                || events[0].Kind != Lifecycle::EventKind::Death
+                || events[0].FormId != 0x00000101u
+                || events[1].Kind != Lifecycle::EventKind::Arrival
+                || events[1].FormId != 0x00000102u)
+            {
+                return false;
+            }
+        }
+
+        // A known mind alive but out of the faction departs; an alive,
+        // relevant known mind is left alone; a dead one is a death.
+        {
+            const std::unordered_set<std::uint32_t> known{
+                0x00000101u, 0x00000102u, 0x00000103u };
+
+            const std::vector<Lifecycle::Scan> scans{
+                { 0x00000101u, false, false },  // left     -> departure
+                { 0x00000102u, true,  false },  // fine     -> nothing
+                { 0x00000103u, false, true  },  // dead     -> death
+            };
+
+            const auto events = Lifecycle::Diff(known, scans);
+
+            if (events.size() != 2
+                || events[0].Kind != Lifecycle::EventKind::Departure
+                || events[0].FormId != 0x00000101u
+                || events[1].Kind != Lifecycle::EventKind::Death
+                || events[1].FormId != 0x00000103u)
+            {
+                return false;
+            }
+        }
+
+        // The process lists can hold an actor twice — one classification
+        // per form id per pass, never a double booking.
+        {
+            const std::unordered_set<std::uint32_t> known;
+
+            const std::vector<Lifecycle::Scan> scans{
+                { 0x00000101u, true, false },
+                { 0x00000101u, true, false },   // duplicate sighting
+                { 0x00000102u, true, false },
+            };
+
+            const auto events = Lifecycle::Diff(known, scans);
+
+            if (events.size() != 2)
+            {
+                return false;
+            }
         }
 
         return true;

@@ -11,6 +11,7 @@
 
 #include "CoSave.h"
 #include "Executor.h"
+#include "Lifecycle.h"
 #include "Market.h"
 #include "Translator.h"
 #include "Tuning.h"
@@ -32,6 +33,7 @@
 
 namespace RE
 {
+    class Actor;
     class TESWeather;
 }
 
@@ -75,6 +77,38 @@ namespace TLC
         void DeleteGame();
         void StartWorld();
         void EndWorld();
+
+        // 0.6.0 Stone 1 — the world keeps its books. The per-second
+        // edge read: new loaded settlers become minds (arrivals), a
+        // known mind whose actor is dead is removed with a death fact
+        // (every survivor remembers who is gone), and a known mind whose
+        // actor left the settler faction is removed with a goodbye.
+        void KeepBooks();
+
+        // Creates a mind for a loaded, sim-relevant actor: the entity,
+        // the species split, seeded needs (with the per-mind desync),
+        // goals, empty memory and relationships, and the human's pouch.
+        // Silent — the caller logs; idempotent (an already-known form is
+        // skipped). The wake seed and the bookkeeping arrival share it.
+        void SeedMind(const RE::Actor* a_actor);
+
+        // The wake seed (StartWorld): every loaded sim-relevant actor
+        // becomes a mind. Returns the count the banner logs.
+        std::size_t SeedLoadedActors();
+
+        // Removes a mind and its book entries: the walk session, the
+        // last-log key, the feeder line, a stall the mind kept (the
+        // market re-derives its keeper on the next arrival), the entity,
+        // and the translation. A death (a_isDeath) writes the death fact
+        // — every surviving mind remembers { the dead, Death, weight,
+        // day } — the groundwork grief reads in Stone 2; a departure is
+        // a goodbye line, no fact (they chose to go).
+        void RemoveMind(std::uint32_t a_formId, bool a_isDeath);
+
+        // The world day (the weather stone reads it inline; this is the
+        // same read, named for the bookkeeping). 0 before the calendar
+        // is up.
+        [[nodiscard]] std::uint64_t CurrentDay() const;
 
         // Co-save (0.4.0) — the world rides inside the save file. The
         // F4SE serialization callbacks (main.cpp) call these; the adapter

@@ -35,16 +35,26 @@ parents.
 Each stone is a buildable unit with an in-game verification. They build in
 order; each one leaves the world strictly more alive.
 
-### Stone 1 — The world keeps its books (lifecycle)
+### Stone 1 — The world keeps its books (lifecycle) — IMPLEMENTED (2026-08-10)
 
-- **Arrivals:** new workshop settlers become minds mid-session (radio
-  beacon recruits, new settlers) — not just at world wake.
-- **Deaths:** hook the actor death event → destroy the entity → write the
-  death fact to the settlement's minds (`{death, who, day}`) → grief.
-- **Departures:** a settler whose bonds are all negative and needs unmet
-  walks out of the settlement and despawns — a removal with a goodbye.
-- **Verify:** kill a settler in-game — the death is town news, no ghost
-  walks, no resurrected minds on reload.
+- **Arrivals:** every loaded, sim-relevant actor that is not yet a mind
+  becomes one on the tick's one-second census — new settlers, radio
+  beacon recruits, and animals alike. The wake seed and the census share
+  one `SeedMind` path.
+- **Deaths:** the census reads the game's own markers (a killer handle,
+  the corpse-cleanup timer, a deleted ref); a dead mind is removed — the
+  walk session, the last-log key, the feeder line, and any stall it
+  kept (the market re-derives its keeper) — and a **death fact**
+  `{ the dead, Death, weight, day }` is pushed to every surviving mind
+  (the core gained `InteractionKind::Death` — append-only ordinal).
+- **Departures:** a known mind whose actor is alive but no longer in the
+  settler faction is removed with a goodbye line. The bond-driven
+  walk-out departure (the mind decides to leave) stays with Stone 2,
+  where bonds define it — the bookkeeping is ready.
+- **Verify (pending in-game):** kill a settler — the death is town news
+  (a `lifecycle: settler X died` line, no ghost walks, no resurrected
+  minds on reload); arrive at a settlement — its new settlers wake as
+  minds mid-session.
 
 ### Stone 2 — Bonds (relationships, good and bad)
 

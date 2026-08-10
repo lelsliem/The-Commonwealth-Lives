@@ -133,32 +133,25 @@ namespace TLC
         }
 
         //-------------------------------------------------------------------------
-        // The translation itself (ADR-0024: at the edge). Every loaded
-        // actor that is sim-relevant becomes an entity: a FormRef so the
-        // entity knows its game form, a SpeciesTag so the sim knows what
-        // kind of mind it is, and a fresh mind (satisfied needs seeded for
-        // the species, empty memory, empty relationships). The game is
-        // read once and never written — the write-through belongs to the
-        // executor stone.
+        // The per-second census sweep (0.6.0 Stone 1). ForEachLoadedActor
+        // visits every actor the game is simulating near the player — the
+        // same four process lists the wake seed reads; the classification
+        // (arrival / death / departure) is Lifecycle::Diff, pure.
+        // IsActorDead reads the game's own markers: a killer handle (set
+        // the moment an actor is killed), a corpse-cleanup timer (the
+        // body awaiting cleanup), or a deleted ref (removed from the
+        // world). Any of the three means the mind is gone.
         //-------------------------------------------------------------------------
-        std::size_t TranslateLoadedActors(
-            LCE::Simulation::EntityRegistry& registry,
-            Translator& translator,
-            const NeedRates& rates)
+        template <class Fn>
+        void ForEachLoadedActor(Fn&& a_fn)
         {
-            using namespace LCE::Simulation;
-
             const auto* processLists = RE::ProcessLists::GetSingleton();
 
             if (!processLists)
             {
-                return 0;
+                return;
             }
 
-            std::size_t count = 0;
-
-            // The four process lists: high, low, middle-high, middle-low —
-            // every actor currently loaded and simulated near the player.
             for (const auto* list : processLists->allProcesss)
             {
                 if (!list)
@@ -168,57 +161,26 @@ namespace TLC
 
                 for (const auto& handle : *list)
                 {
-                    // handle.get() is a NiPointer<Actor>; .get() is the raw
-                    // pointer the predicate and the registry want.
-                    const auto* actor = handle.get().get();
+                    // handle.get() is a NiPointer<Actor>; .get() is the
+                    // raw pointer the callers want.
+                    auto* actor = handle.get().get();
 
-                    if (!actor || !IsSimRelevant(actor))
+                    if (actor == nullptr || actor->IsPlayerRef())
                     {
                         continue;
                     }
 
-                    const auto formId = actor->GetFormID();
-
-                    // Defensive: an actor may appear in more than one list.
-                    if (translator.EntityFor(formId).IsValid())
-                    {
-                        continue;
-                    }
-
-                    const auto species = ClassifySpecies(actor->race);
-                    const auto id = registry.CreateEntity();
-
-                    // The desync stone: every mind's needs are born
-                    // slightly different (VaryNeeds — deterministic per
-                    // entity id), so hunger arrives at different times and
-                    // the settlement doesn't march to the market in
-                    // lockstep.
-                    auto needs = SeededNeeds(species, rates);
-                    VaryNeeds(needs, id);
-
-                    registry.AddComponent<FormRef>(id, FormRef{ formId });
-                    registry.AddComponent<SpeciesTag>(id, SpeciesTag{ species });
-                    registry.AddComponent<Needs>(id, std::move(needs));
-                    registry.AddComponent<Goals>(id, SeededGoals(species));
-                    registry.AddComponent<Memory>(id, Memory{});
-                    registry.AddComponent<Relationships>(id, Relationships{});
-
-                    // The economy stone: a human is born with a small
-                    // pouch (deterministic per entity id — a saved purse
-                    // restores exactly). Children and animals never carry
-                    // one: they never barter.
-                    if (species == Species::Human)
-                    {
-                        registry.AddComponent<CapPouch>(
-                            id, CapPouch{ SeedPouch(id) });
-                    }
-
-                    translator.Add(formId, id);
-                    ++count;
+                    a_fn(actor);
                 }
             }
+        }
 
-            return count;
+        inline bool IsActorDead(RE::Actor* a_actor)
+        {
+            return a_actor == nullptr
+                || a_actor->IsDeleted()
+                || a_actor->myKiller.get().get() != nullptr
+                || a_actor->checkMyDeadBodyTimer > 0.0f;
         }
 
         //-------------------------------------------------------------------------
@@ -581,6 +543,212 @@ namespace TLC
         // through PreLoadGame/GameLoaded, which own the world's life.
     }
 
+    void Adapter::SeedMind(const RE::Actor* a_actor)
+    {
+        using namespace LCE::Simulation;
+
+        if (a_actor == nullptr || !IsSimRelevant(a_actor))
+        {
+            return;
+        }
+
+        const auto formId = a_actor->GetFormID();
+
+        // Already a mind — the wake seed and the per-second bookkeeping
+        // share this path, and a form id never names both a mind and a
+        // workshop (targets carry a FormRef but no SpeciesTag).
+        if (m_Translator.EntityFor(formId).IsValid())
+        {
+            return;
+        }
+
+        const auto species = ClassifySpecies(a_actor->race);
+        const auto id = m_Registry.CreateEntity();
+
+        // The desync stone: every mind's needs are born slightly different
+        // (VaryNeeds — deterministic per entity id), so hunger arrives at
+        // different times and the settlement doesn't march to the market
+        // in lockstep.
+        auto needs = SeededNeeds(species, m_Settings.Rates);
+        VaryNeeds(needs, id);
+
+        m_Registry.AddComponent<FormRef>(id, FormRef{ formId });
+        m_Registry.AddComponent<SpeciesTag>(id, SpeciesTag{ species });
+        m_Registry.AddComponent<Needs>(id, std::move(needs));
+        m_Registry.AddComponent<Goals>(id, SeededGoals(species));
+        m_Registry.AddComponent<Memory>(id, Memory{});
+        m_Registry.AddComponent<Relationships>(id, Relationships{});
+
+        // The economy stone: a human is born with a small pouch
+        // (deterministic per entity id — a saved purse restores exactly).
+        // Children and animals never carry one: they never barter.
+        if (species == Species::Human)
+        {
+            m_Registry.AddComponent<CapPouch>(
+                id, CapPouch{ SeedPouch(id) });
+        }
+
+        m_Translator.Add(formId, id);
+    }
+
+    std::size_t Adapter::SeedLoadedActors()
+    {
+        std::size_t count = 0;
+
+        ForEachLoadedActor(
+            [this, &count](const RE::Actor* a_actor)
+            {
+                if (!IsSimRelevant(a_actor)
+                    || m_Translator.EntityFor(a_actor->GetFormID()).IsValid())
+                {
+                    return;
+                }
+
+                SeedMind(a_actor);
+                ++count;
+            });
+
+        return count;
+    }
+
+    void Adapter::KeepBooks()
+    {
+        using namespace LCE::Simulation;
+
+        // The known minds: every live entity with a SpeciesTag. Workshops
+        // carry a FormRef but no tag — they are targets, never minds.
+        std::unordered_set<std::uint32_t> known;
+
+        m_Registry.ForEachWithComponent<SpeciesTag>(
+            [&](EntityId a_entity, const SpeciesTag&)
+            {
+                if (const auto formId = m_Translator.FormFor(a_entity); formId != 0)
+                {
+                    known.insert(formId);
+                }
+            });
+
+        // The loaded-actor census: one read of the game's truth this pass.
+        std::vector<Lifecycle::Scan> scans;
+
+        ForEachLoadedActor(
+            [&scans](RE::Actor* a_actor)
+            {
+                scans.push_back(Lifecycle::Scan{
+                    a_actor->GetFormID(),
+                    IsSimRelevant(a_actor),
+                    IsActorDead(a_actor) });
+            });
+
+        for (const auto& event : Lifecycle::Diff(known, scans))
+        {
+            switch (event.Kind)
+            {
+            case Lifecycle::EventKind::Arrival:
+            {
+                // The scan's actor, re-resolved: the diff is pure, so the
+                // actor pointer comes back through the form id. A loaded
+                // arrival always resolves.
+                const auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(event.FormId);
+
+                if (actor == nullptr)
+                {
+                    break;
+                }
+
+                SeedMind(actor);
+
+                if (m_Translator.EntityFor(event.FormId).IsValid())
+                {
+                    REX::INFO(
+                        "lifecycle: settler {:#x} arrives — a new mind wakes.",
+                        event.FormId);
+                }
+
+                break;
+            }
+            case Lifecycle::EventKind::Death:
+                RemoveMind(event.FormId, true);
+                break;
+            case Lifecycle::EventKind::Departure:
+                RemoveMind(event.FormId, false);
+                break;
+            }
+        }
+    }
+
+    void Adapter::RemoveMind(std::uint32_t a_formId, bool a_isDeath)
+    {
+        using namespace LCE::Simulation;
+
+        const auto entity = m_Translator.EntityFor(a_formId);
+
+        if (!entity.IsValid())
+        {
+            return;
+        }
+
+        // The book's other pages: no walk, no last-log, no feeder line,
+        // no stall — a keeper's market re-derives its keeper on the next
+        // arrival.
+        m_Walks.erase(entity);
+        m_LastLogged.erase(entity);
+        m_FeederLogged.erase(entity);
+
+        for (auto it = m_StallKeepers.begin(); it != m_StallKeepers.end();)
+        {
+            if (it->second == entity)
+            {
+                it = m_StallKeepers.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        if (a_isDeath)
+        {
+            // The death fact: every surviving mind remembers who is gone —
+            // { the dead, Death, weight, day }. A fact, never a door:
+            // Decide gates only Trade and Social, so a death never blocks
+            // a walk or a trade. Survivors carry it across the co-save;
+            // the dead themselves are simply absent (they do not restore).
+            // Grief reads it in Stone 2.
+            const auto day = CurrentDay();
+
+            m_Registry.ForEachWithComponent<Memory>(
+                [&](EntityId a_survivor, Memory& a_memory)
+                {
+                    if (a_survivor == entity)
+                    {
+                        return;
+                    }
+
+                    a_memory.Events.push_back(MemoryEvent{
+                        entity, InteractionKind::Death,
+                        WorldFacts::kFactWeight, day });
+                });
+        }
+
+        m_Registry.DestroyEntity(entity);
+        m_Translator.Remove(a_formId);
+
+        REX::INFO(
+            "lifecycle: settler {:#x} {} — the world keeps its books.",
+            a_formId, a_isDeath ? "died" : "left the settlement");
+    }
+
+    std::uint64_t Adapter::CurrentDay() const
+    {
+        const auto* calendar = RE::Calendar::GetSingleton();
+
+        return calendar != nullptr && calendar->gameDaysPassed != nullptr
+            ? std::uint64_t(calendar->gameDaysPassed->value)
+            : 0;
+    }
+
     void Adapter::StartWorld()
     {
         if (m_Started)
@@ -588,8 +756,7 @@ namespace TLC
             return;
         }
 
-        const auto count =
-            TranslateLoadedActors(m_Registry, m_Translator, m_Settings.Rates);
+        const auto count = SeedLoadedActors();
 
         // The market: if the workshop form is loaded it becomes an entity,
         // and every mind remembers where to trade (ADR-0024 — the adapter
@@ -1419,6 +1586,12 @@ namespace TLC
             > std::chrono::seconds(1))
         {
             m_LastMarketSeed = std::chrono::steady_clock::now();
+
+            // 0.6.0 Stone 1 — the world keeps its books: new settlers
+            // become minds, deaths and departures leave the book. Runs
+            // before the seed so this tick's Update sees consistent state.
+            KeepBooks();
+
             SeedMarket(false);
 
             // The world's doors: the market's trading hours and the
