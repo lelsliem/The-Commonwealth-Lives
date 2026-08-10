@@ -65,9 +65,14 @@ translated mind with a `SpeciesTag`.
 | a child/animal mind (unreachable — defensive) | no trade | `Trade, Partial` |
 | child/animal arrival | fed by owner or settlement | `Aid, Success` |
 
-The stall-keeper map is per-world edge state, like weather: cleared on
-EndWorld, re-derived on restore, never persisted — a new world has a
-new stall-keeper.
+The stall-keeper map is per-world edge state, but it **is persisted**:
+the co-save record's v3 stall section carries each (market, keeper) as
+form-id pairs — stable across sessions, unlike the session-local
+entity ids — and ApplyRestore rebuilds the map from the restored
+FormRefs. A saved market reopens under the same keeper instead of
+whoever happens to arrive first; a pre-v3 save (no stall section)
+restores with no keepers and each market's stall re-derives on the
+first arrival, exactly like a fresh world.
 
 ## The log lines
 

@@ -678,7 +678,13 @@ namespace TLC::Tests
         source.AddComponent<CapPouch>(farmer, CapPouch{ 33 });
 
         const auto snapshot = source.Capture();
-        const auto record = TLC::CoSave::Encode(snapshot, 0x5EEDC0DEull);
+
+        // v3 (the stall-keepers stone): the record carries who runs each
+        // market's stall, as (market FormID, keeper FormID) — form ids,
+        // never the session-local entity ids.
+        const auto record = TLC::CoSave::Encode(
+            snapshot, 0x5EEDC0DEull,
+            { { 0x000250FEu, 0x0001A4DAu } });
 
         // The record carries the adapter's stable names — literally in the
         // bytes — never the process-local std::type_index addresses.
@@ -720,9 +726,19 @@ namespace TLC::Tests
         // caller's pre-seeded default.
         RegistrySnapshot decoded;
         std::uint64_t rngState = 0xABCDEF0123456789ull;
+        std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-        if (!TLC::CoSave::Decode(record, decoded, rngState)
+        if (!TLC::CoSave::Decode(record, decoded, rngState, stalls)
             || rngState != 0x5EEDC0DEull)
+        {
+            return false;
+        }
+
+        // The stall section round-trips exactly: the same market under
+        // the same keeper.
+        if (stalls.size() != 1
+            || stalls[0].first != 0x000250FEu
+            || stalls[0].second != 0x0001A4DAu)
         {
             return false;
         }
@@ -812,8 +828,9 @@ namespace TLC::Tests
 
             RegistrySnapshot bad;
             std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (TLC::CoSave::Decode(truncated, bad, rngState))
+            if (TLC::CoSave::Decode(truncated, bad, rngState, stalls))
             {
                 return false;
             }
@@ -828,8 +845,9 @@ namespace TLC::Tests
 
             RegistrySnapshot bad;
             std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (TLC::CoSave::Decode(badVersion, bad, rngState))
+            if (TLC::CoSave::Decode(badVersion, bad, rngState, stalls))
             {
                 return false;
             }
@@ -868,8 +886,9 @@ namespace TLC::Tests
 
             RegistrySnapshot migrated;
             std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (!TLC::CoSave::Decode(unknownName, migrated, rngState))
+            if (!TLC::CoSave::Decode(unknownName, migrated, rngState, stalls))
             {
                 return false;
             }
@@ -896,7 +915,7 @@ namespace TLC::Tests
         // `species` existed) loads forward — the missing component is
         // simply absent and the safe default applies (a mind without a
         // SpeciesTag reads as Human). A removed component type ("legacy")
-        // is skipped, not fatal. A newer record (version 2) is refused:
+        // is skipped, not fatal. A newer record (version 4) is refused:
         // a future format is not ours to guess.
         //-------------------------------------------------------------------------
         {
@@ -923,8 +942,9 @@ namespace TLC::Tests
 
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0x1122334455667788ull;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState)
+            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState, stalls)
                 || decoded.Entities.size() != 1
                 || decoded.Entities[0].Components.size() != 1)
             {
@@ -934,6 +954,13 @@ namespace TLC::Tests
             // A v0 record predates the Rng header — the caller's default
             // stream is untouched (that world never had a saved stream).
             if (rngState != 0x1122334455667788ull)
+            {
+                return false;
+            }
+
+            // A v0 record predates the stall section — no keeper is
+            // restored; the market's stall re-derives on first arrival.
+            if (!stalls.empty())
             {
                 return false;
             }
@@ -958,14 +985,15 @@ namespace TLC::Tests
         {
             TLC::Codec::Writer writer;
 
-            writer.U32(3);   // newer than this build — refuse, never half-apply
+            writer.U32(4);   // newer than this build — refuse, never half-apply
             writer.U32(0);
             writer.U32(0);
 
             RegistrySnapshot bad;
             std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (TLC::CoSave::Decode(writer.Bytes, bad, rngState))
+            if (TLC::CoSave::Decode(writer.Bytes, bad, rngState, stalls))
             {
                 return false;
             }
@@ -995,10 +1023,12 @@ namespace TLC::Tests
 
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0xFEEDFACE00000000ull;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState)
+            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState, stalls)
                 || rngState != 0xFEEDFACE00000000ull   // untouched
-                || decoded.Entities.size() != 1)
+                || decoded.Entities.size() != 1
+                || !stalls.empty())   // v1 predates the stall section
             {
                 return false;
             }

@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "CoSave.h"
 #include "Executor.h"
 #include "Market.h"
 #include "Translator.h"
@@ -92,7 +93,16 @@ namespace TLC
 
         void QueueRestore(
             LCE::Simulation::RegistrySnapshot a_snapshot,
-            std::uint64_t a_rngState);
+            std::uint64_t a_rngState,
+            std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers);
+
+        // The stall-keepers in durable form — (market FormID, keeper
+        // FormID) pairs, translated from the session-local entity ids via
+        // the translator. The co-save persists this (v3) so a restored
+        // market reopens under the same keeper instead of whoever happens
+        // to arrive first.
+        [[nodiscard]] std::vector<TLC::CoSave::StallKeeperPair>
+        StallKeepersForSave() const;
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -278,9 +288,10 @@ namespace TLC
 
         // Who runs each market's stall this world (market entity →
         // stall-keeper mind). Set by the first human arrival at that
-        // market; every later bench-arrival trades with them. Per-world
-        // edge state like weather — cleared on EndWorld, re-derived on
-        // restore, never persisted (a new world has a new stall-keeper).
+        // market; every later bench-arrival trades with them. Persisted
+        // in the co-save (v3, as FormID pairs) and rebuilt on restore —
+        // a market reopens under the same keeper, not whoever arrives
+        // first. Cleared on EndWorld.
         std::unordered_map<
             LCE::Simulation::EntityId, LCE::Simulation::EntityId>
             m_StallKeepers;
@@ -299,6 +310,18 @@ namespace TLC
         // stream the saved world was using, resumed on ApplyRestore.
         std::optional<LCE::Simulation::RegistrySnapshot> m_PendingRestore;
         std::uint64_t m_PendingRngState = kRngSeed;
+
+        // The stall-keepers the co-save held for this save, riding with
+        // m_PendingRestore; consumed by ApplyRestore (which translates
+        // the FormID pairs back into this world's entity ids).
+        std::vector<TLC::CoSave::StallKeeperPair> m_PendingStallKeepers;
+
+        // Rebuilds m_StallKeepers from durable (market, keeper) FormID
+        // pairs after a restore — the market entity and the keeper entity
+        // both resolve via the rebuilt translator (their FormRefs rode
+        // the snapshot), so this works even for actors not yet loaded.
+        void RestoreStallKeepers(
+            const std::vector<TLC::CoSave::StallKeeperPair>& a_stallKeepers);
 
         // The world-level randomness (engine stone 07): passed to Update
         // so every entity's needs decay at its own per-tick rate

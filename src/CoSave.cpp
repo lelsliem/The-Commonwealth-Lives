@@ -90,7 +90,9 @@ namespace TLC::CoSave
     }
 
     std::vector<std::byte> Encode(
-        const RegistrySnapshot& a_snapshot, std::uint64_t a_rngState)
+        const RegistrySnapshot& a_snapshot,
+        std::uint64_t a_rngState,
+        const std::vector<StallKeeperPair>& a_stallKeepers)
     {
         Codec::Writer writer;
 
@@ -133,13 +135,26 @@ namespace TLC::CoSave
             }
         }
 
+        // v3 (the stall-keepers stone): the per-world stall section — who
+        // runs each market's stall, as (market FormID, keeper FormID)
+        // pairs, stable across sessions. Present only in v3+ records;
+        // older records end after the entities.
+        writer.U32(static_cast<std::uint32_t>(a_stallKeepers.size()));
+
+        for (const auto& stall : a_stallKeepers)
+        {
+            writer.U32(stall.first);
+            writer.U32(stall.second);
+        }
+
         return writer.Bytes;
     }
 
     bool Decode(
         const std::vector<std::byte>& a_record,
         RegistrySnapshot& a_out,
-        std::uint64_t& a_rngState)
+        std::uint64_t& a_rngState,
+        std::vector<StallKeeperPair>& a_stallKeepers)
     {
         Codec::Reader reader{ a_record };
 
@@ -237,6 +252,37 @@ namespace TLC::CoSave
             }
 
             a_out.Entities.push_back(std::move(entity));
+        }
+
+        // v3 (the stall-keepers stone): the per-world stall section
+        // follows the entities. Older records have no section — the
+        // caller's stall list stands empty, and the market's stall
+        // re-derives on the first arrival (a safe default, like a missing
+        // component).
+        a_stallKeepers.clear();
+
+        if (recordVersion >= 3)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto stallCount = reader.U32();
+            a_stallKeepers.reserve(stallCount);
+
+            for (std::uint32_t i = 0; i < stallCount; ++i)
+            {
+                if (reader.Remaining() < 8)
+                {
+                    return false;
+                }
+
+                const auto marketFormId = reader.U32();
+                const auto keeperFormId = reader.U32();
+
+                a_stallKeepers.emplace_back(marketFormId, keeperFormId);
+            }
         }
 
         return true;

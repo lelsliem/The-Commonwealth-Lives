@@ -49,7 +49,9 @@ namespace
     void OnSaveGame(const F4SE::SerializationInterface* a_intfc)
     {
         const auto snapshot = g_Adapter.CaptureWorld();
-        const auto record = TLC::CoSave::Encode(snapshot, g_Adapter.RngState());
+        const auto stalls = g_Adapter.StallKeepersForSave();
+        const auto record =
+            TLC::CoSave::Encode(snapshot, g_Adapter.RngState(), stalls);
 
         REX::INFO(
             "co-save: writing {} entities ({} bytes).",
@@ -91,16 +93,18 @@ namespace
             // it with the saved world's own state; a v1 record leaves it
             // (that world never had a saved stream).
             std::uint64_t rngState = TLC::kRngSeed;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
 
-            if (!TLC::CoSave::Decode(record, snapshot, rngState))
+            if (!TLC::CoSave::Decode(record, snapshot, rngState, stalls))
             {
                 REX::ERROR("co-save: record decode failed (version {}).", version);
                 continue;
             }
 
-            REX::INFO("co-save: read {} entities — the world will be restored on load.",
-                snapshot.Entities.size());
-            g_Adapter.QueueRestore(std::move(snapshot), rngState);
+            REX::INFO(
+                "co-save: read {} entities, {} stall-keepers — the world will be restored on load.",
+                snapshot.Entities.size(), stalls.size());
+            g_Adapter.QueueRestore(std::move(snapshot), rngState, std::move(stalls));
         }
     }
 

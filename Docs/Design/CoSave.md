@@ -47,10 +47,10 @@ types cross them, so they are testable without the game (CoSaveTest).
 - **Type / UID:** `'LCEW'` (0x4C434557) — the UID is a placeholder for
   the F4SE-assigned one (the author-handle TODO in `xmake.lua` is the
   same open item).
-- **Version:** `kRecordVersion = 2`, the adapter's schema version. Bumped
-  only on a breaking change to the record *format* (the header); old
-  versions are migrated forward, never dropped.
-- **Layout (v2), all little-endian:**
+- **Version:** `kRecordVersion = 3`, the adapter's schema version. Bumped
+  only on a breaking change to the record *format* (the header or a
+  trailing section); old versions are migrated forward, never dropped.
+- **Layout (v3), all little-endian:**
 
   ```
   u32 recordVersion
@@ -64,12 +64,19 @@ types cross them, so they are testable without the game (CoSaveTest).
       per component:
           u8  nameLength, name bytes   ← the stable names below
           u32 blobLength, blob bytes   ← the core's opaque component data
+  u32 stallCount                ← v3 (the stall-keepers stone): who runs
+  per stall:                       each market's stall, in form ids —
+      u32 marketFormId             stable across sessions, unlike the
+      u32 keeperFormId             session-local entity ids
   ```
 
   Decode reads `rngState` only when the record version is ≥ 2; a v1
   record leaves the caller's pre-seeded default stream untouched (that
   world never had a saved stream — it is reseeded fresh, which is
-  honest).
+  honest). The stall section is read only when the record version is ≥ 3;
+  older records end after the entities, so a restored market's stall
+  re-derives on the first arrival (a safe default, like a missing
+  component).
 
 - **Stable names** (chosen once, never renamed — a rename is a schema
   change, migrate instead):
@@ -168,15 +175,18 @@ species/behaviour stone) and `cappouch` (the economy stone) — which is
 why the version never bumped and old saves kept loading: the format
 didn't change, the contents did. The version bumped only when the
 *format* itself changed: v2 (the decay-jitter wiring) added the `Rng`
-state to the header, the one genuine header change so far.
+state to the header, and v3 (the stall-keepers stone) added the stall
+section after the entities.
 
 **Tested:** CoSaveTest crafts a v0 record (no `species`, plus a `legacy`
-component) → decodes, drops `legacy`, restores with the tag absent, and
-the caller's default Rng stream untouched; a v1 record (no `Rng` state)
-→ decodes with the default stream standing; a v3 record → refused; the
-round-trip record with a `needs` name patched to unknown → decodes with
-exactly that one component dropped; the v2 round-trip → the encoded Rng
-state handed back exactly.
+component) → decodes, drops `legacy`, restores with the tag absent, the
+caller's default Rng stream untouched, and the stall list empty; a v1
+record (no `Rng` state) → decodes with the default stream standing and
+no stall section; a v4 record → refused; the round-trip record with a
+`needs` name patched to unknown → decodes with exactly that one
+component dropped; the v3 round-trip → the encoded Rng state handed
+back exactly and the (market, keeper) stall pair round-tripping as
+form ids.
 
 ## Files
 

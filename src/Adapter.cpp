@@ -437,10 +437,57 @@ namespace TLC
     }
 
     void Adapter::QueueRestore(
-        LCE::Simulation::RegistrySnapshot a_snapshot, std::uint64_t a_rngState)
+        LCE::Simulation::RegistrySnapshot a_snapshot,
+        std::uint64_t a_rngState,
+        std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers)
     {
         m_PendingRestore = std::move(a_snapshot);
         m_PendingRngState = a_rngState;
+        m_PendingStallKeepers = std::move(a_stallKeepers);
+    }
+
+    std::vector<TLC::CoSave::StallKeeperPair> Adapter::StallKeepersForSave() const
+    {
+        // Entity ids are session-local; the durable form is form ids.
+        // A keeper or market whose form the translator cannot resolve is
+        // skipped — it was never a real entity this world.
+        std::vector<TLC::CoSave::StallKeeperPair> result;
+        result.reserve(m_StallKeepers.size());
+
+        for (const auto& [market, keeper] : m_StallKeepers)
+        {
+            const auto marketFormId = m_Translator.FormFor(market);
+            const auto keeperFormId = m_Translator.FormFor(keeper);
+
+            if (marketFormId == 0 || keeperFormId == 0)
+            {
+                continue;
+            }
+
+            result.emplace_back(marketFormId, keeperFormId);
+        }
+
+        return result;
+    }
+
+    void Adapter::RestoreStallKeepers(
+        const std::vector<TLC::CoSave::StallKeeperPair>& a_stallKeepers)
+    {
+        for (const auto& [marketFormId, keeperFormId] : a_stallKeepers)
+        {
+            const auto market = m_Translator.EntityFor(marketFormId);
+            const auto keeper = m_Translator.EntityFor(keeperFormId);
+
+            // Both ride the snapshot (the market owns a FormRef, the
+            // keeper is a mind) — if either is missing, that market's
+            // stall re-derives on the first arrival, like a fresh world.
+            if (!market.IsValid() || !keeper.IsValid())
+            {
+                continue;
+            }
+
+            m_StallKeepers[market] = keeper;
+        }
     }
 
     void Adapter::ApplyRestore(LCE::Simulation::RegistrySnapshot a_snapshot)
@@ -491,6 +538,12 @@ namespace TLC
         // tick's periodic refresh keeps catching minds whose actors load
         // after this instant.
         SeedMarket(true);
+
+        // The stall-keepers stone (v3): a restored market reopens under
+        // its saved keeper — the same face behind the bench — instead of
+        // whoever happens to arrive first. Runs after the translator
+        // rebuild above, so both the market and the keeper resolve.
+        RestoreStallKeepers(m_PendingStallKeepers);
 
         REX::INFO(
             "The Commonwealth wakes up: {} minds restored from the co-save.",

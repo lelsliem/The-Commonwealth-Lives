@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2)**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3)**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -244,7 +244,15 @@ all live). Adapter progress:
     credit. The pouch is a co-save component (stable name cappouch) —
     a saved purse restores exactly, pre-economy saves are back-filled
     on restore. No engine change, no new pins. See Docs/Design/Economy.md.
-11. **Nexus name check + publish.**
+11. ✅ **Stall-keepers survive save/load** (implemented 2026-08-10,
+    in-game verification pending) — who runs each market's stall rides
+    the co-save record's v3 section as (market FormID, keeper FormID)
+    pairs — form ids, stable across sessions, unlike the session-local
+    entity ids — and ApplyRestore rebuilds the map from the restored
+    FormRefs. A saved market reopens under the same keeper; a pre-v3
+    save re-derives each stall on first arrival. Record v3, the second
+    real format bump (after v2's Rng header). See Docs/Design/CoSave.md.
+12. **Nexus name check + publish.**
 
 ---
 

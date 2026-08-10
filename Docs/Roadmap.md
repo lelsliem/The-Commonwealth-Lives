@@ -266,4 +266,14 @@ Goal: the real test from the contract.
     saves are back-filled on restore. Implemented 2026-08-10; in-game
     verification pending (the trade lines name the caps; sellers' pouches
     grow while buyers' shrink) — see Docs/Design/Economy.md
+[✓] Stall-keepers survive save/load (co-save record v3) — who runs
+    each market's stall rides the co-save as (market FormID, keeper
+    FormID) pairs — form ids, stable across sessions — and ApplyRestore
+    rebuilds the map from the restored FormRefs. A saved market reopens
+    under the same keeper instead of whoever arrives first; a pre-v3
+    save restores with no keepers and each stall re-derives on the
+    first arrival. Implemented 2026-08-10; in-game verification pending
+    (save with a known stall-keeper, reload — the same settler should
+    still be behind the bench, with the pouch intact) — see
+    Docs/Design/CoSave.md
 [ ] Nexus name check + publish

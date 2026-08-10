@@ -42,9 +42,18 @@ namespace TLC::CoSave
     // component is stored under its stable name), so an old record simply
     // decodes without the new component and the safe default applies (a
     // missing SpeciesTag reads as Human). v2 (the decay-jitter wiring)
-    // added the Rng state to the header — a real format change, so it
-    // bumped. Older versions are migrated forward on load, never dropped.
-    inline constexpr std::uint32_t kRecordVersion = 2;
+    // added the Rng state to the header; v3 (the stall-keepers stone)
+    // added the per-world stall section after the entities — both real
+    // format changes, so both bumped. Older versions are migrated
+    // forward on load, never dropped.
+    inline constexpr std::uint32_t kRecordVersion = 3;
+
+    // A market's stall-keeper, in the durable form: the market's
+    // workbench FormID and the keeper's actor FormID — form ids, not
+    // entity ids, because entity ids are session-local (reassigned per
+    // world). The adapter translates at the edges (StallKeepersForSave /
+    // RestoreStallKeepers).
+    using StallKeeperPair = std::pair<std::uint32_t, std::uint32_t>;
 
     // Encodes a registry snapshot as the durable record bytes: stable
     // component names (never std::type_index), the core's snapshot version
@@ -53,7 +62,8 @@ namespace TLC::CoSave
     // game types cross it, so it is testable without the game.
     [[nodiscard]] std::vector<std::byte> Encode(
         const LCE::Simulation::RegistrySnapshot& a_snapshot,
-        std::uint64_t a_rngState);
+        std::uint64_t a_rngState,
+        const std::vector<StallKeeperPair>& a_stallKeepers);
 
     // Decodes record bytes back into a snapshot. Returns false — the load
     // is refused, never half-applied — when the record version is newer
@@ -72,5 +82,6 @@ namespace TLC::CoSave
     bool Decode(
         const std::vector<std::byte>& a_record,
         LCE::Simulation::RegistrySnapshot& a_out,
-        std::uint64_t& a_rngState);
+        std::uint64_t& a_rngState,
+        std::vector<StallKeeperPair>& a_stallKeepers);
 }
