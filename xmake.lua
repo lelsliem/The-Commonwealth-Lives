@@ -144,7 +144,7 @@ target("TheLivingCommonwealth", function()
     -- the Windows version resource, and install to Data/F4SE/Plugins.
     add_rules("commonlibf4.plugin", {
         name        = "The Living Commonwealth",
-        author      = "LCE Contributors", -- TODO: the author's handle
+        author      = "lelsliem",
         contact     = "",
         description = "Fallout 4 adapter for the Living Commonwealth Engine",
     })

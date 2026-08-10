@@ -277,9 +277,9 @@ all live). Adapter progress:
     the calendar. Proven by CoSaveTest: a crafted v3 record with an
     old-format memory blob loads forward, and the round-trip keeps
     `Day = 42`.
-12. **GitHub publish** (plan change 2026-08-10 — Nexus comes later): set
-    the author handle in `xmake.lua` (the TODO), repo hygiene
-    (`.gitignore` / `README` / `LICENSE` are done), first 0.5.0 release.
+12. **GitHub publish** (plan change 2026-08-10 — Nexus comes later):
+    author handle set (`lelsliem`), repo hygiene (`.gitignore` /
+    `README` / `LICENSE` are done), first 0.5.0 release.
 
 ---
 
@@ -322,8 +322,6 @@ all live). Adapter progress:
 
 ## Open Items (author-side)
 
-- The plugin author handle (TODO in `xmake.lua`) — needed for the
-  GitHub publish.
 - The F4SE-assigned serialization UID — placeholder `'LCEW'` in
   `src/CoSave.h` (`kSerializationUid`); only needed if the mod later
   reaches the F4SE plugin registry (the Nexus release).
