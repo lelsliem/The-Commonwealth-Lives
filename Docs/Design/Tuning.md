@@ -114,6 +114,12 @@ tuning: loaded B:\...\Data\F4SE\Plugins\TheLivingCommonwealth.ini — market 08:
 (The log line names the market hours only; the rates are silent —
 watch the sim's rhythm, not the log, for them.)
 
+**A fix worth knowing:** these lines were previously *silent* —
+`LoadConfiguration` ran in the Adapter constructor, before the logger
+attaches, so its confirmation was dropped every session. It now loads
+from `GameLoaded` (once per session, still before the first world), so
+the lines above actually appear.
+
 ## The seams
 
 - **Pure vs. edge** — `Tuning.h` is pure (parse + settings read, no game

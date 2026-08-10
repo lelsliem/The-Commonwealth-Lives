@@ -194,11 +194,15 @@ all live). Adapter progress:
    kinds (append-only, save-safe). Re-derived at the edge — never
    co-save state. See Docs/Design/WeatherFacts.md.
 6. ✅ **Per-settlement markets** (implemented 2026-08-10, in-game
-   verification pending) — a one-time census of the REFR form array
-   (base `000C1AEB`) finds every settlement market; each mind remembers
-   the nearest within ~140 m instead of one global Sanctuary bench. The
-   legacy single-bench fallback survives a bare census. No new pins.
-   See Docs/Design/SettlementMarkets.md.
+   verification pending) — a census of the REFR form array (base
+   `000C1AEB`) finds every settlement market; each mind remembers the
+   nearest within ~140 m instead of one global Sanctuary bench. The
+   legacy single-bench fallback covers an empty census, and the census
+   now RETRIES when it finds nothing — a false 0 was pinning the whole
+   session into fallback (the live log showed `0 workshops known` every
+   session) — with a one-time base-form probe so the next log says what
+   the filter actually saw. No new pins. See
+   Docs/Design/SettlementMarkets.md.
 7. ✅ **Desync the herd** (implemented 2026-08-10, in-game verification
    pending) — `VaryNeeds` jitters each mind's seeded needs
    (deterministic per entity id): hunger arrives at different times, and

@@ -190,9 +190,25 @@ namespace TLC
         bool m_Started = false;
 
         // The census result: every known settlement market, by form and
-        // world position. m_WorkshopsReady guards the one-time scan.
+        // world position. m_WorkshopsReady is set only when a non-empty
+        // list is found (static per load order) — an empty result is
+        // retried on the seed cycle, throttled by m_LastCensus, because
+        // the REFR array may not be populated when the world wakes. The
+        // legacy single-bench fallback covers the world meanwhile.
         std::vector<WorkshopPosition> m_Workshops;
         bool m_WorkshopsReady = false;
+        std::chrono::steady_clock::time_point m_LastCensus{};
+
+        // The one-time census diagnostic: the first base forms actually
+        // in the REFR array, so a 0-result census says what the filter
+        // saw (empty array vs. a different workbench base) instead of
+        // just that it saw nothing.
+        bool m_CensusDiagnosed = false;
+
+        // Tuning is loaded once per session, from GameLoaded (the
+        // constructor runs before the logger attaches, so its
+        // confirmation lines would be dropped).
+        bool m_TuningLoaded = false;
 
         // First-pass instrumentation (the walking stone's verification):
         // one-time lines that prove the tick hook fires and that a full

@@ -328,11 +328,9 @@ namespace TLC
         // co-save stone) always has its serializers.
         RegisterAllSerializers(m_Registry);
 
-        // The modder's knob (0.5.0): the config file next to the DLL.
-        // Loaded once, before the first world; missing file or broken
-        // lines keep the defaults (the core's rule: a broken line must
-        // never break the world).
-        LoadConfiguration();
+        // Tuning is loaded from GameLoaded (not here): the constructor
+        // runs before the logger attaches, so its confirmation lines
+        // would be silently dropped — and the modder should see them.
     }
 
     void Adapter::LoadConfiguration()
@@ -396,6 +394,16 @@ namespace TLC
         }
 
         m_LoadCompleted = true;
+
+        // The modder's knob, loaded once per session — from here, after
+        // the logger is attached, so the tuning confirmation lines
+        // actually appear. Before the first world: StartWorld and
+        // ApplyRestore below both consume m_Settings/m_CoreTuning.
+        if (!m_TuningLoaded)
+        {
+            LoadConfiguration();
+            m_TuningLoaded = true;
+        }
 
         // Every completed load is a fresh world — but if the co-save held
         // a world for this save, restore it instead of translating anew:
@@ -575,6 +583,21 @@ namespace TLC
 
     void Adapter::RefreshWorkshops()
     {
+        // Throttled retry: the census can run before the game's REFR
+        // data is fully available, so an empty result must never be
+        // pinned — a false 0 would lock the whole session into the
+        // single-bench fallback. Once a non-empty list is found it is
+        // final (static per load order); the seed cycle re-scans an
+        // empty one at most every few seconds.
+        const auto now = std::chrono::steady_clock::now();
+
+        if (m_LastCensus.time_since_epoch().count() != 0
+            && now - m_LastCensus < std::chrono::seconds(5))
+        {
+            return;
+        }
+
+        m_LastCensus = now;
         m_Workshops.clear();
 
         auto* dataHandler = RE::TESDataHandler::GetSingleton();
@@ -588,9 +611,12 @@ namespace TLC
         // whose base is the vanilla workshop workbench is a settlement
         // market. Position comes from the ref's data record — valid even
         // for refs in unloaded cells, so the census is complete without
-        // loading a single cell. Static per load order, so this runs
-        // once and the list survives worlds.
-        for (const auto* ref : dataHandler->GetFormArray<RE::TESObjectREFR>())
+        // loading a single cell.
+        const auto& refs = dataHandler->GetFormArray<RE::TESObjectREFR>();
+
+        std::size_t probed = 0;
+
+        for (const auto* ref : refs)
         {
             if (ref == nullptr)
             {
@@ -599,8 +625,24 @@ namespace TLC
 
             const auto* base = ref->GetObjectReference();
 
-            if (base == nullptr
-                || base->GetFormID() != kWorkshopBaseFormId)
+            if (base == nullptr)
+            {
+                continue;
+            }
+
+            // Diagnostic (once per session): the first bases actually in
+            // the array, so a 0-result census says what the filter saw,
+            // not just that it saw nothing — is the array empty, or is
+            // the workbench's real base different from the pinned one?
+            if (!m_CensusDiagnosed && probed < 3)
+            {
+                REX::INFO(
+                    "census probe: REFR {:#x} base {:#x}.",
+                    ref->GetFormID(), base->GetFormID());
+                ++probed;
+            }
+
+            if (base->GetFormID() != kWorkshopBaseFormId)
             {
                 continue;
             }
@@ -611,11 +653,23 @@ namespace TLC
                 ref->GetFormID(), pos.x, pos.y });
         }
 
-        m_WorkshopsReady = true;
+        if (probed > 0)
+        {
+            m_CensusDiagnosed = true;
+        }
+
+        // A found list is final; an empty one is not (see the throttle
+        // above) — the legacy single-bench fallback covers the world
+        // while the census keeps looking.
+        if (!m_Workshops.empty())
+        {
+            m_WorkshopsReady = true;
+        }
 
         REX::INFO(
-            "settlement census: {} workshops known — markets are per settlement.",
-            m_Workshops.size());
+            "settlement census: {} REFRs probed, {} workshops known (base {:#x}){}.",
+            refs.size(), m_Workshops.size(), kWorkshopBaseFormId,
+            m_Workshops.empty() ? " — will retry" : " — markets are per settlement");
     }
 
     LCE::Simulation::EntityId Adapter::OwnerEntityFor(
@@ -844,8 +898,10 @@ namespace TLC
 
     void Adapter::SeedMarket(bool a_announce)
     {
-        // The census: one scan over the REFR form array, once per world.
-        // Static per load order, so the result survives worlds.
+        // The census: one scan over the REFR form array. Static per load
+        // order once it finds workshops; an empty result is retried (the
+        // array may not be populated yet) while the fallback covers the
+        // world — see RefreshWorkshops.
         if (!m_WorkshopsReady)
         {
             RefreshWorkshops();
