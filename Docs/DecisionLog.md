@@ -200,3 +200,12 @@ so real deaths still register). In the first in-game run, actors entered
 the process lists before their members were initialized after a 665-mind
 restore, and the unchecked read booked 11 false deaths in one frame,
 3 s after the restore. The gate turned that into 0.
+
+**Hardening, round two (same day):** two-pass confirmation was not
+enough — the spawn burst after a big load reads the same actors dead on
+their very first sighting for ~2 s (deterministic: the same two
+persistent Sanctuary settlers, three builds, three loads), so a second
+pass merely confirmed the artifact. The rule now: a death is a
+transition, so a mind must have read **alive at least once** before it
+can be booked dead. Never-alive dead reads are parked forever and
+un-park the moment the actor reads alive.
