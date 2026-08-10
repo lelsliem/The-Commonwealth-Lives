@@ -62,12 +62,32 @@ namespace TLC
     const BehaviourProfile& BehaviourFor(Species a_species);
 
     //-------------------------------------------------------------------------
+    // NeedRates — the seeded decay rates, per need (the tuning stone).
+    // The core decays need.Value -= need.DecayRate * dt, so these set the
+    // rhythm of the sim: 0.1/s empties a need in ~10 s; "a few meals a
+    // day" is roughly 0.001–0.005/s (the math is in Tuning.md). The
+    // defaults are the pre-tuning stone's constants; the INI overrides
+    // them (sim.hunger.decay = ...). They apply to every species' mind;
+    // the species profile still decides which needs exist at all.
+    //-------------------------------------------------------------------------
+    struct NeedRates
+    {
+        float Hunger = 0.1f;
+        float Fatigue = 0.1f;
+        float Safety = 0.1f;
+        float Social = 0.1f;
+        float Comfort = 0.1f;
+    };
+
+    //-------------------------------------------------------------------------
     // A fresh mind of a given species: every seeded need satisfied, decay
-    // rates at the seed defaults. Hunger, Fatigue, and Safety are
-    // universal; Social and Comfort belong to species that can use them.
+    // rates from a_rates (defaults unless the tuning file says otherwise).
+    // Hunger, Fatigue, and Safety are universal; Social and Comfort
+    // belong to species that can use them.
     //-------------------------------------------------------------------------
     [[nodiscard]]
-    LCE::Simulation::Needs SeededNeeds(Species a_species);
+    LCE::Simulation::Needs SeededNeeds(
+        Species a_species, const NeedRates& a_rates = {});
 
     //-------------------------------------------------------------------------
     // The deterministic per-mind jitter behind VaryNeeds: a value in

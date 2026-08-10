@@ -28,6 +28,12 @@ sim.trust.gain = 0.15        ; a fair trade proves reliability (core)
 sim.disposition.gain = 0.1   ; aid and company warm feelings (core)
 sim.disposition.loss = 0.25  ; wrongs and fights sour them (core)
 
+sim.hunger.decay = 0.001     ; the adapter's keys share the sim.* prefix
+sim.fatigue.decay = 0.001    ; the seeded need rhythm (a few meals a day)
+sim.safety.decay = 0.001
+sim.social.decay = 0.001
+sim.comfort.decay = 0.001
+
 market.open.hour = 8         ; the adapter's own keys ride along
 market.close.hour = 20
 ```
@@ -37,6 +43,24 @@ CRLF, and surrounding whitespace all survive; a malformed line (no `=`)
 is skipped. **Missing, empty, or unparsable values keep the default** —
 the core's rule, and the adapter's: a broken line must never break the
 world. Unknown keys are ignored, so one file serves both sides.
+
+### The seeded need rhythm — `sim.*.decay`
+
+The core decays a need by its own rate (`need.Value -= need.DecayRate *
+dt`) — it never configures one, so the seeded rhythm is the adapter's
+and reads its own keys, sharing the `sim.*` prefix with the core's. One
+file, two readers; `sim.hunger.decay` etc. are the adapter's.
+
+The math: a need empties in ~1/rate seconds. `0.1/s` (the default —
+the pre-tuning constant) is an empty stomach in ~10 real seconds: a
+fast demo. A game day is ~1.2 real minutes, so "eats a few times a
+day" is roughly **0.001–0.005/s**: at 0.002/s a need empties in ~8
+real minutes, and a settler with a full belly at dawn reaches the
+market a handful of times over the day. The rate feeds `SeededNeeds`
+(Behaviour.h), and the desync stone's `VaryNeeds` still jitters it per
+mind, so tuned values spread instead of locking the herd back into
+step. Rates are serialized by the co-save, so a mind's rhythm survives
+save/load unchanged.
 
 ## The flow
 
@@ -50,14 +74,15 @@ Tuning::ParseConfig(text) ──► LCE::Config::Configuration
     │        (the sim.* keys: memory fade, drift, trust, ...)
     │
     └─► Tuning::AdapterSettingsFrom(config)           ──► m_Settings
-             (the adapter's own keys: the market hours)
+             (the adapter's own keys: market hours + need rates)
 ```
 
 `m_CoreTuning` threads into every core call that takes tuning —
 `Update` (needs decay, memory fade, goal urgency) and `ReportOutcome`
-(trust/disposition gains). `m_Settings` feeds the world-facts gate:
-`PushWorldFacts` and the market announce now ask *"is the market closed
-given the tuned hours?"* instead of the compile-time constants.
+(trust/disposition gains). `m_Settings` feeds the world-facts gate
+(*"is the market closed given the tuned hours?"*) and the need rhythm:
+`StartWorld` passes `m_Settings.Rates` into `SeededNeeds` for every
+fresh mind.
 
 The startup log lines:
 
@@ -65,6 +90,9 @@ The startup log lines:
 tuning: no config file (B:\...\Data\F4SE\Plugins\TheLivingCommonwealth.ini expected) — defaults. Create it to change the sim's feel.
 tuning: loaded B:\...\Data\F4SE\Plugins\TheLivingCommonwealth.ini — market 08:00–20:00.
 ```
+
+(The log line names the market hours only; the rates are silent —
+watch the sim's rhythm, not the log, for them.)
 
 ## The seams
 

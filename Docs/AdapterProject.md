@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, weather memory events, per-settlement markets, desync**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -203,7 +203,14 @@ all live). Adapter progress:
    the decay-rate jitter is a metabolism that persists after every feed.
    The co-save already serializes the rate — no engine change, no new
    pins. See the Behaviour.md desync section.
-8. **Nexus name check + publish.**
+8. ✅ **Seeded need decay rates in the INI** (implemented 2026-08-10,
+   in-game verification pending) — sim.hunger.decay / .fatigue /.safety
+   /.social /.comfort ride in the same file, so the whole rhythm tunes
+   to "a few meals a day" without a recompile. Rates thread StartWorld
+   → SeededNeeds, still jittered per mind by VaryNeeds, serialized by
+   the co-save. Missing/broken values keep the defaults. See
+   Docs/Design/Tuning.md.
+9. **Nexus name check + publish.**
 
 ---
 

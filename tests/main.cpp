@@ -1407,6 +1407,11 @@ namespace TLC::Tests
             "# another comment\r\n"
             "\r\n"
             "sim.memory.fade = 0.25\r\n"
+            "sim.hunger.decay = 0.002\r\n"
+            "sim.fatigue.decay = 0.003\r\n"
+            "sim.safety.decay = 0.004\r\n"
+            "sim.social.decay = 0.005\r\n"
+            "sim.comfort.decay = 0.006\r\n"
             "market.open.hour = 9\r\n"
             "market.close.hour=21\r\n"
             "   padded.key   =   spaced   \r\n"
@@ -1435,7 +1440,12 @@ namespace TLC::Tests
         const auto settings = Tuning::AdapterSettingsFrom(config);
 
         if (settings.MarketOpenHour != 9.0f
-            || settings.MarketCloseHour != 21.0f)
+            || settings.MarketCloseHour != 21.0f
+            || settings.Rates.Hunger != 0.002f
+            || settings.Rates.Fatigue != 0.003f
+            || settings.Rates.Safety != 0.004f
+            || settings.Rates.Social != 0.005f
+            || settings.Rates.Comfort != 0.006f)
         {
             return false;
         }
@@ -1444,16 +1454,36 @@ namespace TLC::Tests
             LCE::Config::Configuration{});
 
         if (defaults.MarketOpenHour != WorldFacts::kMarketOpenHour
-            || defaults.MarketCloseHour != WorldFacts::kMarketCloseHour)
+            || defaults.MarketCloseHour != WorldFacts::kMarketCloseHour
+            || defaults.Rates.Hunger != 0.1f
+            || defaults.Rates.Fatigue != 0.1f
+            || defaults.Rates.Safety != 0.1f
+            || defaults.Rates.Social != 0.1f
+            || defaults.Rates.Comfort != 0.1f)
         {
             return false;
         }
 
         const auto broken = Tuning::ParseConfig(
-            "market.open.hour = not-a-number\n");
+            "market.open.hour = not-a-number\n"
+            "sim.hunger.decay = slow\n");
         const auto brokenSettings = Tuning::AdapterSettingsFrom(broken);
 
-        if (brokenSettings.MarketOpenHour != WorldFacts::kMarketOpenHour)
+        if (brokenSettings.MarketOpenHour != WorldFacts::kMarketOpenHour
+            || brokenSettings.Rates.Hunger != 0.1f)
+        {
+            return false;
+        }
+
+        // The tuned rates actually reach fresh minds: SeededNeeds applies
+        // them, and an animal's profile (no Social/Comfort needs) still
+        // seeds only its universal needs — with the tuned rates.
+        const auto needs = SeededNeeds(Species::Human, defaults.Rates);
+        const auto animal = SeededNeeds(Species::Animal, defaults.Rates);
+
+        if (needs.List.size() != 5
+            || animal.List.size() != 3
+            || animal.List[0].DecayRate != 0.1f)
         {
             return false;
         }

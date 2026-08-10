@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "Behaviour.h"
 #include "WorldFacts.h"
 
 #include "LCE/Config/Configuration.h"
@@ -26,7 +27,8 @@ namespace TLC::Tuning
     //
     //     ; The Living Commonwealth tuning
     //     sim.memory.fade = 0.2        ; feeds the core (FromConfiguration)
-    //     market.open.hour = 8         ; the adapter's own keys ride along
+    //     sim.hunger.decay = 0.001     ; the adapter's own keys ride along
+    //     market.open.hour = 8
     //     market.close.hour = 20
     //
     // Unknown keys are ignored (the core's rule) so one file serves both
@@ -115,13 +117,22 @@ namespace TLC::Tuning
     // AdapterSettings
     //
     // The adapter's own keys — the ones the core's FromConfiguration does
-    // not know. Defaults are the WorldFacts constants; the config file
-    // overrides them.
+    // not know. Defaults are the pre-tuning constants (the WorldFacts
+    // hours; the Behaviour.h NeedRates); the config file overrides them.
+    // The `sim.*.decay` keys share the sim.* prefix with the core's keys
+    // but belong to the adapter: the core decays a need by its own rate
+    // (need.DecayRate), it never configures one — the seeded rhythm is
+    // the adapter's, so it reads its own. One file, two readers.
     //-------------------------------------------------------------------------
     struct AdapterSettings
     {
         float MarketOpenHour = WorldFacts::kMarketOpenHour;
         float MarketCloseHour = WorldFacts::kMarketCloseHour;
+
+        // The seeded need rhythm. A need empties in ~1/rate seconds:
+        // 0.1/s is the tuning stone's default (a fast demo); "a few
+        // meals a day" is ~0.001–0.005/s (the math is in Tuning.md).
+        NeedRates Rates;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -152,6 +163,14 @@ namespace TLC::Tuning
             read("market.open.hour", settings.MarketOpenHour);
         settings.MarketCloseHour =
             read("market.close.hour", settings.MarketCloseHour);
+
+        settings.Rates.Hunger = read("sim.hunger.decay", settings.Rates.Hunger);
+        settings.Rates.Fatigue =
+            read("sim.fatigue.decay", settings.Rates.Fatigue);
+        settings.Rates.Safety = read("sim.safety.decay", settings.Rates.Safety);
+        settings.Rates.Social = read("sim.social.decay", settings.Rates.Social);
+        settings.Rates.Comfort =
+            read("sim.comfort.decay", settings.Rates.Comfort);
 
         return settings;
     }

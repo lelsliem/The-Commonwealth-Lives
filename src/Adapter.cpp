@@ -140,7 +140,8 @@ namespace TLC
         //-------------------------------------------------------------------------
         std::size_t TranslateLoadedActors(
             LCE::Simulation::EntityRegistry& registry,
-            Translator& translator)
+            Translator& translator,
+            const NeedRates& rates)
         {
             using namespace LCE::Simulation;
 
@@ -189,7 +190,7 @@ namespace TLC
                     // entity id), so hunger arrives at different times and
                     // the settlement doesn't march to the market in
                     // lockstep.
-                    auto needs = SeededNeeds(species);
+                    auto needs = SeededNeeds(species, rates);
                     VaryNeeds(needs, id);
 
                     registry.AddComponent<FormRef>(id, FormRef{ formId });
@@ -475,7 +476,8 @@ namespace TLC
             return;
         }
 
-        const auto count = TranslateLoadedActors(m_Registry, m_Translator);
+        const auto count =
+            TranslateLoadedActors(m_Registry, m_Translator, m_Settings.Rates);
 
         // The market: if the workshop form is loaded it becomes an entity,
         // and every mind remembers where to trade (ADR-0024 — the adapter

@@ -204,6 +204,16 @@ Goal: the real test from the contract.
     line never breaks the world. Implemented 2026-08-10; in-game
     verification pending (the `tuning: loaded` line + an hours override
     actually moving when settlers stop) — see Docs/Design/Tuning.md
+[✓] Seeded need decay rates in the INI — sim.hunger.decay / .fatigue /
+    .safety / .social / .comfort (the adapter's keys, sharing the sim.*
+    prefix with the core's): the seeded rhythm becomes tunable to "a few
+    meals a day" (~0.001–0.005/s; the default 0.1/s is an empty stomach
+    in ~10 s). Rates thread StartWorld → SeededNeeds, still jittered per
+    mind by VaryNeeds, serialized by the co-save. Missing/broken values
+    keep the defaults. Implemented 2026-08-10; in-game verification
+    pending (create the INI with sim.hunger.decay = 0.002 and settlers
+    should visit the market a handful of times a game day instead of a
+    steady stream) — see Docs/Design/Tuning.md
 [✓] Food sources + arrival outcomes — per-species food sources (a dog
     is fed by its owner when the game assigns one, else the settlement;
     humans trade at the market) resolved at seed time; on arrival,

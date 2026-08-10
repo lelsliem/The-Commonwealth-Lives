@@ -52,25 +52,31 @@ namespace TLC
         return kHuman;
     }
 
-    LCE::Simulation::Needs SeededNeeds(Species a_species)
+    LCE::Simulation::Needs SeededNeeds(
+        Species a_species, const NeedRates& a_rates)
     {
         using namespace LCE::Simulation;
 
         Needs needs;
-        needs.List.push_back(Need{ NeedType::Hunger, 1.0f, 0.1f });
-        needs.List.push_back(Need{ NeedType::Fatigue, 1.0f, 0.1f });
-        needs.List.push_back(Need{ NeedType::Safety, 1.0f, 0.1f });
+        needs.List.push_back(
+            Need{ NeedType::Hunger, 1.0f, a_rates.Hunger });
+        needs.List.push_back(
+            Need{ NeedType::Fatigue, 1.0f, a_rates.Fatigue });
+        needs.List.push_back(
+            Need{ NeedType::Safety, 1.0f, a_rates.Safety });
 
         const auto& profile = BehaviourFor(a_species);
 
         if (profile.NeedsSocial)
         {
-            needs.List.push_back(Need{ NeedType::Social, 1.0f, 0.1f });
+            needs.List.push_back(
+                Need{ NeedType::Social, 1.0f, a_rates.Social });
         }
 
         if (profile.NeedsComfort)
         {
-            needs.List.push_back(Need{ NeedType::Comfort, 1.0f, 0.1f });
+            needs.List.push_back(
+                Need{ NeedType::Comfort, 1.0f, a_rates.Comfort });
         }
 
         return needs;
