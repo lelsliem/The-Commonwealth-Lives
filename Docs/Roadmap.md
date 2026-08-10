@@ -12,17 +12,21 @@ Project Roadmap
 
 Status
 
-Current Version : 0.5.0
+Current Version : 0.5.0 — complete
 
-Current Stage   : Living world — every 0.5.0 stone implemented and
-                   verified in-game: species split, world facts, tuning,
-                   need-decay tuning, weather memory events,
+Current Stage   : Living world — every 0.5.0 stone implemented, verified
+                   in-game, and shipped: species split, world facts,
+                   tuning, need-decay tuning, weather memory events,
                    per-settlement markets (persistent-cell census), the
                    trade stone, the economy stone, per-tick decay jitter
                    wired, stall-keepers persisted in the co-save (v3),
-                   and the lifecycle + walk-probe hardenings
+                   memory world-days (v4), the lifecycle + walk-probe
+                   hardenings, and the GitHub publish (repo live,
+                   tag 0.5.0, INI template shipped)
 
-Next Milestone  : GitHub publish (first 0.5.0 release — Nexus later)
+Next Milestone  : 0.6.0 — scoped from the engine's next hand-over
+                   (seeds: the Robot species — Behaviour.md — and
+                   deeper social simulation on the outcome channel)
 
 ═══════════════════════════════════════════════
 
@@ -291,6 +295,7 @@ Goal: the real test from the contract.
     (save with a known stall-keeper, reload — the same settler should
     still be behind the bench, with the pouch intact) — see
     Docs/Design/CoSave.md
-[ ] GitHub publish — set the author handle in xmake.lua, repo hygiene
-    (.gitignore / README / LICENSE are done), first 0.5.0 release;
-    Nexus comes later
+[x] GitHub publish — repo live at
+    github.com/lelsliem/The-Commonwealth-Lives (author `lelsliem` in
+    xmake.lua, hygiene done), pushed 2026-08-10, tag `0.5.0`; the
+    release page (DLL + INI from `config/`) and Nexus come later

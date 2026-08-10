@@ -53,7 +53,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4 — the weather-day stamps now survive save/load)**; only the GitHub publish remains (plan change 2026-08-10 — Nexus comes later) |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ✅ complete (2026-08-10) — **everything implemented and verified in-game: species split, arrival outcomes, real test, world facts (settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets (persistent-cell census), desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4), lifecycle + walk-probe hardenings, the tuning INI template (`config/TheLivingCommonwealth.ini`), and the GitHub publish (repo live, tag `0.5.0`, 2026-08-10)** |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -277,9 +277,13 @@ all live). Adapter progress:
     the calendar. Proven by CoSaveTest: a crafted v3 record with an
     old-format memory blob loads forward, and the round-trip keeps
     `Day = 42`.
-12. **GitHub publish** (plan change 2026-08-10 — Nexus comes later):
-    author handle set (`lelsliem`), repo hygiene (`.gitignore` /
-    `README` / `LICENSE` are done), first 0.5.0 release.
+12. ✅ **GitHub publish** (plan change 2026-08-10 — Nexus comes
+    later): repo live at
+    `github.com/lelsliem/The-Commonwealth-Lives` — author `lelsliem`
+    in xmake.lua, hygiene (`.gitignore` / `README` / `LICENSE`) done,
+    pushed, tag `0.5.0`. The release page (DLL + INI from `config/`)
+    and the Nexus upload remain; the F4SE serialization UID is only
+    needed if the mod reaches the F4SE plugin registry.
 
 ---
 
