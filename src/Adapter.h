@@ -151,5 +151,12 @@ namespace TLC
         // this session starts fresh (a new game, or a save made while the
         // sim was not running).
         std::optional<LCE::Simulation::RegistrySnapshot> m_PendingRestore;
+
+        // Whether the current load's completion event was already handled.
+        // F4SE can fire both kPostLoadGame and kGameLoaded for one load —
+        // the first applies the restore, the second must not wipe it.
+        // Reset by PreLoadGame; the startup wake (no preceding load) also
+        // starts false and is handled once.
+        bool m_LoadCompleted = false;
     };
 }

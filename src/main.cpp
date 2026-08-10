@@ -174,6 +174,13 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
             switch (a_msg->type)
             {
             case F4SE::MessagingInterface::kGameLoaded:
+                // kGameLoaded fires at startup (the menu world wakes);
+                // kPostLoadGame fires when a save finishes loading —
+                // in-game tests showed real loads complete on screen
+                // without a kGameLoaded, so the completion event is the
+                // one that must apply a co-save restore. Both route to
+                // the same handler; the adapter dedupes one load's pair.
+            case F4SE::MessagingInterface::kPostLoadGame:
                 REX::INFO("lifecycle: GameLoaded — the world wakes.");
                 OnGameLoaded();
                 break;

@@ -197,6 +197,17 @@ namespace TLC
 
     void Adapter::GameLoaded()
     {
+        // One load can complete with both kPostLoadGame and kGameLoaded —
+        // the first completion applies the restore; the second must not
+        // wipe it with a fresh start. Reset by PreLoadGame; the startup
+        // wake (no preceding load) also starts false and is handled once.
+        if (m_LoadCompleted)
+        {
+            return;
+        }
+
+        m_LoadCompleted = true;
+
         // Every completed load is a fresh world — but if the co-save held
         // a world for this save, restore it instead of translating anew:
         // the sim remembers (0.4.0). An empty pending restore (a save made
@@ -262,6 +273,9 @@ namespace TLC
         EndWorld();
         m_AwaitingLoad = true;
         m_WorldEndedAt = std::chrono::steady_clock::now();
+
+        // A load is starting — its completion event has not been handled.
+        m_LoadCompleted = false;
     }
 
     void Adapter::DeleteGame()
