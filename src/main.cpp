@@ -5,7 +5,7 @@
 //   ation of it. The seam is the public API: CreateEntity, DestroyEntity,     //
 //   Remember, Update; intents are hints, not commands.                        //
 //                                                                             //
-//   QUOTE: <the author's line goes here>                                      //
+//   Please stand by — the Commonwealth is loading.                                      //
 //                                                                             //
 //=============================================================================//
 

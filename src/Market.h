@@ -3,7 +3,7 @@
 //   The Living Commonwealth — Fallout 4 adapter for the Living Commonwealth   //
 //   Engine (LCE).                                                             //
 //                                                                             //
-//   QUOTE: <the author's line goes here>                                      //
+//   Come one, come all — the caps are fresh and the rads are free.                                      //
 //                                                                             //
 //=============================================================================//
 

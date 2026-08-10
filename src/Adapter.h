@@ -3,7 +3,7 @@
 //   The Living Commonwealth — Fallout 4 adapter for the Living Commonwealth   //
 //   Engine (LCE).                                                             //
 //                                                                             //
-//   QUOTE: <the author's line goes here>                                      //
+//   One world, two brains — this is the bridge.                                      //
 //                                                                             //
 //=============================================================================//
 

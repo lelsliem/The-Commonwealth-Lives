@@ -3,7 +3,7 @@
 //   The Living Commonwealth — Fallout 4 adapter for the Living Commonwealth   //
 //   Engine (LCE).                                                             //
 //                                                                             //
-//   QUOTE: <the author's line goes here>                                      //
+//   Two lives: one in the wasteland, one in the sim.                                      //
 //                                                                             //
 //=============================================================================//
 
