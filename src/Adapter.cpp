@@ -34,6 +34,7 @@
 
 #include <REX/LOG.h>
 
+#include <cmath>
 #include <cstdio>
 #include <string>
 
@@ -140,6 +141,10 @@ namespace TLC
             std::snprintf(buffer, sizeof(buffer), "%08X", a_value);
             return buffer;
         }
+
+        // A settler standing next to the workbench counts as arrived; the
+        // game's arrival stop is typically 1-3 m from the marker.
+        constexpr float kArrivalRadius = 4.0f;
 
         // The entity's form, or null when the form is unknown.
         RE::TESForm* FormFor(const Translator& a_translator, LCE::Simulation::EntityId a_entity)
@@ -365,6 +370,44 @@ namespace TLC
                     else
                     {
                         session = {};   // a refused walk ends the session
+                    }
+                }
+
+                // The walk probe — ground truth for the in-game
+                // verification (the log, not the player's eyes): distance
+                // to the market every 5s, the closest approach so far, and
+                // one "reached" line. It discriminates the two outcomes:
+                // distance closing → the pinned planner drives the walk;
+                // flat or rising → the settler's sandbox package is
+                // overriding the destination (then the fix is the game's
+                // command system, which outranks sandbox).
+                if (walked && session.Target == targetFormId)
+                {
+                    const auto from = actor->GetPosition();
+                    const auto to = target->GetPosition();
+                    const auto dx = from.x - to.x;
+                    const auto dy = from.y - to.y;
+                    const auto d = std::sqrt(dx * dx + dy * dy);
+
+                    if (d < session.MinDistance)
+                    {
+                        session.MinDistance = d;
+                    }
+
+                    if (!session.Reached && d < kArrivalRadius)
+                    {
+                        session.Reached = true;
+                        REX::INFO(
+                            "LCE: settler {} reached the market (d = {:.1f} m).",
+                            FormatHex8(actorFormId), d);
+                    }
+                    else if (now - session.LastProbe >= std::chrono::seconds(5))
+                    {
+                        session.LastProbe = now;
+                        REX::DEBUG(
+                            "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m).",
+                            FormatHex8(actorFormId), FormatHex8(targetFormId), d,
+                            session.MinDistance);
                     }
                 }
 

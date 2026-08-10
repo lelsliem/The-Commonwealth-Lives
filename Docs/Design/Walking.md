@@ -117,7 +117,7 @@ tests/               — MarketTest (5/5 suites green): seeded mind decides
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **MarketTest** — a hungry settler seeded with the market memory decides `MoveTo` after `Update`; the same mind without it explores. The decision half of the farmer's road. |
-| In-game (author) | Pending: load Sanctuary → every settler logs `decides MoveTo -> 000250FE` within a frame or two of the world waking, then physically walks to the workbench. Failure modes are logged: `market not loaded`, or the vtable-mismatch ERROR (which prints the real vtable). |
+| In-game (author) | Pending: load Sanctuary → every settler logs `decides MoveTo -> 000250FE`, and the **walk probe** settles it in the log, not by eye: `walk probe settler X -> 000250FE d = 42.3 m (min 41.8 m)` every 5s, then one `settler X reached the market (d = 1.2 m)` line. Distance closing → the pinned planner drives the walk. Flat or rising d → the settler's sandbox package is overriding the destination, and the fix is the game's command system (which outranks sandbox). Failure modes are logged: `market not loaded`, the vtable-mismatch ERROR (prints the real vtable), or `WalkTo refused — no actor or no AI process` (transient — the next tick re-attempts). |
 
 ## Decisions (resolved)
 

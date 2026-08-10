@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -66,6 +67,14 @@ namespace TLC
         {
             std::uint32_t Target = 0;
             std::chrono::steady_clock::time_point Issued{};
+
+            // The walk probe (verification instrument): distance to the
+            // destination every few seconds, the closest approach so far,
+            // and whether arrival was ever logged. The log, not the
+            // player's eyes, proves whether the walk happened.
+            std::chrono::steady_clock::time_point LastProbe{};
+            float MinDistance = std::numeric_limits<float>::max();
+            bool Reached = false;
         };
 
         void ExecutePlan(const std::vector<PlanEntry>& a_plan);
