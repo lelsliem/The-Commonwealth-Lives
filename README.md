@@ -40,7 +40,9 @@ through **0.5.0** is in and verified in-game:
   hardenings: `DeleteGame` no longer kills a running world, and the walk
   probe reads the actor's data position instead of a lying 3D transform.
 
-The only open item before live git: the **Nexus name check + publish**.
+The only open item before live git: the **GitHub publish** — set the
+author handle in `xmake.lua`, repo hygiene (`.gitignore` / `README` /
+`LICENSE` are done), first 0.5.0 release. Nexus comes later.
 
 ## What this is
 

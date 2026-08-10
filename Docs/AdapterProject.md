@@ -53,7 +53,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4 — the weather-day stamps now survive save/load)**; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4 — the weather-day stamps now survive save/load)**; only the GitHub publish remains (plan change 2026-08-10 — Nexus comes later) |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -277,7 +277,9 @@ all live). Adapter progress:
     the calendar. Proven by CoSaveTest: a crafted v3 record with an
     old-format memory blob loads forward, and the round-trip keeps
     `Day = 42`.
-12. **Nexus name check + publish.**
+12. **GitHub publish** (plan change 2026-08-10 — Nexus comes later): set
+    the author handle in `xmake.lua` (the TODO), repo hygiene
+    (`.gitignore` / `README` / `LICENSE` are done), first 0.5.0 release.
 
 ---
 
@@ -320,10 +322,11 @@ all live). Adapter progress:
 
 ## Open Items (author-side)
 
+- The plugin author handle (TODO in `xmake.lua`) — needed for the
+  GitHub publish.
 - The F4SE-assigned serialization UID — placeholder `'LCEW'` in
-  `src/CoSave.h` (`kSerializationUid`) until assigned.
-- The plugin author handle (TODO in `xmake.lua`).
-- The Nexus name check before publishing.
+  `src/CoSave.h` (`kSerializationUid`); only needed if the mod later
+  reaches the F4SE plugin registry (the Nexus release).
 - A `Robot` species (no biological needs, its own market rule) — noted in
   Behaviour.md as the next category to grow.
 

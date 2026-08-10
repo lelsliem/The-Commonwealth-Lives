@@ -22,7 +22,7 @@ Current Stage   : Living world — every 0.5.0 stone implemented and
                    wired, stall-keepers persisted in the co-save (v3),
                    and the lifecycle + walk-probe hardenings
 
-Next Milestone  : 0.6.0 — TBD (Nexus name check + publish first)
+Next Milestone  : GitHub publish (first 0.5.0 release — Nexus later)
 
 ═══════════════════════════════════════════════
 
@@ -291,4 +291,6 @@ Goal: the real test from the contract.
     (save with a known stall-keeper, reload — the same settler should
     still be behind the bench, with the pouch intact) — see
     Docs/Design/CoSave.md
-[ ] Nexus name check + publish
+[ ] GitHub publish — set the author handle in xmake.lua, repo hygiene
+    (.gitignore / README / LICENSE are done), first 0.5.0 release;
+    Nexus comes later
