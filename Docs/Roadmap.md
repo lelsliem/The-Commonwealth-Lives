@@ -71,23 +71,27 @@ Sanctuary.
 
 Goal: the simulation ticks in-game, and intents become game actions.
 
-STATUS: IMPLEMENTED — in-game verification pending
+STATUS: IMPLEMENTED — tick verified in-game; walking call pending
 
 [✓] Design — Docs/Design/Executor.md
-[✓] Per-frame tick — a hook on the game's own per-frame pump
-    (DelayFunctorQueue, verified against the 1.11.221 address library),
-    once per frame on the game thread, real delta
+[✓] Per-frame tick — a hook on the game's frame driver (0x00C30C0A,
+    inside the 5KB driver 0x00C2FD12), once per frame on the game
+    thread, real delta. Verified in-game 2026-08-10: fires at 60fps.
+    (The original target, ProcessVMTick ID 2251368, proved
+    event-driven and was pruned.)
 [✓] Plan builder — pure and tested (PlanBuilderTest, 4/4 suites);
     refusals are the contract: unloaded actor, unloaded target, busy
-    actor → dropped, re-decided next tick
+    actor → dropped, re-decided next tick; targetless intents are never
+    refused for a target
 [✓] Action table — MoveTo through the Movement::WalkTo seam (never
     teleport); Rest/Socialize/Explore/Work/Flee → table slots + log
     lines
 [ ] Walking call — the AIProcess::CreateMovementPlanner RVA for
     1.11.221 is pending in-game verification (one constant in
     src/Movement.cpp); until then WalkTo refuses, never teleports
-[ ] In-game test — needs decay; intents appear in the log and a settler
-    walks to market
+[ ] Walking in-game — a MoveTo executes and a settler walks to market;
+    the intent lines themselves are verified (all 11 settlers at
+    Sanctuary logged decides Explore)
 
 ═══════════════════════════════════════════════
 

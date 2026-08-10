@@ -345,6 +345,26 @@ namespace TLC::Tests
             }
         }
 
+        // A targetless intent (Explore) is never refused for an unloaded
+        // target — there is nothing to load.
+        {
+            EntityRegistry exploreOnly;
+
+            const auto wanderer = exploreOnly.CreateEntity();
+
+            exploreOnly.AddComponent<Intent>(wanderer, Intent{
+                ActionType::Explore, EntityId{}, 0.5f });
+
+            const auto plan = BuildPlan(exploreOnly, all, none, all);
+
+            if (plan.size() != 1
+                || plan[0].Intent.Action != ActionType::Explore
+                || !plan[0].TargetLoaded)
+            {
+                return false;
+            }
+        }
+
         // The target predicate sees the merchant, not the actor.
         {
             EntityId seen{};

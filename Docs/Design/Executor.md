@@ -1,9 +1,10 @@
 # Intent Executor — "The Farmer Walks"
 
 **Stone:** adapter 0.3 (after translation, verified in-game)
-**Status:** Implemented — the tick, the read, and the plan are verified in
-the codebase and by the adapter's test suite; the *walking call itself* is
-pending in-game verification (the one open item, flagged below).
+**Status:** Implemented — the tick is **verified in-game** (the frame
+hook fires every frame; intents appear in the log); the refusal fix for
+targetless intents is tested (adapter tests 4/4). One open item remains:
+the walking call (flagged below).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026
 (free functions over static classes), Law 001 (simple things; compose the
 complex). The contract's guarantee this stone honors: **an intent is a
@@ -37,28 +38,38 @@ every frame (game thread)
 
 Three pieces, all inside the adapter (the core stays untouched):
 
-### 1. The tick — a frame hook (verified)
+### 1. The tick — a frame hook (verified in-game)
 
 The plugin's own heartbeat becomes the simulation's: a **per-frame hook on
-`DelayFunctorQueue`** — the game's budget-ticked delay-functor queue that
-F4SE itself hooks to fire Papyrus `OnUpdate`. Installed once at init via
-the library's own mechanism (`REL::THook` registered in `FHookStore`,
-Init'd at `PreLoad`, enabled at `Load`; the trampoline comes from
-`F4SE::Init` with `{ .trampoline = true }`).
+the game's frame driver**, installed once at init via the library's own
+mechanism (`REL::THook` registered in `FHookStore`, Init'd at `PreLoad`,
+enabled at `Load`; the trampoline comes from `F4SE::Init` with
+`{ .trampoline = true }`).
 
-How it was grounded: the address library knows the function (ID 2251368 →
-`0x010F04A0`, verified against the game's `version-1-11-221-0.bin` — the
-same file F4SE itself resolves against), and THook patches *call sites*, so
-`src/Tick.cpp` hooks the four `call DelayFunctorQueue` instructions inside
-the game loop (`0x010E9F7E`, `0x010EA08E`, `0x010EA24B`, `0x010EA2F6` —
-pinned to 1.11.221, the same discipline F4SE uses for its own offsets). A
-once-per-frame guard collapses the four sites into one tick.
+The hook is one call site: `0x00C30C0A` — inside the game's 5KB frame
+driver `0x00C2FD12` (no direct callers; entered via function pointer;
+dozens of internal loops) into the update function `0x00C32450`. Pinned
+to 1.11.221, the same discipline F4SE uses for its own offsets.
 
-- Runs on the **game thread** — zero contention, trivially debuggable
-  (the contract's threading decision for 0.4.0).
-- `delta` = **real seconds** since the last frame (the game clock). The
-  sim's "per second of simulation time" maps to wall time for now;
-  time-scale is a future tuning input from Configuration.
+**How it was grounded — and what the first test proved wrong.** The
+original plan hooked `DelayFunctorQueue`/`ProcessVMTick` (address library
+ID 2251368 — the budget-ticked Papyrus VM queue F4SE itself hooks for its
+delay functors) via its four call sites (`0x010E9F7E`, `0x010EA08E`,
+`0x010EA24B`, `0x010EA2F6` — verified real `call 0x010F04A0`
+instructions). The first in-game test: all four hooks enabled, world
+started (11 settlers), and **no tick lines for the whole session** — the
+four sites are event-driven (the VM only processes when it has queued
+work), so F4SE's delay functors are *not* per-frame either. A second
+test hooked the driver site alongside them with per-hook proof logging:
+`Tick hook 4` (the driver) fired at load and then every frame (600 frames
+per ~10s at 60fps for the whole session); hooks 0–3 fired only on later VM
+processing events. The driver is the path; the four VM sites were pruned.
+
+Runs on the **game thread** — zero contention, trivially debuggable (the
+contract's threading decision for 0.4.0). The once-per-frame guard
+collapses repeated calls in one frame into a single tick with `delta` =
+**real seconds** since the last tick; the sim's "per second of simulation
+time" maps to wall time for now (time-scale is a future tuning input).
 
 ### 2. The read — intents are components
 
@@ -131,7 +142,8 @@ spam.
 Files:
 
 ```
-src/Tick.h/.cpp       — the frame hook (four call sites, once-per-frame guard)
+src/Tick.h/.cpp       — the frame hook (one driver call site,
+                       once-per-frame guard)
 src/Executor.h/.cpp   — the read + the table; the pure plan builder
 src/Movement.h/.cpp   — the WalkTo seam (the game's own walking, never teleport)
 src/Adapter.h/.cpp    — Tick(delta) + the game-side execution of the plan
@@ -143,8 +155,8 @@ tests/                — plan-building suites (4/4 green)
 
 | Where | Proves |
 |-------|--------|
-| Adapter tests (on every build) | **Implemented — `PlanBuilderTest`** (4/4 suites green): given registry intents + injected loaded/available answers, produces the right plan and the right refusals (unloaded actor, unloaded target, busy actor) — pure, no game required. |
-| In-game (author) | Needs decay over real time; intents appear in the log (`settler ... decides MoveTo ...`); a `MoveTo` executes — a settler walks. The farmer's road. |
+| Adapter tests (on every build) | **Implemented — `PlanBuilderTest`** (4/4 suites green): given registry intents + injected loaded/available answers, produces the right plan and the right refusals (unloaded actor, unloaded target, busy actor, and the targetless rule — an intent without a target is never refused for one) — pure, no game required. |
+| In-game (author) | **Verified 2026-08-10:** the tick runs every frame (`Tick hook 4` fired at load, then 600 frames per ~10s at 60fps); intents appear — all 11 settlers at Sanctuary logged `decides Explore`. The targetless-refusal fix makes those lines clean (`decides Explore (0.xx)`, not refused). Remaining: a `MoveTo` executes — a settler walks. The farmer's road. |
 
 ## The four questions
 
@@ -160,19 +172,25 @@ tests/                — plan-building suites (4/4 green)
 
 ## Decisions (resolved)
 
-1. **Tick via a frame hook** on the game's own per-frame pump
-   (`DelayFunctorQueue`) over a Papyrus timer — code-only, no content
-   files. The author asked which works best: the hook, and nothing needed
-   extending — the whole mechanism is in the library.
-2. **MoveTo: real walking, never teleport** — the author's call. The
+1. **Tick via a frame hook** on the game's frame driver over a Papyrus
+   timer — code-only, no content files. The first in-game test disproved
+   the original target (`ProcessVMTick` is event-driven, not per-frame —
+   its four call sites never fired during idle gameplay); the driver
+   call site (`0x00C30C0A`) was verified in-game as the per-frame path
+   and the VM sites were pruned.
+2. **Targetless intents are never refused for a target** — the first
+   in-game run showed every `Explore` (no target) refused with "target
+   not loaded"; the plan builder now marks a targetless intent's target
+   as loaded by definition (tested).
+3. **MoveTo: real walking, never teleport** — the author's call. The
    engine (core) creates nothing: it only hands the adapter
    `Intent{MoveTo, target}`; the walking is the game's own machinery,
    invoked by the adapter. The one open item is the movement-planner RVA
    for 1.11.221, flagged above.
-3. **One action end-to-end this stone** — `MoveTo` implemented; the other
+4. **One action end-to-end this stone** — `MoveTo` implemented; the other
    four actions get table slots and log lines. The loop is the proof.
-4. **Real-time delta for now** — time-scale becomes a tuning input later.
-5. **Refusal = drop the intent** — the hint-not-command guarantee, made
+5. **Real-time delta for now** — time-scale becomes a tuning input later.
+6. **Refusal = drop the intent** — the hint-not-command guarantee, made
    concrete. No need to consult the engine tab: the contract already
    blesses refusal, and the core recomputes a fresh intent every tick, so
    a dropped one is simply re-decided next tick — nothing to coordinate.

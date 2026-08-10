@@ -13,10 +13,14 @@ namespace TLC
 {
     //-------------------------------------------------------------------------
     // Tick — the simulation's heartbeat inside the game. A per-frame hook on
-    // the game's own per-frame pump (DelayFunctorQueue — the budget-ticked
-    // delay-functor queue F4SE itself hooks to fire OnUpdate), installed with
-    // the library's own THook machinery and enabled at Load. Runs on the
-    // game thread; zero contention (the contract's 0.4.0 threading decision).
+    // the game's frame driver, installed with the library's own THook
+    // machinery and enabled at Load. Runs on the game thread; zero
+    // contention (the contract's 0.4.0 threading decision).
+    //
+    // The hook sites are pinned to 1.11.221 (mid-function call sites are
+    // not in the address library — the same discipline F4SE uses for its
+    // own offsets). The sites carry per-hook proof logging so the log
+    // shows which paths fire; dead sites are pruned once verified.
     //-------------------------------------------------------------------------
     namespace Tick
     {

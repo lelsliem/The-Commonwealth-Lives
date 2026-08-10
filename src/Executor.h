@@ -34,7 +34,8 @@ namespace TLC
         LCE::Simulation::EntityId Entity;
         LCE::Simulation::Intent Intent;
         bool ActorLoaded = false;   // the entity's form is a loaded actor
-        bool TargetLoaded = false;  // the target's form is loaded
+        bool TargetLoaded = false;  // true when the intent has no target;
+                                    // else whether the target's form is loaded
         bool Available = false;     // the actor is free to act
     };
 

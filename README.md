@@ -19,11 +19,12 @@ That sentence is the test plan.
 Where this project is and where it's going: `Docs/Roadmap.md`. Four
 stones are in: the heartbeat (verified in-game), the translation (settlers
 become minds — verified at Sanctuary), the snapshot substrate, and the
-intent executor — the simulation now ticks in-game (hooked to the game's
-own per-frame pump) and intents are read and executed. One open item: the
-game's walking call (the movement planner) is pending in-game
-verification — the executor refuses rather than teleport. Next: the
-co-save, where the world survives a save and a load.
+intent executor — the simulation now ticks in-game every frame (verified:
+the frame-driver hook fires at 60fps and all 11 settlers at Sanctuary
+logged their intents). One open item: the game's walking call (the
+movement planner) is pending in-game verification — the executor refuses
+rather than teleport. Next: the co-save, where the world survives a save
+and a load.
 
 ## What this is
 
@@ -93,6 +94,8 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    Every frame after that, the executor ticks the simulation and logs
    intents as they change, e.g.
    `settler 0008F3A1 decides MoveTo -> 0008F3B2 (0.82)`.
+   ✅ Tick verified in-game 2026-08-10: the frame-driver hook fired every
+   frame, and all 11 settlers at Sanctuary logged `decides Explore`.
    (The walking call itself is pending verification — see
    `Docs/Design/Executor.md`.)
 

@@ -25,7 +25,13 @@ namespace TLC
                 entry.Entity = a_entity;
                 entry.Intent = a_intent;
                 entry.ActorLoaded = a_actorLoaded(a_entity);
-                entry.TargetLoaded = a_targetLoaded(a_intent.Target);
+
+                // An intent without a target (Explore, Rest, Work,
+                // Socialize) needs nothing loaded; only targeted intents
+                // (MoveTo, Flee) can be refused for an unloaded target.
+                entry.TargetLoaded =
+                    !a_intent.Target.IsValid() || a_targetLoaded(a_intent.Target);
+
                 entry.Available = a_available(a_entity);
                 plan.push_back(entry);
             });
