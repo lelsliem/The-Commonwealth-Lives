@@ -115,11 +115,17 @@ STATUS: IMPLEMENTED — tick and walking verified in-game (2026-08-10)
 
 Goal: the simulation rides inside the game's save files.
 
+STATUS: IMPLEMENTED — verified in-game (2026-08-10): a save wrote 637
+entities (105 KB) and the load restored them (`The Commonwealth wakes
+up: 637 minds restored from the co-save`), with the restored world
+ticking its first pass.
+
 [✓] F4SE serialization records — the adapter's stable type names and
     versioning over the core's Capture/Restore substrate (CoSave, tested
     — CoSaveTest 6/6 suites green)
 [✓] Lifecycle — PreSaveGame → Capture → record; load → record →
-    Restore (applied on GameLoaded); PreLoadGame/DeleteGame/new game →
+    Restore (applied on the load's completion event — kPostLoadGame,
+    deduped against kGameLoaded); PreLoadGame/DeleteGame/new game →
     Clear (serializers survive)
 [ ] Migration — old saves load forward (the version seam is in
     CoSave::Decode; the first schema change exercises it)

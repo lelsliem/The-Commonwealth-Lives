@@ -182,7 +182,7 @@ resolves the road.
 | 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
 | 0.2.0 | Translation | ✅ verified in-game |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick and walking (settlers walked to market, 2026-08-10) |
-| 0.4.0 | Co-save | implemented — record + lifecycle + tests (CoSaveTest); in-game save/load verification pending |
+| 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored (2026-08-10) |
 | 0.5.0 | Living world (the market test) | ⬜ |
 
 See `Docs/Roadmap.md`.
@@ -271,20 +271,25 @@ See `Docs/Roadmap.md`.
   crash blamed on this call was a corrupt save (identical signature in
   runs without the DLL); DisableExitSave now prevents the exit-save
   cycle that produced it.
-- **The co-save is wired (0.4.0, 2026-08-10).** `TLC::CoSave`
-  (`src/CoSave.h/.cpp`) is the adapter's durable record over the core's
-  snapshot substrate: stable component names (`needs`, `memory`, … —
-  never `std::type_index`, which is process-local) and the adapter's own
-  versioning, per the core 0.4.0 contract that save-compatibility is the
-  adapter's job. F4SE callbacks in `main.cpp`: `PreSaveGame →
-  CaptureWorld → Encode → WriteRecord`; load → `Decode → QueueRestore`;
-  `GameLoaded` applies the restore (or starts fresh when the co-save
+- **The co-save is verified in-game (0.4.0, 2026-08-10).**
+  `TLC::CoSave` (`src/CoSave.h/.cpp`) is the adapter's durable record
+  over the core's snapshot substrate: stable component names (`needs`,
+  `memory`, … — never `std::type_index`, which is process-local) and the
+  adapter's own versioning, per the core 0.4.0 contract that
+  save-compatibility is the adapter's job. F4SE callbacks in `main.cpp`:
+  `PreSaveGame → CaptureWorld → Encode → WriteRecord`; load → `Decode →
+  QueueRestore`; the load's **completion event** (`kPostLoadGame`,
+  deduped against `kGameLoaded` — real loads complete without firing
+  `kGameLoaded`) applies the restore (or starts fresh when the co-save
   held nothing); `PreLoadGame`/`DeleteGame`/new game → Clear
   (serializers survive). Refusals are the contract: truncated records,
   unsupported versions, and unknown component names never half-apply.
   CoSaveTest proves the durable round-trip and the refusal paths
-  (6/6 suites green). In-game save/load verification pending — see
-  `Docs/Design/CoSave.md`.
+  (6/6 suites green). **Verified in-game: a save wrote 637 entities
+  (105 KB) and the load restored them (`The Commonwealth wakes up: 637
+  minds restored from the co-save`), the restored world ticking its
+  first pass.** The abort-recovery window is 60s and a completed load
+  ends the pending state immediately — see `Docs/Design/CoSave.md`.
 
 Open items for the author: the plugin author handle (TODO in `xmake.lua`),
 the F4SE-assigned serialization UID (placeholder `'LCEW'` in `CoSave.h`),

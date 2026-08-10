@@ -1,8 +1,10 @@
 # Co-save — "The World Remembers"
 
 **Stone:** adapter 0.4.0
-**Status:** Implemented (record + lifecycle + tests) — in-game save/load
-verification pending
+**Status:** ✅ **VERIFIED in-game 2026-08-10** — a save wrote 637
+entities (105 KB) and the load restored them (`The Commonwealth wakes
+up: 637 minds restored from the co-save`), the restored world ticking
+its first pass immediately after
 **Related:** core 0.4.0-alpha snapshot substrate (`RegistrySnapshot.h`),
 ADR-0024 (adapters translate, don't simulate).
 
@@ -132,4 +134,4 @@ tests/main.cpp    — CoSaveTest (6/6 suites green)
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **CoSaveTest** — the full durable round-trip (world → snapshot → record → bytes → back → restore, stable names literally in the bytes), plus the refusal paths (truncated, unsupported version, unknown component name all refuse). |
-| In-game (author) | Save during play, load the save, and watch the log: `co-save: writing N entities (M bytes)` on save, `co-save: read N entities — the world will be restored on load` + `The Commonwealth wakes up: N minds restored from the co-save` on load — and the settlers resume with their needs where they left off. |
+| In-game (author) | ✅ **Verified 2026-08-10**: save during play → `co-save: writing N entities (M bytes)`; load that save → `co-save: read N entities — the world will be restored on load` then `The Commonwealth wakes up: N minds restored from the co-save` — the load's completion event (`kPostLoadGame`; `kGameLoaded` alone does not fire for real loads, which is why the completion event is the trigger) applies the restore, and the settlers resume where they left off. |
