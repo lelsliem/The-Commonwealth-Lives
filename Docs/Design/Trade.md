@@ -61,6 +61,7 @@ translated mind with a `SpeciesTag`.
 |---|---|---|
 | bench, stall-keeper known | trade with the stall-keeper | `Trade, Success` |
 | bench, no stall-keeper | this mind sets up the stall | `Trade, Partial` |
+| bench, the stall-keeper themself | no customers yet — the stall stands, no re-claim (also the restored case: the keeper comes home to their own bench) | `Trade, Partial` |
 | a human mind (remembered merchant) | trade with them | `Trade, Success` |
 | a child/animal mind (unreachable — defensive) | no trade | `Trade, Partial` |
 | child/animal arrival | fed by owner or settlement | `Aid, Success` |

@@ -487,6 +487,10 @@ namespace TLC
             }
 
             m_StallKeepers[market] = keeper;
+
+            REX::INFO(
+                "LCE: stall restored — market {:#x} reopens under keeper {:#x}.",
+                marketFormId, keeperFormId);
         }
     }
 
@@ -822,6 +826,7 @@ namespace TLC
         // the settlement).
         LCE::Simulation::EntityId counterparty = target;
         bool traded = false;
+        bool keeperHome = false;   // the stall-keeper at their own bench
         std::uint32_t marketFormId = a_targetFormId;
 
         if (species == Species::Human)
@@ -843,6 +848,16 @@ namespace TLC
                 {
                     counterparty = stall;
                     traded = true;
+                }
+                else if (stall.IsValid())
+                {
+                    // The keeper themselves at their own bench (this world
+                    // or restored from the co-save) — no customers yet.
+                    // Not a re-claim: the stall stands, nothing changes
+                    // hands, and the map keeps the same keeper.
+                    counterparty = target;
+                    traded = false;
+                    keeperHome = true;
                 }
                 else
                 {
@@ -935,6 +950,12 @@ namespace TLC
                         "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed on the settlement's credit (no caps).",
                         formId, traderFormId, marketFormId);
                 }
+            }
+            else if (keeperHome)
+            {
+                REX::INFO(
+                    "LCE: settler {:#x} is at their own stall at market {:#x} — no customers yet.",
+                    formId, marketFormId);
             }
             else
             {
