@@ -61,8 +61,9 @@ namespace TLC
         // A walk in progress: which target the entity was told to walk to,
         // and when. The Trade memory outlives one tick, so a MoveTo intent
         // would otherwise re-issue the walk every frame; the session makes
-        // each walk issued once. It ends when the mind decides something
-        // else, the walk is refused, or 30s pass (a stuck walk re-issues).
+        // each walk issued once. It outlives the intent — ProbeWalks keeps
+        // measuring distance (and logs arrival) until the walk is refused,
+        // arrival is logged, or 60s pass (a stuck walk then re-issues).
         struct WalkSession
         {
             std::uint32_t Target = 0;
@@ -78,6 +79,14 @@ namespace TLC
         };
 
         void ExecutePlan(const std::vector<PlanEntry>& a_plan);
+
+        // Measures every active walk session every few seconds: distance to
+        // the target, closest approach, and a one-time "reached" line. The
+        // verification instrument of the walking stone — runs independent
+        // of the current intent, because the Trade memory fades (~4.5s)
+        // long before the walk completes.
+        void ProbeWalks();
+
         void LogPlanEntry(
             LCE::Simulation::EntityId a_entity,
             std::string a_message,

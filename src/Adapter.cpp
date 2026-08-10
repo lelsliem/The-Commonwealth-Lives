@@ -315,6 +315,7 @@ namespace TLC
             [](EntityId) { return true; });
 
         ExecutePlan(plan);
+        ProbeWalks();
     }
 
     void Adapter::ExecutePlan(const std::vector<PlanEntry>& a_plan)
@@ -389,14 +390,16 @@ namespace TLC
                 // The walk session: while the Trade memory lasts the intent
                 // stays MoveTo and would re-issue the planner every frame.
                 // Issue each walk once per session; the game's planner keeps
-                // walking the settler to the destination on its own.
+                // walking the settler to the destination on its own. The
+                // session outlives the intent (ProbeWalks measures it)
+                // because the memory fades long before the walk completes.
                 auto& session = m_Walks[entry.Entity];
                 const auto now = std::chrono::steady_clock::now();
 
                 bool walked = false;
 
                 if (session.Target == targetFormId
-                    && now - session.Issued < std::chrono::seconds(30))
+                    && now - session.Issued < std::chrono::seconds(60))
                 {
                     walked = true;   // already walking that way
                 }
@@ -412,44 +415,6 @@ namespace TLC
                     else
                     {
                         session = {};   // a refused walk ends the session
-                    }
-                }
-
-                // The walk probe — ground truth for the in-game
-                // verification (the log, not the player's eyes): distance
-                // to the market every 5s, the closest approach so far, and
-                // one "reached" line. It discriminates the two outcomes:
-                // distance closing → the pinned planner drives the walk;
-                // flat or rising → the settler's sandbox package is
-                // overriding the destination (then the fix is the game's
-                // command system, which outranks sandbox).
-                if (walked && session.Target == targetFormId)
-                {
-                    const auto from = actor->GetPosition();
-                    const auto to = target->GetPosition();
-                    const auto dx = from.x - to.x;
-                    const auto dy = from.y - to.y;
-                    const auto d = std::sqrt(dx * dx + dy * dy);
-
-                    if (d < session.MinDistance)
-                    {
-                        session.MinDistance = d;
-                    }
-
-                    if (!session.Reached && d < kArrivalRadius)
-                    {
-                        session.Reached = true;
-                        REX::INFO(
-                            "LCE: settler {} reached the market (d = {:.1f} m).",
-                            FormatHex8(actorFormId), d);
-                    }
-                    else if (now - session.LastProbe >= std::chrono::seconds(5))
-                    {
-                        session.LastProbe = now;
-                        REX::DEBUG(
-                            "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m).",
-                            FormatHex8(actorFormId), FormatHex8(targetFormId), d,
-                            session.MinDistance);
                     }
                 }
 
@@ -471,9 +436,9 @@ namespace TLC
             case ActionType::Work:
             case ActionType::Flee:
             {
-                // A mind that decides something else is no longer walking
-                // to market — its walk session ends.
-                m_Walks.erase(entry.Entity);
+                // The session is deliberately kept: the walk was issued and
+                // the game's planner carries it, so ProbeWalks still
+                // measures progress (and arrival) after the memory fades.
 
                 char confidence[16];
                 std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
@@ -505,5 +470,82 @@ namespace TLC
 
         m_LastLogged[a_entity] = a_key;
         REX::INFO("{}", a_message);
+    }
+
+    void Adapter::ProbeWalks()
+    {
+        using namespace LCE::Simulation;
+
+        const auto now = std::chrono::steady_clock::now();
+
+        for (auto it = m_Walks.begin(); it != m_Walks.end();)
+        {
+            auto& session = it->second;
+
+            // A session ends 60s after issue — the walk is issued once and
+            // the game's planner carries it from there; 60s covers the
+            // market radius (≈140 m) even at a slow walk.
+            if (now - session.Issued >= std::chrono::seconds(60))
+            {
+                if (!session.Reached)
+                {
+                    REX::DEBUG(
+                        "LCE: walk session settler {} ended (closest approach {:.1f} m).",
+                        FormatHex8(m_Translator.FormFor(it->first)),
+                        session.MinDistance);
+                }
+
+                it = m_Walks.erase(it);
+                continue;
+            }
+
+            if (session.Reached)
+            {
+                ++it;
+                continue;
+            }
+
+            // Resolve the pair: the walker and the destination it was told
+            // to walk to.
+            const auto actorFormId = m_Translator.FormFor(it->first);
+            const auto* actor = RE::TESForm::GetFormByID<RE::Actor>(actorFormId);
+            const auto* target =
+                RE::TESForm::GetFormByID<RE::TESObjectREFR>(session.Target);
+
+            if (actor == nullptr || target == nullptr)
+            {
+                ++it;   // unloaded — nothing to measure this tick
+                continue;
+            }
+
+            const auto from = actor->GetPosition();
+            const auto to = target->GetPosition();
+            const auto dx = from.x - to.x;
+            const auto dy = from.y - to.y;
+            const auto d = std::sqrt(dx * dx + dy * dy);
+
+            if (d < session.MinDistance)
+            {
+                session.MinDistance = d;
+            }
+
+            if (d < kArrivalRadius)
+            {
+                session.Reached = true;
+                REX::INFO(
+                    "LCE: settler {} reached the market (d = {:.1f} m).",
+                    FormatHex8(actorFormId), d);
+            }
+            else if (now - session.LastProbe >= std::chrono::seconds(5))
+            {
+                session.LastProbe = now;
+                REX::DEBUG(
+                    "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m).",
+                    FormatHex8(actorFormId), FormatHex8(session.Target), d,
+                    session.MinDistance);
+            }
+
+            ++it;
+        }
     }
 }
