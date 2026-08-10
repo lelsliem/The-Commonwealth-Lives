@@ -2,10 +2,12 @@
 
 **Stone:** adapter 0.3.1 (after the executor, verified in-game pending)
 **Status:** Implemented — the walking call is **pinned and verified
-statically** (RTTI chain against Fallout4.exe 1.11.221, described below);
-the decision half is unit-tested (MarketTest, 5/5 suites green); the walk
+statically** (name anchors + disassembly against Fallout4.exe 1.11.221,
+described below; the first pin, 0xD77440, was wrong — the runtime byte
+check refused it in-game and disassembly confirmed the error); the
+decision half is unit-tested (MarketTest, 5/5 suites green); the walk
 itself is **pending in-game verification** — the same discipline as the
-tick stone: a runtime vtable check guards the call, and one log line tells
+tick stone: a runtime byte check guards the call, and one log line tells
 the truth.
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026.
 The contract's guarantee this stone honors: **an intent is a hint, not a
@@ -52,57 +54,60 @@ the game's own "make this actor walk to that refr".
 - **The function is named twice.** The older name-bearing address database
   and the Fallout 4 public PDB (via the FO4VR address-library repo) both
   name it `Actor::InitiateCommandModeTravelPackage(TESObjectREFR*, COMMAND_TYPE)`
-  — `this` = the actor being commanded, arg1 = the destination refr —
-  with `Actor::InitiateCommandModeActivatePackage` exactly 0x240 bytes
-  later in both. The 1.11.221 pair sits at **0xD77440 / 0xD77680** (also
-  0x240 apart), the first of which is the one called from the player's
-  command-mode flow (the command handler gates on `this == player`, then
-  calls it with the refr).
-- **The flow confirms the semantics.** Disassembled, 0xD77440 sets the
-  actor's command target to the passed refr, builds a command package
-  through the package machinery (`0xce5a90`, the same call the game uses
-  for every Initiate*Package), marks the AI process command state, and
-  clears the target — i.e. "command this actor to go to that refr". The
-  travel package outranks the sandbox package: it *is* the commanded
-  move, the exact machinery the player uses to send a settler or
-  companion somewhere.
-- `Actor::movementController` (CommonLibF4, +0x318) is a `MovementControllerNPC`:
-  a 0x1A8-byte object — the AI base (`MovementControllerAI`, holding the
-  active-arbiter set) at +0x00, the NPC subobject at +0x138 (RTTI chain:
-  `.?AVMovementControllerNPC@@` → 7 COLs → 7 vtables; destructor frees
-  exactly 0x1A8).
-- The NPC subobject's vtable (**0x2567B68**) carries the `DoSet*` family —
-  the movement-mode switches (`DoSetPlannerDirectControl`, etc. — the
-  names come from the older name-bearing address database; the functions
-  themselves are confirmed by structure).
-- Slot [2] (**0xdc92f0**) is the one we want: it calls the "activate
-  planner" virtual, finds the planner arbiter in the controller's active
-  set, and sets the destination NiPoint3 on it. Its setter writes the
-  arbiter's destination fields; the arbiter then drives the DirectControl
-  agent — the game's real pathing (the PDB confirms: `IMovementPlannerDirectControl`
-  and its auto-registered agent are real types).
-- The slots compute their AI base as `this - 0x138`, which lands on the
-  active-arbiter container the AI ctor initialized — confirming `this` is
-  the NPC subobject at controller+0x138.
+  — `this` = the actor being commanded, arg1 = the destination refr,
+  arg2 = the command type — with `Actor::InitiateCommandModeActivatePackage`
+  exactly 0x240 bytes later in both.
+- **The first pin was wrong — the runtime byte-check caught it.** The old
+  CSV gave the pair's *old-version* RVAs (0xD82300/0xD82540), and an early
+  RE guessed 0xD77440/0xD77680 in 1.11.221 from a coincidental 0x240
+  spacing. The in-game run refused at the prologue check (`pin mismatch at
+  0x7ff679c27440`) and disassembly confirmed why: 0xD77440 is a
+  stats/report loop, not a command initiator. The check exists exactly for
+  this — a wrong pin refuses (never teleports) and logs the truth instead
+  of crashing.
+- **The real 1.11.221 address was located by anchoring, then verified by
+  disassembly.** The old CSV's ID era doesn't bridge to the current
+  address library (its numbering changed), so: names in CommonLibF4's
+  IDs.h resolve to current-era IDs (verified: `SetCommandType` 2231826 →
+  0xD00890 — the same RVA RE'd independently), the old database gives the
+  same names' 1.10.163 RVAs, and the local old→new shift interpolates
+  travel's old 0xD82300 to ~0xC6BD00. Scanning that window for real
+  function starts (post-0xCC padding) and matching the old build's exact
+  557-byte size found **0xC6BE90** (535B) — the only candidate that (a)
+  takes `(actor, target refr, command type)` — rcx saved as `this`, rdx
+  saved as the target, r8d as the type; (b) reads the target's position
+  and writes it into the actor's AI process as the travel destination
+  (`[process+0x28]`-relative, the tell that this is *travel*, not
+  activate); (c) calls `SetCommandType` (0xD00890) with the passed type;
+  and (d) sets the commanding flag and evaluates the package. Its twin
+  0xC6AA80 (551B) is `Actor::InitiateCommandMode` — the "enter command
+  mode" guard that bails unless `this == player`; travel is the
+  self-contained "command this actor to go to that refr".
+- `this` = the actor that walks. Every package-building call reads
+  `[this+0x300]` (the actor's `currentProcess`) and the destination lands
+  in *its* process; the other actor (read from a global) is the
+  commander, used for the command-relationship markers. So the adapter
+  calls it on the **settler**, with the market refr and `kMove` — the same
+  shape the game uses when the player sends someone somewhere.
 
-So `WalkTo` now issues, in order: **1)** the command-mode travel package
-(0xD77440, the order — sandbox cannot override it), **2)** the planner
-destination (0xdc92f0, the exact point for the package's pathing), and
-**3)** `AIProcess::SetCommandType(COMMAND_TYPE::kMove)` (wrapped, current
-address-library ID — the game's "commanding" marker on the process).
+So `WalkTo` is now exactly one call: the command-mode travel package
+(0xC6BE90, the order — sandbox cannot override it) with `kMove`; the
+function itself sets the command state, writes the destination, and
+evaluates the package. The earlier hand-rolled planner + `SetCommandType`
+steps are gone — the travel package does all of it internally.
 
-Not in CommonLibF4, not in the address library — pinned by byte/RTTI
-checks against the user's exe, the same discipline F4SE uses for its
-offsets.
+Not in CommonLibF4, not in the current address library — pinned here with
+a byte check against the user's exe, the same discipline F4SE uses for
+its offsets.
 
 ### The guard
 
 `WalkTo` byte-verifies the pinned travel package (prologue
-`55 53 56 57 41 54 41 55`) and the subobject's vtable against the pinned
-values at runtime before calling. A wrong pin → refuse (never teleport) +
-an ERROR line printing the truth, so a layout surprise is diagnosed in
-one in-game session (the tick stone's lesson: attribution, not
-assumption).
+`48 89 5C 24 18 57 41 54` — `mov [rsp+0x18],rbx; push rdi; push r12`)
+against the pinned value at runtime before calling. A wrong pin → refuse
+(never teleport) + an ERROR line printing the truth, so a layout surprise
+is diagnosed in one in-game session (the tick stone's lesson:
+attribution, not assumption).
 
 ### The walk session
 
@@ -167,9 +172,8 @@ at their own workbenches.)
 ## Files
 
 ```
-src/Movement.h/.cpp  — WalkTo: the pinned DoSetPlannerDirectControl call
-                       (vtable 0x2567B68, slot [2], this = controller+0x138)
-                       with the runtime vtable guard
+src/Movement.h/.cpp  — WalkTo: the pinned InitiateCommandModeTravelPackage
+                       call (0xC6BE90, kMove) with the runtime byte guard
 src/Market.h         — kMarketFormId + pure SeedMarketMemory
 src/Adapter.h/.cpp   — EnsureMarket + seed at StartWorld; the walk session
 tests/               — MarketTest (5/5 suites green): seeded mind decides
@@ -181,18 +185,21 @@ tests/               — MarketTest (5/5 suites green): seeded mind decides
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **MarketTest** — a hungry settler seeded with the market memory decides `MoveTo` after `Update`; the same mind without it explores. The decision half of the farmer's road. |
-| In-game (author) | Pending: load Sanctuary, stay in the game ~30s, paste the tail. Only nearby minds get the market memory (radius-scoped: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected: `LCE: WalkTo — command-mode travel package issued` then `walk probe settler X -> 000250FE d = ... m (min ... m) [live]` lines as the settler moves (≥1 m of progress, 2s apart) with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. Closing d → the command package drives the walk; **silence after the first probe line** → the package didn't take (next: the commanded-actor state on the player, or `PlayerCharacter::EvaluateAndSetCommandTypeForTarget`). Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. **The game's exit-save reload kills the sim**: a PreLoadGame fires ~0.1s after the world wakes (loading the Exitsave left by the previous quit) and aborts ~9s later without a GameLoaded — EndWorld runs and the sim stays dead, which read as "nobody walks". The adapter now revives the world when a pending load never completes (`lifecycle: the pending load aborted — reviving the world.` ~12s after PreLoadGame), and every GameLoaded rebuilds fresh. Failure modes are logged: `market not loaded`, the pin/vtable-mismatch ERRORs, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
+| In-game (author) | Pending: deploy the DLL, load Sanctuary, stay in the game ~30s, paste the tail. Only nearby minds get the market memory (radius-scoped: 10 of 11 settlers correctly Explore, one decides MoveTo). Expected: `LCE: WalkTo — command-mode travel package issued` then `walk probe settler X -> 000250FE d = ... m (min ... m) [live]` lines as the settler moves (≥1 m of progress, 2s apart) with **d closing** — then one `settler X reached the market (d = 1.2 m)` line. Closing d → the travel package drives the walk; **silence after the first probe line** → the package didn't take (next: the commanded-actor state on the player, or `PlayerCharacter::EvaluateAndSetCommandTypeForTarget`). Markers on the latest build: `Tick: called before the world started` and `Tick: first pass complete (N intents, M walks)`. **The game's exit-save reload kills the sim**: a PreLoadGame fires ~0.1s after the world wakes (loading the Exitsave left by the previous quit) and aborts ~9s later without a GameLoaded — EndWorld runs and the sim stays dead, which read as "nobody walks". The adapter now revives the world when a pending load never completes (`lifecycle: the pending load aborted — reviving the world.` ~12s after PreLoadGame), and every GameLoaded rebuilds fresh. **The revival world after an abort can seed 600+ settler-faction actors** (the aborted load's temp actors), all within the market radius — a flood of walks. The executor caps concurrent walks (16) and a refused walk now erases its session (the old reset left a zombie session that ProbeWalks logged as an instant "ended" every frame — the flood that preceded the crash). Failure modes are logged: `market not loaded`, the pin-mismatch ERROR, or `WalkTo refused — no actor or no AI process` (000B0EEE/050049D9 refuse every session — persistent null AI process, logged but harmless). |
 
 ## Decisions (resolved)
 
-1. **The walking call is the movement controller's DoSetPlanner slot, not
-   a function named `CreateMovementPlanner`** — the earlier name was an
-   assumption; the RTTI chain found the real machinery. Pinned by vtable
-   + slot index (0x2567B68, slot [2] = 0xdc92f0), with a runtime guard.
+1. **The walking call is the command-mode travel package, not a planner
+   call** — the earlier design (a bare `CreateMovementPlanner`-style
+   destination) lost to the sandbox package; the probe proved it. The
+   game honors commands over packages, so `WalkTo` issues the real
+   "move here": `Actor::InitiateCommandModeTravelPackage` (0xC6BE90,
+   kMove), found by anchoring (IDs.h × old database × current bin) and
+   verified by disassembly, with a runtime byte guard.
 2. **The market is seeded memory, not a quest** — the adapter reports
    "the settler knows where to trade"; the core reasons over it
    (ADR-0024). No scripts, no content files.
 3. **One walk per session** — the executor's walk session keeps the
    planner from being re-issued every frame while the memory lasts.
 4. **Never teleport, never fake it** — a refused walk logs the truth and
-   the sim re-decides; the vtable guard keeps a wrong pin harmless.
+   the sim re-decides; the byte guard keeps a wrong pin harmless.

@@ -156,6 +156,13 @@ namespace TLC
         // walk to the Sanctuary workbench.
         constexpr float kMarketRadius = 10000.0f;
 
+        // How many settlers may walk at once. The command-mode travel
+        // package flags each walker as commanded; hundreds at once (the
+        // revival world after an aborted load can seed 600+ settler-faction
+        // actors near the market) risks a flood — cap the issued walks.
+        // The rest are refused this tick and re-decide next.
+        constexpr std::size_t kMaxWalks = 16;
+
         // The entity's form, or null when the form is unknown.
         RE::TESForm* FormFor(const Translator& a_translator, LCE::Simulation::EntityId a_entity)
         {
@@ -464,6 +471,15 @@ namespace TLC
                 {
                     walked = true;   // already walking that way
                 }
+                else if (m_Walks.size() >= kMaxWalks)
+                {
+                    // Walk cap: erase the session so a refused walk never
+                    // lingers (a zombie session — Issued at the epoch —
+                    // made ProbeWalks log an instant "ended" line every
+                    // frame for every refused walk; that flood preceded
+                    // the crash). The mind re-decides next tick.
+                    m_Walks.erase(entry.Entity);
+                }
                 else
                 {
                     walked = Movement::WalkTo(actor, target);
@@ -475,7 +491,10 @@ namespace TLC
                     }
                     else
                     {
-                        session = {};   // a refused walk ends the session
+                        // A refused walk ends the session — erase, don't
+                        // reset (see the cap branch: a reset leaves a
+                        // zombie that ProbeWalks logs as instantly ended).
+                        m_Walks.erase(entry.Entity);
                     }
                 }
 
@@ -542,6 +561,16 @@ namespace TLC
         for (auto it = m_Walks.begin(); it != m_Walks.end();)
         {
             auto& session = it->second;
+
+            // A never-issued session (default Issued) is a zombie — drop it
+            // silently rather than log it as an instant "ended" (the flood
+            // that preceded the crash). ExecutePlan now erases on refusal,
+            // so this is defense in depth.
+            if (session.Issued == std::chrono::steady_clock::time_point{})
+            {
+                it = m_Walks.erase(it);
+                continue;
+            }
 
             // A session ends 60s after issue — the walk is issued once and
             // the game's planner carries it from there; 60s covers the

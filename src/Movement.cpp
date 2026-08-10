@@ -15,7 +15,6 @@
 
 #include <RE/A/Actor.h>
 #include <RE/C/COMMAND_TYPE.h>
-#include <RE/N/NiPoint3.h>
 #include <RE/T/TESObjectREFR.h>
 
 #include <REL/Offset.h>
@@ -30,52 +29,42 @@
 namespace
 {
     //-------------------------------------------------------------------------
-    // The game's walking machinery, pinned to 1.11.221. Two layers:
+    // The game's walking machinery, pinned to 1.11.221.
     //
-    // 1. The command package — the game's real "move here". The old
-    //    address database and the Fallout 4 public PDB both name it
-    //    `Actor::InitiateCommandModeTravelPackage(TESObjectREFR*, COMMAND_TYPE)`
-    //    — this = the actor being commanded, arg1 = the destination refr.
-    //    It sets the actor's command target to the refr, builds a command
-    //    package (which outranks the sandbox package — the bare planner
-    //    call below lost to sandbox, the probe proved it), and starts the
-    //    walk. In 1.11.221 it is at 0xD77440, byte-verified (prologue
-    //    55 53 56 57 41 54 41 55 — push rbp/rbx/rsi/rdi/r14/r15). The
-    //    COMMAND_TYPE argument of the PDB signature is not read by this
-    //    build (the command type rides in the package it creates).
+    // Actor::InitiateCommandModeTravelPackage(TESObjectREFR*, COMMAND_TYPE)
+    // — the game's own "move here": this = the actor that walks, arg1 =
+    // the destination refr, arg2 = the command type. It sets the command
+    // relationship, reads the destination from the refr, writes it into the
+    // actor's AI process, sets the command state, and evaluates the
+    // package. A command package outranks the sandbox package — the bare
+    // planner call lost to sandbox, the probe proved it.
     //
-    // 2. The movement planner — the game walks an NPC to a point through
-    //    its movement controller. The actor's `movementController` is a
-    //    0x1A8-byte object: the AI base (MovementControllerAI, with the
-    //    active-arbiter set) at +0x00, and the NPC subobject at +0x138.
-    //    The NPC subobject's vtable — 0x2567B68, RTTI-verified (name →
-    //    type descriptor → COL → vtable) — carries the DoSet* family;
-    //    slot [2] (function 0xdc92f0) is the game's
-    //    DoSetPlannerDirectControl: it activates the planner arbiter in
-    //    the controller's active set and sets the destination NiPoint3.
+    // Where the pin came from: the old flat database and the FO4 PDB name
+    // the function; the old CSV's ID era doesn't bridge to the current
+    // address library (its numbering changed), so the 1.11.221 address was
+    // located by anchoring — names in commonlibf4's IDs.h resolve to
+    // current-era IDs (verified: SetCommandType 2231826 -> 0xD00890), the
+    // old database gives the same names' 1.10.163 RVAs, and the local
+    // old->new shift interpolates travel's old 0xD82300 to ~0xC6BD00.
+    // Disassembly at 0xC6BE90 confirmed it: the only candidate in the
+    // window that (a) is ~557 bytes (the old build's exact size), (b) takes
+    // (actor, target refr, command type), (c) writes the target's position
+    // into the actor's process as the travel destination, and (d) calls
+    // SetCommandType (0xD00890) with the passed type. The earlier 0xD77440
+    // pin was wrong (disassembly showed a stats/report loop, and the
+    // byte-check refused it in-game — the check exists exactly for that).
     //
-    // Neither is wrapped in CommonLibF4 nor present in the address
-    // library — both are pinned here by RTTI/byte checks against
-    // Fallout4.exe 1.11.221. A wrong pin refuses (never teleports) and
-    // logs the truth.
-    //
-    // Order matters: the command package first (it is the order — sandbox
-    // cannot override it), then the planner activation (the destination
-    // the package's own pathing can begin from), then the kMove command
-    // state on the AI process (the game's own "commanding" marker).
-    //-------------------------------------------------------------------------
-    constexpr std::uintptr_t kTravelPackageRva = 0xD77440;   // Actor::InitiateCommandModeTravelPackage
-    constexpr std::uintptr_t kNpcSubobjectOffset = 0x138;    // the NPC part of the controller
-    constexpr std::uintptr_t kNpcVtableRva = 0x2567B68;      // the DoSet* vtable
-    constexpr std::size_t kDoSetPlannerSlot = 2;             // 0xdc92f0
+    // Not wrapped in CommonLibF4 nor present in the current address
+    // library — pinned here with a byte check against Fallout4.exe
+    // 1.11.221. A wrong pin refuses (never teleports) and logs the truth.
+    constexpr std::uintptr_t kTravelPackageRva = 0xC6BE90;   // Actor::InitiateCommandModeTravelPackage
 
-    using InitiateTravelFn = void (*)(RE::Actor* a_actor, RE::TESObjectREFR* a_target);
-    using DoSetPlannerFn = void (*)(void* a_controller, const RE::NiPoint3* a_destination);
+    using InitiateTravelFn = void (*)(RE::Actor* a_actor, RE::TESObjectREFR* a_target, RE::COMMAND_TYPE a_type);
 
-    // The first eight bytes of InitiateCommandModeTravelPackage in
-    // 1.11.221: push rbp; push rbx; push rsi; push rdi; push r14; push r15.
+    // The first eight bytes in 1.11.221: mov [rsp+0x18],rbx; push rdi;
+    // push r12.
     constexpr std::array<std::uint8_t, 8> kTravelPrologue{
-        0x55, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55 };
+        0x48, 0x89, 0x5C, 0x24, 0x18, 0x57, 0x41, 0x54 };
 
     bool Matches(const std::uintptr_t a_rva, const std::array<std::uint8_t, 8>& a_bytes)
     {
@@ -101,8 +90,8 @@ namespace TLC::Movement
             return false;
         }
 
-        // Byte-verify the two pins before first use: a wrong pin (runtime
-        // changed, address library mismatch) must refuse, never crash.
+        // Byte-verify the pin before use: a wrong pin (runtime changed,
+        // address library mismatch) must refuse, never crash.
         if (!Matches(kTravelPackageRva, kTravelPrologue))
         {
             REX::ERROR(
@@ -112,57 +101,18 @@ namespace TLC::Movement
             return false;
         }
 
-        const auto controller =
-            reinterpret_cast<std::uintptr_t>(a_actor->movementController.get());
-
-        if (controller == 0)
-        {
-            REX::DEBUG("LCE: WalkTo refused — no movement controller.");
-            return false;
-        }
-
-        auto* npc = reinterpret_cast<void*>(controller + kNpcSubobjectOffset);
-
-        const auto vtable = *reinterpret_cast<std::uintptr_t*>(npc);
-        const auto expected = REL::Offset{ kNpcVtableRva }.address();
-
-        if (vtable != expected)
-        {
-            REX::ERROR(
-                "LCE: WalkTo refused — movement controller vtable mismatch "
-                "(got {:#x}, want {:#x}); intent dropped (never teleport).",
-                vtable, expected);
-            return false;
-        }
-
-        // 1. The order: the command-mode travel package. This is the game's
-        //    "move here" — a command package that outranks the sandbox
-        //    package (the probe proved the bare planner loses to sandbox).
+        // The order: the command-mode travel package — the game's real
+        // "move here" (kMove), which outranks the sandbox package. The
+        // function does the rest itself: the destination, the command
+        // state, and the package evaluation.
         const auto initiateTravel = *reinterpret_cast<InitiateTravelFn*>(
             REL::Offset{ kTravelPackageRva }.address());
 
-        initiateTravel(a_actor, a_target);
+        initiateTravel(a_actor, a_target, RE::COMMAND_TYPE::kMove);
 
         REX::DEBUG(
             "LCE: WalkTo — command-mode travel package issued for target {:#010x}.",
             a_target->GetFormID());
-
-        // 2. The destination: drive the movement planner to the target's
-        //    position, so the command package's pathing has the exact
-        //    point to walk to.
-        const auto destination = a_target->GetPosition();
-
-        const auto fn = *reinterpret_cast<DoSetPlannerFn*>(vtable + kDoSetPlannerSlot * 8);
-
-        fn(npc, &destination);
-
-        // 3. The command marker on the AI process (the game's own
-        //    "commanding" state; kRelease is a later stone's work).
-        a_actor->currentProcess->SetCommandType(RE::COMMAND_TYPE::kMove);
-
-        REX::DEBUG(
-            "LCE: WalkTo — planner activated for destination ({}, {}, {}).",
-            destination.x, destination.y, destination.z);
 
         return true;
     }
