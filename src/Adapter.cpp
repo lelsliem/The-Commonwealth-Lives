@@ -542,21 +542,17 @@ namespace TLC
                 continue;
             }
 
-            // The walker's LIVE position comes from its 3D node. Actor
-            // GetPosition() returns the stored `data.location` — the
-            // save-time position — which never changes while the actor
-            // moves: the first probe run showed a frozen 1567.8 m even
-            // though the settler was walking. The 3D world transform is
-            // the render position, always current.
+            // Live position: prefer the 3D node (the render position —
+            // always current). Fall back to the stored position when the
+            // node is missing (some actors report no 3D — a hard skip here
+            // once silenced the probe entirely), and tag which one was
+            // used so the reading is interpretable.
             const auto* node = actor->Get3D();
 
-            if (node == nullptr)
-            {
-                ++it;   // no 3D — nothing to measure this tick
-                continue;
-            }
-
-            const auto from = node->GetWorldTransform().translate;
+            const auto from = node != nullptr
+                ? node->GetWorldTransform().translate
+                : actor->GetPosition();
+            const bool live = node != nullptr;
             const auto to = target->GetPosition();
             const auto dx = from.x - to.x;
             const auto dy = from.y - to.y;
@@ -581,9 +577,9 @@ namespace TLC
                 session.LastProbe = now;
                 session.LastDistance = d;
                 REX::DEBUG(
-                    "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m).",
+                    "LCE: walk probe settler {} -> {} d = {:.1f} m (min {:.1f} m){}.",
                     FormatHex8(actorFormId), FormatHex8(session.Target), d,
-                    session.MinDistance);
+                    session.MinDistance, live ? " [live]" : " [stored]");
             }
 
             ++it;

@@ -39,6 +39,16 @@ The earlier design assumed a single function `AIProcess::CreateMovementPlanner`.
 The RE says otherwise: FO4's movement is **message/controller-driven**, and
 the "walk to a point" primitive is on the NPC movement controller.
 
+**The planner destination alone is not enough** — the probe proved it: the
+planner activated every run, yet the settler stood still (the user's eyes
+agree — nobody ever walked). A bare planner destination is a *hint*; the
+settler's sandbox package keeps overriding the movement mode. The game
+honors commands over packages ("move here" is the command system), so
+`WalkTo` now also marks the walk as a command —
+`AIProcess::SetCommandType(COMMAND_TYPE::kMove)`, wrapped with a current
+address-library ID — before driving the planner. Command + destination =
+the walk the game itself would produce.
+
 ### What was found (the evidence)
 
 - `Actor::movementController` (CommonLibF4, +0x318) is a `MovementControllerNPC`:
@@ -87,13 +97,15 @@ with the memory after ~4.5s — one line, no trend; that's fixed.) A
 refused walk, a logged arrival, 60s passing, or a world end clears the
 session.
 
-The walker's position is read from its **3D node** (`Get3D()` →
-`GetWorldTransform().translate`), not `GetPosition()`: `GetPosition()`
-returns the REFR's stored `data.location` — the save-time position,
-which never changes while an actor moves. The first live-probe run froze
-at 1567.8 m (the saved distance) even while the settler was walking —
-and the same stale values are why the cross-map distances matched
-settlement workbenches so exactly.
+The walker's position is read live from its **3D node** (`Get3D()` →
+`GetWorldTransform().translate`) when available, falling back to
+`GetPosition()` (the stored `data.location`) and **tagging which one was
+used** (`[live]` / `[stored]`). A hard skip on a missing 3D node once
+silenced the probe entirely — the fallback guarantees a reading every
+tick. (`GetPosition()` is the save-time position and never changes while
+an actor moves; it's also why the cross-map distances matched settlement
+workbenches so exactly — those were saved positions of settlers standing
+at their own workbenches.)
 
 ---
 

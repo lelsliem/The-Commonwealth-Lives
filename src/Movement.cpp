@@ -14,6 +14,7 @@
 #include <F4SE/Impl/PCH.h>
 
 #include <RE/A/Actor.h>
+#include <RE/C/COMMAND_TYPE.h>
 #include <RE/N/NiPoint3.h>
 
 #include <REL/Offset.h>
@@ -43,6 +44,16 @@ namespace
     // pinned here by the RTTI chain against Fallout4.exe 1.11.221. The
     // runtime vtable check below keeps a wrong pin harmless: walking
     // refuses (never teleports) and logs the truth.
+    //
+    // The planner destination alone is NOT enough — the probe proved it:
+    // the planner activated every run, yet the settler stood still. The
+    // settler's sandbox package keeps overriding the movement mode, and a
+    // bare planner destination is a hint, not an order. The game honors
+    // commands over packages ("move here" goes through the command
+    // system), so WalkTo also marks the walk as a command (kMove) via
+    // AIProcess::SetCommandType — wrapped in CommonLibF4 with a current
+    // address-library ID. Command + destination = the walk the game
+    // itself would produce.
     //-------------------------------------------------------------------------
     constexpr std::uintptr_t kNpcSubobjectOffset = 0x138;   // the NPC part of the controller
     constexpr std::uintptr_t kNpcVtableRva = 0x2567B68;     // the DoSet* vtable
@@ -83,6 +94,11 @@ namespace TLC::Movement
                 vtable, expected);
             return false;
         }
+
+        // Mark the walk as a command (kMove) so the sandbox package cannot
+        // override it. Releasing the command (kRelease) is a later stone's
+        // work — for the walking stone the session ends after arrival.
+        a_actor->currentProcess->SetCommandType(RE::COMMAND_TYPE::kMove);
 
         const auto fn = *reinterpret_cast<DoSetPlannerFn*>(vtable + kDoSetPlannerSlot * 8);
 
