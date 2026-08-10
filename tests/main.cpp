@@ -301,9 +301,51 @@ namespace TLC::Tests
 
         const auto childArrival = ArrivalOutcome(Species::Child, feeder);
 
-        return childArrival.Other == feeder
-            && childArrival.Kind == InteractionKind::Aid
-            && childArrival.Result == OutcomeResult::Success;
+        if (childArrival.Other != feeder
+            || childArrival.Kind != InteractionKind::Aid
+            || childArrival.Result != OutcomeResult::Success)
+        {
+            return false;
+        }
+
+        // The hunger loop's payoff: arriving at the market restores the
+        // Hunger need and reports what it was.
+        auto needs = SeededNeeds(Species::Animal);
+        needs.List[0].Value = 0.12f;
+
+        const auto previous = RestoreHunger(needs);
+
+        if (previous != 0.12f || needs.List[0].Value != 1.0f)
+        {
+            return false;
+        }
+
+        // A mind without a Hunger need is left alone (defensive).
+        Needs noHunger;
+        noHunger.List.push_back(Need{ NeedType::Fatigue, 0.4f, 0.1f });
+
+        if (RestoreHunger(noHunger) != -1.0f || noHunger.List[0].Value != 0.4f)
+        {
+            return false;
+        }
+
+        // The born ambition: a human carries AcquireFood; a child or an
+        // animal carries none (their loop closes on the feed alone).
+        const auto humanGoals = SeededGoals(Species::Human);
+
+        if (!humanGoals.Active
+            || humanGoals.Active->Type != GoalType::AcquireFood)
+        {
+            return false;
+        }
+
+        if (SeededGoals(Species::Child).Active
+            || SeededGoals(Species::Animal).Active)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     bool SerializationTest()

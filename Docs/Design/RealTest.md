@@ -1,10 +1,9 @@
 # The Real Test — "The Settler Goes to Market"
 
 **Stone:** adapter 0.5.0 (the contract's real test)
-**Status:** ⬜ **DESIGNED 2026-08-10 — not built.** The previous build
-(food sources + arrival outcomes, `909fd6e`) is in the user's hands for
-verification; this document is the next stone's plan so the design is
-settled before the build.
+**Status:** ✅ **IMPLEMENTED 2026-08-10 — pending in-game verification.**
+Build `b7f0aa0` (the hunger write-through); the user verifies the loop
+closes in-game before the docs flip fully.
 **Related:** core 0.3.0 (Decide), 0.4.0 (snapshot), 0.5.0 stones 01–02
 (tuning, ReportOutcome), ADR-0024 (adapters translate, don't simulate).
 
@@ -56,14 +55,17 @@ exist — none are seeded). The trip therefore never satisfies hunger.
 
 ### 1. The adapter's write-through: arrival feeds (adapter-owned)
 
-On a successful arrival, the adapter restores the hunger need of the
-arriving mind — the walk's payoff. This is the documented translation
-rule in action ("a settler's `Hunger` ↔ an ActorValue write through
-`RE::Actor`"; components ↔ game data at the edge): *the dog ate* is a
-game fact, reported by the adapter, not simulated by the core. Concretely:
-after `ReportArrival`, find the `Needs` component's `Hunger` entry and
-set it back toward 1.0 (full). Nothing to do for goals yet — the outcome
-already records the memory and the relationship.
+On arrival, the adapter restores the hunger need — the walk's payoff.
+This is the documented translation rule in action ("a settler's
+`Hunger` ↔ an ActorValue write through `RE::Actor`"; components ↔ game
+data at the edge): *the mind ate* is a game fact, reported by the
+adapter, not simulated by the core. Concretely: after `ReportArrival`,
+`RestoreHunger` finds the `Needs` component's `Hunger` entry and sets it
+back to 1.0 (full), logging the change. It applies to **every** arrival
+— the settlement's stores feed arrivals, human and animal alike; the
+per-species *outcome* still distinguishes commerce (human Trade/Partial
+— nothing bought yet) from being fed (child/animal Aid/Success —
+nothing given).
 
 Game knowledge at the edge, sim law in the core — this stays honest with
 the boundary. The alternative (the core restoring needs on goal service)
@@ -71,12 +73,13 @@ is sim meaning, not game fact, and is noted as an engine option below.
 
 ### 2. Goal seeding (adapter-owned) + the Feed-kind question (engine ask)
 
-For the outcome's goal-service to mean anything, minds need goals.
-Seed `Goals{ AcquireFood }` at translation, per species (animals:
-AcquireFood only; humans: AcquireFood — Prosper/Socialize later). Now a
-Trade Success clears the human's AcquireFood ambition (core map:
-Trade → AcquireFood), a Partial halves it — the ambition is genuinely
-served.
+For the outcome's goal-service to mean anything, minds need goals. The
+adapter seeds `Goals{ AcquireFood }` at translation for humans
+(Prosper/Socialize later); a Trade Success will clear the ambition when
+trading lands, a Partial halves it. Children and animals are seeded with
+none — their loop closes on the feed alone. Note: `Decide` does not read
+goals yet, so seeding is bookkeeping that becomes decision-relevant when
+the engine wires goals into Decide.
 
 **The animal gap:** the core's goal map feeds `AcquireFood` from Trade,
 not Aid. A dog reported `Aid, Success` has its memory and disposition
@@ -109,19 +112,19 @@ then switches the animal's outcome kind and seeds its goal.
   arrival stays `Partial` ("arrived, no trade yet") until a later stone
   makes trading real.
 
-## Verification (when built)
+## Verification (in the build)
 
 The log tells the loop:
 
 ```
-settler 0001CA7D decides MoveTo -> 000250FE (0.16)      ← hungry
-walk probe ... min closing ...                          ← walking
-settler 0001CA7D arrived — no trade yet (Trade, Partial) ← human arrival
-settler 0001CA7D fed: Hunger 0.00 -> 1.00               ← THE new line: the trip paid off
-settler 0001CA7D decides Explore (0.04)                 ← not hungry — no walk
+settler 0001CA7D decides MoveTo -> 000250FE (0.16)       ← hungry
+walk probe ... min closing ...                           ← walking
+settler 0001CA7D arrived — no trade yet (Trade, Partial)  ← arrival outcome
+settler 0001CA7D fed: Hunger 0.00 -> 1.00                ← THE payoff line
+settler 0001CA7D decides Explore (0.04)                  ← not hungry — no walk
 ```
 
-The no-script proof: the same settler, watched over minutes, cycles
-hungry → market → fed → idle, driven entirely by the need value — and
-the moment the write-through is removed, the cycle collapses back to
+The no-script proof: the same mind, watched over minutes, cycles hungry
+→ market → fed → idle, driven entirely by the need value — and the
+moment the write-through is removed, the cycle collapses back to
 walk-forever. That contrast *is* the test.

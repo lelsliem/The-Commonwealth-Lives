@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "LCE/Simulation/Goals.h"
 #include "LCE/Simulation/Memory.h"   // InteractionKind
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Outcome.h"
@@ -77,4 +78,25 @@ namespace TLC
     LCE::Simulation::Outcome ArrivalOutcome(
         Species a_species,
         LCE::Simulation::EntityId a_feeder);
+
+    //-------------------------------------------------------------------------
+    // The hunger loop's payoff (0.5.0, the real test): arriving at the
+    // market means food — the settlement's stores feed arrivals. Restores
+    // the Hunger need to full and returns its previous value (or -1 when
+    // the mind has no Hunger need — a defensive marker, all seeded minds
+    // have one). Game fact at the edge: the dog ate; the sim just records
+    // it.
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    float RestoreHunger(LCE::Simulation::Needs& a_needs);
+
+    //-------------------------------------------------------------------------
+    // The ambition a fresh mind of a species is born with. Humans carry
+    // the AcquireFood ambition (served when trading lands; Partial halves
+    // it per arrival). Children and animals carry none yet — their loop
+    // closes on the feed alone, and the core's Aid kind does not serve
+    // AcquireFood (the Feed-kind engine ask).
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    LCE::Simulation::Goals SeededGoals(Species a_species);
 }

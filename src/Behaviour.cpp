@@ -102,4 +102,33 @@ namespace TLC
         return Outcome{
             a_feeder, InteractionKind::Trade, OutcomeResult::Partial, 1.0f };
     }
+
+    float RestoreHunger(LCE::Simulation::Needs& a_needs)
+    {
+        using namespace LCE::Simulation;
+
+        for (auto& need : a_needs.List)
+        {
+            if (need.Type == NeedType::Hunger)
+            {
+                const auto previous = need.Value;
+                need.Value = 1.0f;
+                return previous;
+            }
+        }
+
+        return -1.0f;   // no Hunger need — defensive, all seeds have one
+    }
+
+    LCE::Simulation::Goals SeededGoals(Species a_species)
+    {
+        using namespace LCE::Simulation;
+
+        if (a_species == Species::Human)
+        {
+            return Goals{ Goal{ GoalType::AcquireFood, 0.0f } };
+        }
+
+        return Goals{};   // no ambition yet — fed by the settlement
+    }
 }

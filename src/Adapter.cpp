@@ -168,6 +168,7 @@ namespace TLC
                     registry.AddComponent<FormRef>(id, FormRef{ formId });
                     registry.AddComponent<SpeciesTag>(id, SpeciesTag{ species });
                     registry.AddComponent<Needs>(id, SeededNeeds(species));
+                    registry.AddComponent<Goals>(id, SeededGoals(species));
                     registry.AddComponent<Memory>(id, Memory{});
                     registry.AddComponent<Relationships>(id, Relationships{});
 
@@ -495,18 +496,40 @@ namespace TLC
 
         ReportOutcome(m_Registry, a_entity, outcome);
 
+        const auto formId = m_Translator.FormFor(a_entity);
+        const auto* label = species == Species::Human
+            ? "settler"
+            : (species == Species::Child ? "child" : "animal");
+
         if (species == Species::Human)
         {
             REX::INFO(
                 "LCE: settler {:#x} arrived — no trade yet (Trade, Partial).",
-                m_Translator.FormFor(a_entity));
+                formId);
         }
         else
         {
             REX::INFO(
                 "LCE: {} {:#x} arrived — fed, gives nothing in return (Aid, Success).",
-                species == Species::Child ? "child" : "animal",
-                m_Translator.FormFor(a_entity));
+                label, formId);
+        }
+
+        // The trip pays off (the real test): arriving at the market means
+        // food — the settlement's stores feed arrivals, human and animal
+        // alike. The need is restored, the loop closes, and the log shows
+        // the payoff the sim previously hid.
+        auto needs = m_Registry.GetComponent<Needs>(a_entity);
+
+        if (needs)
+        {
+            const auto previous = RestoreHunger(*needs);
+
+            if (previous >= 0.0f)
+            {
+                REX::INFO(
+                    "LCE: {} {:#x} fed: Hunger {:.2f} -> 1.00",
+                    label, formId, previous);
+            }
         }
     }
 

@@ -154,10 +154,12 @@ Goal: the real test from the contract.
     Child/Animal → Aid, Success — fed, gives nothing in return).
     Implemented 2026-08-10; in-game verification pending (the arrival
     log lines + the feeder readout prove it)
-[ ] The real test: a settler goes to market because they are hungry —
-    no script. DESIGNED (Docs/Design/RealTest.md) — the missing piece is
-    the write-through: arrival restores the hunger need, closing the
-    loop. Seed goals per species; the animal gap (Aid doesn't serve
-    AcquireFood) is a decision point — engine Feed kind vs adapter-side
-    path. Not built until the current build verifies.
+[✓] The real test: a settler goes to market because they are hungry —
+    no script. IMPLEMENTED 2026-08-10 — the hunger write-through on
+    arrival (fed: Hunger X -> 1.00) closes the loop: needs decay →
+    MoveTo → walk → arrive → fed → not hungry → no walk. Goals seeded
+    per species (Human: AcquireFood; Child/Animal: none — their loop
+    closes on the feed alone). Pending in-game verification — see
+    Docs/Design/RealTest.md. Engine ask remains: a Feed kind (or Aid
+    serving AcquireFood) so animal goals can be served when wired.
 [ ] Nexus name check + publish
