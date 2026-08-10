@@ -195,14 +195,16 @@ Goal: the real test from the contract.
     so a mind's rhythm survives restore. Implemented 2026-08-10;
     in-game verification pending (the fed line + MoveTo confidences now
     spread instead of matching; walks trickle instead of wave)
-[◐] Per-tick decay jitter (engine core 0.5.0 stone 07, `90a9d33` —
-    engine side SHIPPED) — the engine now jitters each tick's decay per
-    entity: `DecayRate * Derive(id).NextFloat(1 ± sim.jitter)` (default
-    0.15, `0` off), the herd broken at the source on top of VaryNeeds.
-    The adapter's half is pending: own an Rng, pass it to Update, and
-    persist rng.State() in the co-save so a restored world resumes the
-    same randomness (engine Seeded RNG contract, stone 05). Until then
-    the engine's spread is inert (multiplier 1.0) in the adapter
+[✓] Per-tick decay jitter (engine core 0.5.0 stone 07, `90a9d33` —
+    SHIPPED and WIRED 2026-08-10) — the engine jitters each tick's
+    decay per entity: `DecayRate * Derive(id).NextFloat(1 ± sim.jitter)`
+    (default 0.15, `0` off), the herd broken at the source on top of
+    VaryNeeds. The adapter owns a seeded Rng, passes it to Update, and
+    persists rng.State() in the co-save (record v2 — the Rng header is
+    the record's first real format bump) so a restored world resumes the
+    same randomness; a v1 record reseeds fresh. In-game verification
+    pending (decay spreads per mind even before VaryNeeds' base rates
+    differ; sim.jitter = 0 turns it off)
 [✓] Tuning from the Configuration service — one text file next to the
     DLL (Data\F4SE\Plugins\TheLivingCommonwealth.ini): the sim.* keys
     feed SimulationTuning::FromConfiguration (memory fade, drift, trust,

@@ -420,9 +420,16 @@ namespace TLC
         return m_Registry.Capture();
     }
 
-    void Adapter::QueueRestore(LCE::Simulation::RegistrySnapshot a_snapshot)
+    std::uint64_t Adapter::RngState() const noexcept
+    {
+        return m_Rng.State();
+    }
+
+    void Adapter::QueueRestore(
+        LCE::Simulation::RegistrySnapshot a_snapshot, std::uint64_t a_rngState)
     {
         m_PendingRestore = std::move(a_snapshot);
+        m_PendingRngState = a_rngState;
     }
 
     void Adapter::ApplyRestore(LCE::Simulation::RegistrySnapshot a_snapshot)
@@ -432,6 +439,12 @@ namespace TLC
         EndWorld();
 
         m_Registry.Restore(a_snapshot);
+
+        // The decay-jitter wiring (engine stone 07): resume the saved
+        // world's randomness — its stream, exactly where it left off.
+        // (For a v1 record the decode left the default seed untouched,
+        // which is honest: that world never had a saved stream.)
+        m_Rng.SetState(m_PendingRngState);
 
         // Rebuild the edge's memory: which form is which entity, from the
         // restored FormRef components. The translator is adapter state,
@@ -1262,7 +1275,7 @@ namespace TLC
         // The core's stateless tick: needs decay, memory fade, goal
         // urgency, then one Intent per mind. All of it on the game thread,
         // with the modder's tuning (the config file) when present.
-        Update(m_Registry, a_deltaSeconds, m_CoreTuning);
+        Update(m_Registry, a_deltaSeconds, m_CoreTuning, nullptr, &m_Rng);
 
         // The read + the table. "Already acting" is a future refinement —
         // every loaded settler is available for now.

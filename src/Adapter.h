@@ -17,6 +17,7 @@
 
 #include "LCE/Simulation/EntityRegistry.h"
 #include "LCE/Simulation/RegistrySnapshot.h"
+#include "LCE/Simulation/Rng.h"
 #include "LCE/Simulation/Simulation.h"
 
 #include <chrono>
@@ -35,6 +36,17 @@ namespace RE
 
 namespace TLC
 {
+    //-------------------------------------------------------------------------
+    // The world-level randomness seed (the decay-jitter wiring, engine
+    // stone 07). A fixed constant: the adapter's own stream starts
+    // identically every session, and the co-save's v2 record persists
+    // rng.State() so a restored world resumes the exact same stream.
+    // (The parent only feeds Derive — per-entity jitter never advances it
+    // — so the persisted state matters the moment a world-level draw
+    // exists.)
+    //-------------------------------------------------------------------------
+    inline constexpr std::uint64_t kRngSeed = 0x4C43455700000001ull;   // 'LCEW' + 1
+
     //-------------------------------------------------------------------------
     // Adapter — the plugin's one world object (owned by main.cpp, not a
     // hidden global). Holds the core's registry and the translator, and
@@ -72,7 +84,15 @@ namespace TLC
         //                  held; GameLoaded applies it (or starts fresh
         //                  when none is pending).
         [[nodiscard]] LCE::Simulation::RegistrySnapshot CaptureWorld() const;
-        void QueueRestore(LCE::Simulation::RegistrySnapshot a_snapshot);
+
+        // The Rng's whole state — one number the co-save persists (v2) so
+        // a restored world resumes the same randomness (engine Seeded RNG
+        // contract).
+        [[nodiscard]] std::uint64_t RngState() const noexcept;
+
+        void QueueRestore(
+            LCE::Simulation::RegistrySnapshot a_snapshot,
+            std::uint64_t a_rngState);
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -259,8 +279,16 @@ namespace TLC
         // The world the co-save held for this save. Set by QueueRestore
         // during the load, consumed by GameLoaded; absent or empty means
         // this session starts fresh (a new game, or a save made while the
-        // sim was not running).
+        // sim was not running). m_PendingRngState rides with it: the
+        // stream the saved world was using, resumed on ApplyRestore.
         std::optional<LCE::Simulation::RegistrySnapshot> m_PendingRestore;
+        std::uint64_t m_PendingRngState = kRngSeed;
+
+        // The world-level randomness (engine stone 07): passed to Update
+        // so every entity's needs decay at its own per-tick rate
+        // (DecayRate * Derive(id).NextFloat(1 ± sim.jitter)). Session
+        // state — never reset by EndWorld; the co-save resumes it.
+        LCE::Simulation::Rng m_Rng{ kRngSeed };
 
         // Whether the current load's completion event was already handled.
         // F4SE can fire both kPostLoadGame and kGameLoaded for one load —

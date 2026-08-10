@@ -47,7 +47,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone**; engine's per-tick decay jitter shipped (`90a9d33`) with the adapter's Rng wiring pending; only the Nexus name check + publish remain |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **everything implemented: species split, arrival outcomes, real test (verified in-game), world facts (verified in-game — settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets, desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2)**; only the Nexus name check + publish remain |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -205,13 +205,14 @@ all live). Adapter progress:
    the decay-rate jitter is a metabolism that persists after every feed.
    The co-save already serializes the rate — no engine change, no new
    pins. See the Behaviour.md desync section.
-7b. ◐ **Per-tick decay jitter** (engine core 0.5.0 stone 07 SHIPPED
-   `90a9d33`, adapter wiring pending) — the engine jitters each tick's
-   decay per entity (`DecayRate * Derive(id).NextFloat(1 ± sim.jitter)`,)
-   once the adapter passes an `Rng` to `Update`. Adapter half: own the
-   Rng, thread it into Update, and persist `rng.State()` in the co-save
-   (engine Seeded RNG contract, stone 05) so a restored world resumes
-   the same randomness. Until wired, the engine's spread is inert here.
+7b. ✅ **Per-tick decay jitter** (engine core 0.5.0 stone 07 SHIPPED
+   `90a9d33`, WIRED 2026-08-10, in-game verification pending) — the
+   engine jitters each tick's decay per entity (`DecayRate *
+   Derive(id).NextFloat(1 ± sim.jitter)`), and the adapter now owns a
+   seeded `Rng`, passes it to every `Update`, and persists `rng.State()`
+   in the co-save (record v2 — the Rng header is the record's first real
+   format bump; a v1 record reseeds fresh). See Docs/Design/Tuning.md
+   (sim.jitter) and Docs/Design/CoSave.md (the v2 header).
 8. ✅ **Seeded need decay rates in the INI** (implemented 2026-08-10,
    in-game verification pending) — sim.hunger.decay / .fatigue /.safety
    /.social /.comfort ride in the same file, so the whole rhythm tunes

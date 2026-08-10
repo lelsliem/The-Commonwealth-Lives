@@ -167,14 +167,13 @@ stagger persists after every feed instead of re-synchronizing at
 (one id, one temperament), so each mind's internal urgency ordering
 stays sensible — a mind never becomes "fast-hunger, slow-fatigue."
 
-**The engine's complement (core 0.5.0 stone 07, `90a9d33`):** on top
-of the adapter's seeded metabolism, the engine now jitters *each tick's*
-decay per entity — `DecayRate * Derive(id).NextFloat(1 ± sim.jitter)`
-(default 0.15) — the herd broken at the source. Two layers, two
-purposes: `VaryNeeds` sets a mind's *base* rate (persistent, serialized,
-works with no engine support); the engine's spread re-rolls a small
-per-tick personality on top. The engine layer is **not yet active in
-this adapter**: the `Update` call passes no `Rng`, so the multiplier is
-exactly 1.0. Wiring it — own an `Rng`, pass it to `Update`, persist
-`rng.State()` in the co-save (the engine's Seeded RNG contract) — is
-the adapter's pending half of the stone.
+**The engine's complement (core 0.5.0 stone 07, `90a9d33`, wired into
+the adapter 2026-08-10):** on top of the adapter's seeded metabolism,
+the engine jitters *each tick's* decay per entity — `DecayRate *
+Derive(id).NextFloat(1 ± sim.jitter)` (default 0.15) — the herd broken
+at the source. Two layers, two purposes: `VaryNeeds` sets a mind's
+*base* rate (persistent, serialized, works with no engine support); the
+engine's spread re-rolls a small per-tick personality on top. The
+adapter owns a seeded `Rng` and passes it to `Update`; the co-save
+persists `rng.State()` (record v2) so a restored world resumes the same
+stream, and a v1 record reseeds fresh.

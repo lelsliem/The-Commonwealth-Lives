@@ -678,7 +678,7 @@ namespace TLC::Tests
         source.AddComponent<CapPouch>(farmer, CapPouch{ 33 });
 
         const auto snapshot = source.Capture();
-        const auto record = TLC::CoSave::Encode(snapshot);
+        const auto record = TLC::CoSave::Encode(snapshot, 0x5EEDC0DEull);
 
         // The record carries the adapter's stable names — literally in the
         // bytes — never the process-local std::type_index addresses.
@@ -715,10 +715,14 @@ namespace TLC::Tests
         }
 
         // Decode, then restore into a fresh registry — a fresh game
-        // session that never saw the first one.
+        // session that never saw the first one. The v2 header carries the
+        // Rng state: decode must hand it back exactly, overwriting the
+        // caller's pre-seeded default.
         RegistrySnapshot decoded;
+        std::uint64_t rngState = 0xABCDEF0123456789ull;
 
-        if (!TLC::CoSave::Decode(record, decoded))
+        if (!TLC::CoSave::Decode(record, decoded, rngState)
+            || rngState != 0x5EEDC0DEull)
         {
             return false;
         }
@@ -807,8 +811,9 @@ namespace TLC::Tests
             truncated.resize(truncated.size() - 1);
 
             RegistrySnapshot bad;
+            std::uint64_t rngState = 0;
 
-            if (TLC::CoSave::Decode(truncated, bad))
+            if (TLC::CoSave::Decode(truncated, bad, rngState))
             {
                 return false;
             }
@@ -822,8 +827,9 @@ namespace TLC::Tests
             badVersion[3] = std::byte{ 0xDE };
 
             RegistrySnapshot bad;
+            std::uint64_t rngState = 0;
 
-            if (TLC::CoSave::Decode(badVersion, bad))
+            if (TLC::CoSave::Decode(badVersion, bad, rngState))
             {
                 return false;
             }
@@ -861,8 +867,9 @@ namespace TLC::Tests
             }
 
             RegistrySnapshot migrated;
+            std::uint64_t rngState = 0;
 
-            if (!TLC::CoSave::Decode(unknownName, migrated))
+            if (!TLC::CoSave::Decode(unknownName, migrated, rngState))
             {
                 return false;
             }
@@ -915,12 +922,20 @@ namespace TLC::Tests
             writer.U32(0xDEADBEEFu);
 
             RegistrySnapshot decoded;
+            std::uint64_t rngState = 0x1122334455667788ull;
 
-            if (!TLC::CoSave::Decode(writer.Bytes, decoded)
+            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState)
                 || decoded.Entities.size() != 1
                 || decoded.Entities[0].Components.size() != 1)
             {
                 return false;   // legacy dropped, formref kept
+            }
+
+            // A v0 record predates the Rng header — the caller's default
+            // stream is untouched (that world never had a saved stream).
+            if (rngState != 0x1122334455667788ull)
+            {
+                return false;
             }
 
             EntityRegistry restored;
@@ -943,13 +958,47 @@ namespace TLC::Tests
         {
             TLC::Codec::Writer writer;
 
-            writer.U32(2);   // newer than this build — refuse, never half-apply
+            writer.U32(3);   // newer than this build — refuse, never half-apply
             writer.U32(0);
             writer.U32(0);
 
             RegistrySnapshot bad;
+            std::uint64_t rngState = 0;
 
-            if (TLC::CoSave::Decode(writer.Bytes, bad))
+            if (TLC::CoSave::Decode(writer.Bytes, bad, rngState))
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // Migration across the Rng header (v1 → v2): a v1 record — saved
+        // before the decay-jitter wiring — has no Rng state in its header.
+        // It loads forward; the caller's default stream stands (the world
+        // is reseeded fresh, which is honest: it never had a saved stream).
+        //-------------------------------------------------------------------------
+        {
+            TLC::Codec::Writer writer;
+
+            writer.U32(1);   // the pre-jitter record version
+            writer.U32(0);
+            writer.U32(1);   // one entity
+
+            writer.U64(EntityId{ 9 }.Value());
+            writer.U32(1);   // one component
+
+            constexpr std::string_view formName = "formref";
+            writer.U8(static_cast<std::uint8_t>(formName.size()));
+            writer.Raw(formName.data(), formName.size());
+            writer.U32(4);
+            writer.U32(0x00012345u);
+
+            RegistrySnapshot decoded;
+            std::uint64_t rngState = 0xFEEDFACE00000000ull;
+
+            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState)
+                || rngState != 0xFEEDFACE00000000ull   // untouched
+                || decoded.Entities.size() != 1)
             {
                 return false;
             }

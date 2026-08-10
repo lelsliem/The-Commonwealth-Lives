@@ -87,19 +87,18 @@ Tuning::ParseConfig(text) ──► LCE::Config::Configuration
 `StartWorld` passes `m_Settings.Rates` into `SeededNeeds` for every
 fresh mind.
 
-### The per-tick spread — `sim.jitter` (core stone 07)
+### The per-tick spread — `sim.jitter` (core stone 07, wired)
 
 `sim.jitter` (default 0.15; `0` turns it off) is a **core** key — the
-engine's per-mind decay jitter (core 0.5.0 stone 07, in the engine
-repo as `90a9d33`). When the adapter passes a seeded `Rng` to `Update`,
-every entity's needs decay at `DecayRate * Derive(id).NextFloat(1 ±
+engine's per-mind decay jitter (core 0.5.0 stone 07, engine `90a9d33`),
+wired into the adapter 2026-08-10. The adapter owns a seeded `Rng`
+(`kRngSeed`, Adapter.h) and passes it to every `Update`, so each
+entity's needs decay at `DecayRate * Derive(id).NextFloat(1 ±
 sim.jitter)` — the herd broken at the source, on top of the adapter's
-seeded `VaryNeeds` metabolism. **Not yet active in the adapter**: the
-adapter's `Update` call passes no Rng, so decay is exactly the seeded
-rate. The adapter's half — own an `Rng`, pass it to `Update`, persist
-`rng.State()` in the co-save so a restored world resumes the same
-randomness (the engine's Seeded RNG contract, stone 05) — is the
-pending wiring. `sim.sale.warmth` feeds the trade stone's `RecordSale`:
+seeded `VaryNeeds` metabolism. The co-save persists `rng.State()`
+(record v2) so a restored world resumes the exact same stream; a v1
+record — saved before the wiring — reseeds fresh, which is honest. Set
+`sim.jitter = 0` to turn the spread off. `sim.sale.warmth` feeds the trade stone's `RecordSale`:
 how much a stall-keeper's disposition toward a customer warms per sale
 (default 0.1 — a sale warms like good company). `sim.meal.price` feeds
 the economy stone's `PayForMeal`: what a meal costs in caps (default 5;

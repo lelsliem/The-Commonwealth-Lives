@@ -47,15 +47,17 @@ types cross them, so they are testable without the game (CoSaveTest).
 - **Type / UID:** `'LCEW'` (0x4C434557) — the UID is a placeholder for
   the F4SE-assigned one (the author-handle TODO in `xmake.lua` is the
   same open item).
-- **Version:** `kRecordVersion = 1`, the adapter's schema version. Bumped
-  only on a breaking change; old versions are migrated forward, never
-  dropped.
-- **Layout (v1), all little-endian:**
+- **Version:** `kRecordVersion = 2`, the adapter's schema version. Bumped
+  only on a breaking change to the record *format* (the header); old
+  versions are migrated forward, never dropped.
+- **Layout (v2), all little-endian:**
 
   ```
   u32 recordVersion
   u32 coreSnapshotVersion
   u32 entityCount
+  u64 rngState                  ← v2 (the decay-jitter wiring): the world's
+                                  randomness, resumed on restore
   per entity:
       u64 id (index + generation packed)
       u32 componentCount
@@ -63,6 +65,11 @@ types cross them, so they are testable without the game (CoSaveTest).
           u8  nameLength, name bytes   ← the stable names below
           u32 blobLength, blob bytes   ← the core's opaque component data
   ```
+
+  Decode reads `rngState` only when the record version is ≥ 2; a v1
+  record leaves the caller's pre-seeded default stream untouched (that
+  world never had a saved stream — it is reseeded fresh, which is
+  honest).
 
 - **Stable names** (chosen once, never renamed — a rename is a schema
   change, migrate instead):
@@ -75,6 +82,8 @@ types cross them, so they are testable without the game (CoSaveTest).
   | `Goals` | `goals` |
   | `Intent` | `intent` |
   | `FormRef` (adapter) | `formref` |
+  | `SpeciesTag` (adapter) | `species` |
+  | `CapPouch` (adapter) | `cappouch` |
 
 - **Refusal is the contract:** `Decode` returns false — the load is never
   half-applied — when the record version is unsupported, a component name
@@ -85,8 +94,8 @@ types cross them, so they are testable without the game (CoSaveTest).
 
 ```
 PreSaveGame ──► CaptureWorld() ──► CoSave::Encode ──► WriteRecord
-load         ──► ReadRecord ──► CoSave::Decode ──► QueueRestore(snapshot)
-kGameLoaded  ──► pending? ApplyRestore(snapshot) : StartWorld() fresh
+load         ──► ReadRecord ──► CoSave::Decode ──► QueueRestore(snapshot, rngState)
+kGameLoaded  ──► pending? ApplyRestore(snapshot, rngState) : StartWorld() fresh
 PreLoadGame / DeleteGame / new game ──► EndWorld() (Clear; serializers survive)
 ```
 
@@ -154,15 +163,20 @@ byte translation at all, and the seam is two small rules in `Decode`:
    stays aligned) and the entity keeps everything else. This is how a
    breaking *removal* migrates.
 
-The first real change in the wild was additive — `species` (the
-species/behaviour stone) — which is why the version never bumped and old
-saves kept loading: the format didn't change, the contents did. The
-version bumps only on a change to the record *format* itself.
+The first real changes in the wild were additive — `species` (the
+species/behaviour stone) and `cappouch` (the economy stone) — which is
+why the version never bumped and old saves kept loading: the format
+didn't change, the contents did. The version bumped only when the
+*format* itself changed: v2 (the decay-jitter wiring) added the `Rng`
+state to the header, the one genuine header change so far.
 
 **Tested:** CoSaveTest crafts a v0 record (no `species`, plus a `legacy`
-component) → decodes, drops `legacy`, restores with the tag absent; a v2
-record → refused; the round-trip record with a `needs` name patched to
-unknown → decodes with exactly that one component dropped.
+component) → decodes, drops `legacy`, restores with the tag absent, and
+the caller's default Rng stream untouched; a v1 record (no `Rng` state)
+→ decodes with the default stream standing; a v3 record → refused; the
+round-trip record with a `needs` name patched to unknown → decodes with
+exactly that one component dropped; the v2 round-trip → the encoded Rng
+state handed back exactly.
 
 ## Files
 

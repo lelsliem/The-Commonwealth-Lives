@@ -38,7 +38,7 @@ namespace
     void OnSaveGame(const F4SE::SerializationInterface* a_intfc)
     {
         const auto snapshot = g_Adapter.CaptureWorld();
-        const auto record = TLC::CoSave::Encode(snapshot);
+        const auto record = TLC::CoSave::Encode(snapshot, g_Adapter.RngState());
 
         REX::INFO(
             "co-save: writing {} entities ({} bytes).",
@@ -76,7 +76,12 @@ namespace
 
             LCE::Simulation::RegistrySnapshot snapshot;
 
-            if (!TLC::CoSave::Decode(record, snapshot))
+            // Pre-seeded with the default stream: a v2 record overwrites
+            // it with the saved world's own state; a v1 record leaves it
+            // (that world never had a saved stream).
+            std::uint64_t rngState = TLC::kRngSeed;
+
+            if (!TLC::CoSave::Decode(record, snapshot, rngState))
             {
                 REX::ERROR("co-save: record decode failed (version {}).", version);
                 continue;
@@ -84,7 +89,7 @@ namespace
 
             REX::INFO("co-save: read {} entities — the world will be restored on load.",
                 snapshot.Entities.size());
-            g_Adapter.QueueRestore(std::move(snapshot));
+            g_Adapter.QueueRestore(std::move(snapshot), rngState);
         }
     }
 

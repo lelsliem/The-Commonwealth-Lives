@@ -89,13 +89,19 @@ namespace TLC::CoSave
         }
     }
 
-    std::vector<std::byte> Encode(const RegistrySnapshot& a_snapshot)
+    std::vector<std::byte> Encode(
+        const RegistrySnapshot& a_snapshot, std::uint64_t a_rngState)
     {
         Codec::Writer writer;
 
         writer.U32(kRecordVersion);
         writer.U32(a_snapshot.Version);
         writer.U32(static_cast<std::uint32_t>(a_snapshot.Entities.size()));
+
+        // v2 (the decay-jitter wiring): the Rng state rides the header so
+        // a restored world resumes the exact same randomness. Read back
+        // version-gated in Decode.
+        writer.U64(a_rngState);
 
         for (const auto& entity : a_snapshot.Entities)
         {
@@ -130,23 +136,41 @@ namespace TLC::CoSave
         return writer.Bytes;
     }
 
-    bool Decode(const std::vector<std::byte>& a_record, RegistrySnapshot& a_out)
+    bool Decode(
+        const std::vector<std::byte>& a_record,
+        RegistrySnapshot& a_out,
+        std::uint64_t& a_rngState)
     {
         Codec::Reader reader{ a_record };
 
-        // Header: record version, core snapshot version, entity count.
+        // Header: record version, core snapshot version, entity count,
+        // then (v2) the Rng state.
         if (reader.Remaining() < 12)
         {
             return false;
         }
 
-        if (reader.U32() > kRecordVersion)
+        const auto recordVersion = reader.U32();
+
+        if (recordVersion > kRecordVersion)
         {
             return false;   // a newer format is not ours to guess — refuse
         }
 
         a_out.Version = reader.U32();
         const auto entityCount = reader.U32();
+
+        // v2 carries the Rng state in the header; older records leave the
+        // caller's default (a fresh stream) untouched.
+        if (recordVersion >= 2)
+        {
+            if (reader.Remaining() < 8)
+            {
+                return false;
+            }
+
+            a_rngState = reader.U64();
+        }
 
         a_out.Entities.clear();
         a_out.Entities.reserve(entityCount);
