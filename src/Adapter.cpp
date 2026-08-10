@@ -329,8 +329,10 @@ namespace TLC
         // again. The seed is a fading memory event (weight 1.0, forgotten
         // in seconds) — a mind saved long after its world woke has already
         // forgotten the market, and without the seed a restored world is
-        // market-blind: starving minds Explore instead of walking.
-        SeedMarket();
+        // market-blind: starving minds Explore instead of walking. The
+        // tick's periodic refresh keeps catching minds whose actors load
+        // after this instant.
+        SeedMarket(true);
 
         REX::INFO(
             "The Commonwealth wakes up: {} minds restored from the co-save.",
@@ -372,7 +374,7 @@ namespace TLC
         // and every mind remembers where to trade (ADR-0024 — the adapter
         // reports events; the simulation gives them meaning). A mind that
         // knows the market can decide MoveTo; one that doesn't explores.
-        SeedMarket();
+        SeedMarket(true);
 
         REX::INFO("The Commonwealth wakes up: {} settlers became minds.", count);
         LCE::Logging::Info(
@@ -421,7 +423,7 @@ namespace TLC
         m_Translator.Add(kMarketFormId, id);
     }
 
-    void Adapter::SeedMarket()
+    void Adapter::SeedMarket(bool a_announce)
     {
         EnsureMarket();
 
@@ -464,9 +466,12 @@ namespace TLC
                     });
             }
 
-            REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
+            if (a_announce)
+            {
+                REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
+            }
         }
-        else
+        else if (a_announce)
         {
             REX::INFO("The market is not loaded — settlers explore until it is.");
         }
@@ -524,6 +529,19 @@ namespace TLC
         }
 
         using namespace LCE::Simulation;
+
+        // The market stays open: re-push the fact every second so minds
+        // whose actors load after the world started (a restore brings 637
+        // entities back, but their actors load gradually) learn where to
+        // trade. Idempotent — SeedMarketMemory skips minds that already
+        // remember — so this only ever adds to the truly forgotten.
+        // Silent: the world-start call announced it.
+        if (std::chrono::steady_clock::now() - m_LastMarketSeed
+            > std::chrono::seconds(1))
+        {
+            m_LastMarketSeed = std::chrono::steady_clock::now();
+            SeedMarket(false);
+        }
 
         // The core's stateless tick: needs decay, memory fade, goal
         // urgency, then one Intent per mind. All of it on the game thread.

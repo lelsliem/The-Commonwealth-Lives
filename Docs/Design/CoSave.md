@@ -118,11 +118,22 @@ the translator but never re-ran the market seed, and the seed itself is a
 fading memory event (weight 1.0, `MemoryFadeRate` 0.2/s — forgotten in
 seconds). A save made long after its world woke contains minds that have
 already forgotten the market; restoring them produced a world where
-starving minds Explore instead of deciding `MoveTo`. The fix: `SeedMarket`
-is a shared helper called from **both** `StartWorld` and `ApplyRestore` —
-the market is open on every world start, fresh or restored. (The log
-tells it: restored worlds never printed "market is open" before the fix;
-now they do, and walks issue again.)
+starving minds Explore instead of deciding `MoveTo`.
+
+Two fixes, layered:
+
+1. **`SeedMarket` is a shared helper** called from **both** `StartWorld`
+   and `ApplyRestore` — the market is open on every world start, fresh
+   or restored. (The log tells it: restored worlds never printed
+   "market is open" before; now they do.)
+2. **The seed is periodic and idempotent.** A restore brings 637
+   entities back, but their actors load gradually — the one-shot seed
+   at the restore instant missed everyone whose actor wasn't loaded
+   yet. The tick re-pushes the fact every second (`SeedMarket(false)`,
+   silent), and `SeedMarketMemory` skips minds that already remember
+   (the core erases faded events, so a missing event means truly
+   forgotten) — memory never grows, and late-loading minds learn where
+   to trade. MarketTest pins both properties.
 
 ## Migration
 

@@ -760,6 +760,42 @@ namespace TLC::Tests
             return false;
         }
 
+        // The seed is idempotent: a mind that already remembers the
+        // market keeps its single event, so the tick's periodic re-seed
+        // (the adapter re-pushes the "market is open" fact every second)
+        // never grows memory.
+        {
+            EntityRegistry world;
+
+            const auto resident = world.CreateEntity();
+            const auto stall = world.CreateEntity();
+
+            world.AddComponent<Memory>(resident, Memory{});
+            world.AddComponent<FormRef>(stall, FormRef{ kMarketFormId });
+
+            SeedMarketMemory(world, stall);
+            SeedMarketMemory(world, stall);
+            SeedMarketMemory(world, stall);
+
+            const auto memory = world.GetComponent<Memory>(resident);
+
+            if (!memory || memory->Events.size() != 1)
+            {
+                return false;
+            }
+
+            // A mind that truly forgot (the core erases faded events
+            // below its threshold) is re-seeded — the fact comes back.
+            memory->Events.clear();
+
+            SeedMarketMemory(world, stall);
+
+            if (memory->Events.size() != 1)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 }

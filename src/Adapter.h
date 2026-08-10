@@ -124,7 +124,9 @@ namespace TLC
         // remembers where to trade. Runs on every world start — fresh
         // translations and co-save restores alike, because the seed is a
         // fading memory event and a saved mind may have forgotten it.
-        void SeedMarket();
+        // a_announce logs the "market is open" line; the tick's periodic
+        // refresh passes false (idempotent, silent).
+        void SeedMarket(bool a_announce);
 
         // Rebuilds the world from a co-save snapshot: Restore the registry
         // (identities preserved), rebuild the translator from the restored
@@ -148,6 +150,13 @@ namespace TLC
         // GameLoaded — without this, the sim dies every session.
         bool m_AwaitingLoad = false;
         std::chrono::steady_clock::time_point m_WorldEndedAt{};
+
+        // The market fact is re-pushed every second while the world runs
+        // (idempotent — SeedMarketMemory skips minds that remember) so
+        // minds whose actors load after the world starts — a restore
+        // brings 637 entities back, but their actors load gradually —
+        // still learn where to trade.
+        std::chrono::steady_clock::time_point m_LastMarketSeed{};
 
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;

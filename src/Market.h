@@ -46,6 +46,13 @@ namespace TLC
     // Pure: registry + entity id + predicate, no game types. The weight is
     // the core's default seed; it fades (MemoryFadeRate 0.2/s, forgotten
     // below 0.1) unless arrival reinforces it — the next stone's work.
+    //
+    // Idempotent on purpose: a mind that already remembers the market is
+    // left alone. The core erases faded events below its threshold, so a
+    // missing event means truly forgotten — the seed only ever adds the
+    // fact back to minds that lost it. This makes periodic re-seeding
+    // safe (the adapter re-pushes the "market is open" fact, per the
+    // 0.5.0 world-facts design) without growing memory.
     //-------------------------------------------------------------------------
     inline void SeedMarketMemory(
         LCE::Simulation::EntityRegistry& a_registry,
@@ -59,6 +66,15 @@ namespace TLC
                 if (a_include && !a_include(a_entity))
                 {
                     return;   // not near the market — no market memory
+                }
+
+                for (const auto& event : a_memory.Events)
+                {
+                    if (event.Other == a_market
+                        && event.Kind == LCE::Simulation::InteractionKind::Trade)
+                    {
+                        return;   // already remembers — keep its memory
+                    }
                 }
 
                 a_memory.Events.push_back(LCE::Simulation::MemoryEvent{
