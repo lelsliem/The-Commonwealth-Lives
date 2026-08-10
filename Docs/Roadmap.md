@@ -299,3 +299,40 @@ Goal: the real test from the contract.
     github.com/lelsliem/The-Commonwealth-Lives (author `lelsliem` in
     xmake.lua, hygiene done), pushed 2026-08-10, tag `0.5.0`; the
     release page (DLL + INI from `config/`) and Nexus come later
+
+═══════════════════════════════════════════════
+
+0.6.0 — Life & Emergent Quests · "The Commonwealth Remembers"
+
+═══════════════════════════════════════════════
+
+Goal: settlers are born, live, and die; they make friends and enemies;
+and quests happen because life happens — no scripts. The quest is the
+behaviour, visible in the world and the log.
+
+STATUS: IN PROGRESS — plan written (2026-08-10, Docs/Design/Life.md);
+no 0.6.0 code yet. Full plan + the engine hand-over in Life.md and the
+engine's AdapterProject.md.
+
+[ ] Stone 1 — The world keeps its books: arrivals become minds
+    mid-session, deaths destroy the mind and write the death fact,
+    departures walk out with a goodbye
+[ ] Stone 2 — Bonds: named relationship states (friend / sweetheart /
+    spouse / rival / enemy) from Disposition/Trust thresholds,
+    persisted in the co-save (record v5)
+[ ] Stone 3 — Households: couples share a pouch, a stall, a bench, a
+    bed; the shared wallet round-trips
+[ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind
+    in the gossip radius — the settlement knows its own news
+[ ] Stone 5 — Emergent arcs: the feud, the grief (vengeance or
+    comfort), the courtship, the departure, the famine — adapter-side
+    state machines steering intents
+[ ] Stone 6 — Birth (experimental, INI-gated): a couple has a child; a
+    mind is born at Day 0, protected, fed, bonded
+[ ] Co-save v5: bonds, households, arcs in progress, gossip stamps,
+    birth registry — version-gated like v3/v4
+[ ] Tuning: bond thresholds, gossip radius, grief duration, famine
+    threshold, population cap, births on/off
+[ ] Engine hand-over: Request A — RelationshipChanged observation
+    event (core stone 08 candidate); Request B — GoalType growth
+    (optional, deferred). Handed to the engine 2026-08-10.

@@ -54,6 +54,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
 | 0.5.0 | Living world ("The Settler Goes to Market") | ✅ complete (2026-08-10) — **everything implemented and verified in-game: species split, arrival outcomes, real test, world facts (settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets (persistent-cell census), desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4), lifecycle + walk-probe hardenings, the tuning INI template (`config/TheLivingCommonwealth.ini`), and the GitHub publish (repo live, tag `0.5.0`, 2026-08-10)** |
+| 0.6.0 | Life & Emergent Quests ("The Commonwealth Remembers") | ⬜ in progress — **plan written (2026-08-10, `Docs/Design/Life.md`): birth, life, death, bonds, households, gossip, five emergent arcs (feud, grief, courtship, departure, famine), co-save v5, tuning additions; the engine hand-over is in the core's `Docs/AdapterProject.md` (Request A: `RelationshipChanged` observation event — candidate core stone 08)** |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
