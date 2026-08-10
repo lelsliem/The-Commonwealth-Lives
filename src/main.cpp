@@ -23,6 +23,17 @@
 #include <utility>
 #include <vector>
 
+// The build stamp injected by xmake.lua (the git short hash) — the
+// banner's "which DLL ran" identifier. Injected unquoted (a clean
+// token) and stringized here, so the compiler never sees escaped
+// quotes. Falls back for non-xmake builds.
+#ifndef TLC_BUILD_STAMP
+#define TLC_BUILD_STAMP unknown
+#endif
+
+#define TLC_BUILD_STAMP_STRINGIZE_(x) #x
+#define TLC_BUILD_STAMP_STRINGIZE(x) TLC_BUILD_STAMP_STRINGIZE_(x)
+
 namespace
 {
     // The plugin's one world object — owned here, by the module, never a
@@ -222,6 +233,8 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
         return false;
     }
 
-    REX::INFO("The Living Commonwealth v{} loaded.", F4SE::GetPluginVersion());
+    REX::INFO(
+        "The Living Commonwealth v{} loaded (build {}).",
+        F4SE::GetPluginVersion(), TLC_BUILD_STAMP_STRINGIZE(TLC_BUILD_STAMP));
     return true;
 }

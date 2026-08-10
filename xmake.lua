@@ -18,7 +18,9 @@
 set_xmakever("3.0.0")
 
 set_project("TheLivingCommonwealth")
-set_version("0.2.0")
+set_version("0.5.0")
+
+set_xmakever("3.0.0")
 set_plat("windows")
 set_arch("x64")
 set_languages("c++23")
@@ -150,6 +152,46 @@ target("TheLivingCommonwealth", function()
     add_rules("lce.core")
 
     add_files("src/**.cpp")
+
+    -- The banner's build stamp: the git short hash, so the log's first
+    -- lines always say which DLL ran. The version alone stops changing
+    -- once a milestone ships (it read 0.2.0 for every build from the
+    -- walking stone on) — the hash tells two builds apart. Computed in
+    -- on_load because os.exec is sandboxed out of xmake.lua's top level
+    -- (the lce.core rule relies on the same allowance inside its own
+    -- on_load); os.iorun is blocked entirely.
+    on_load(function(target)
+        -- The git short hash, so the log's first lines always say which
+        -- DLL ran. -C pins the repo (on_load's cwd is not the project);
+        -- try/catch swallows a missing git → "unknown". (The sandbox
+        -- strips pcall and the os capture APIs at top level; on_load
+        -- callbacks run in the full sandbox — the same allowance the
+        -- lce.core rule's own on_load relies on for os.exec.)
+        local out
+
+        try
+        {
+            function()
+                out = os.iorunv(
+                    "git",
+                    { "-C", os.projectdir(), "rev-parse", "--short", "HEAD" })
+            end,
+            catch
+            {
+                function()
+                    out = nil
+                end
+            }
+        }
+
+        -- Unquoted on purpose: main.cpp stringizes the macro, so MSVC
+        -- never sees escaped quotes (the hash is a clean token).
+        local stamp = out or "unknown"
+
+        stamp = stamp:gsub("%s+", "")
+
+        target:add("defines", "TLC_BUILD_STAMP=" .. stamp)
+    end)
 end)
 
 --==============================================================================
