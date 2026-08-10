@@ -193,3 +193,10 @@ old saves decode unchanged). It is a fact, never a door: Decide gates
 only Trade and Social, so a death never blocks a walk or a trade. The
 settlement remembers who is gone; the dead are simply absent and never
 restore. Grief (Stone 2) reads the fact.
+
+**Hardening (same day):** the raw marker reads only happen on a fully
+streamed-in actor — a 3D node must exist first (a corpse keeps its 3D,
+so real deaths still register). In the first in-game run, actors entered
+the process lists before their members were initialized after a 665-mind
+restore, and the unchecked read booked 11 false deaths in one frame,
+3 s after the restore. The gate turned that into 0.

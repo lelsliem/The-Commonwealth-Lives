@@ -137,10 +137,6 @@ namespace TLC
         // visits every actor the game is simulating near the player — the
         // same four process lists the wake seed reads; the classification
         // (arrival / death / departure) is Lifecycle::Diff, pure.
-        // IsActorDead reads the game's own markers: a killer handle (set
-        // the moment an actor is killed), a corpse-cleanup timer (the
-        // body awaiting cleanup), or a deleted ref (removed from the
-        // world). Any of the three means the mind is gone.
         //-------------------------------------------------------------------------
         template <class Fn>
         void ForEachLoadedActor(Fn&& a_fn)
@@ -175,10 +171,33 @@ namespace TLC
             }
         }
 
+        // IsActorDead — the game's own death markers, read only on a
+        // fully streamed-in actor. A killer handle is set the moment an
+        // actor is killed, a corpse-cleanup timer runs while the body
+        // awaits cleanup, and a deleted ref is removed from the world;
+        // any of the three means the mind is gone. The 3D gate matters:
+        // after a load, actors enter the process lists BEFORE their
+        // members are initialized — reading myKiller / the corpse timer /
+        // the form flags on a partially-initialized actor is garbage, and
+        // in-game that read 11 false deaths in one frame, 3s after a
+        // 665-mind restore (2026-08-10). A fully-loaded actor has a 3D
+        // node, and a corpse keeps it — so the raw reads only happen once
+        // the actor is really there.
         inline bool IsActorDead(RE::Actor* a_actor)
         {
-            return a_actor == nullptr
-                || a_actor->IsDeleted()
+            if (a_actor == nullptr)
+            {
+                return true;
+            }
+
+            // Not fully streamed in yet — treat as alive; the census
+            // re-reads next second, when the members are real.
+            if (a_actor->Get3D() == nullptr)
+            {
+                return false;
+            }
+
+            return a_actor->IsDeleted()
                 || a_actor->myKiller.get().get() != nullptr
                 || a_actor->checkMyDeadBodyTimer > 0.0f;
         }
