@@ -342,6 +342,19 @@ namespace TLC
         // (one line per animal, cleared on EndWorld).
         std::unordered_set<LCE::Simulation::EntityId> m_FeederLogged;
 
+        // Two-pass death confirmation (Stone 1 hardening): a form id read
+        // dead by the census is parked here; if the very next pass still
+        // reads it dead, the death is real and booked. Actors streaming
+        // in after a load can read as dead once (garbage members — the
+        // 3D gate is not enough; two persistent Sanctuary settlers
+        // "died" on both the first and second in-game runs, same 3s
+        // window, nobody near them), and a transient read must never
+        // book a death. Cleared the moment the actor reads alive or
+        // stops being scanned, and on EndWorld.
+        std::unordered_map<
+            std::uint32_t, std::chrono::steady_clock::time_point>
+            m_PendingDeaths;
+
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
 

@@ -659,6 +659,33 @@ namespace TLC
                     IsActorDead(a_actor) });
             });
 
+        // Two-pass death confirmation: park a form id read dead this
+        // pass; book the death only when the next pass still reads it
+        // dead. Stream-in artifacts read dead once — cleared the moment
+        // the actor reads alive or leaves the lists. Real corpses stay
+        // dead for minutes; two passes a second apart never miss one.
+        std::unordered_set<std::uint32_t> deadThisPass;
+
+        for (const auto& scan : scans)
+        {
+            if (scan.Dead)
+            {
+                deadThisPass.insert(scan.FormId);
+            }
+        }
+
+        for (auto it = m_PendingDeaths.begin(); it != m_PendingDeaths.end();)
+        {
+            if (!deadThisPass.contains(it->first))
+            {
+                it = m_PendingDeaths.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
         for (const auto& event : Lifecycle::Diff(known, scans))
         {
             switch (event.Kind)
@@ -688,7 +715,25 @@ namespace TLC
                 break;
             }
             case Lifecycle::EventKind::Death:
-                RemoveMind(event.FormId, true);
+                if (m_PendingDeaths.contains(event.FormId))
+                {
+                    // Second consecutive dead read — the death is real.
+                    m_PendingDeaths.erase(event.FormId);
+                    RemoveMind(event.FormId, true);
+                }
+                else
+                {
+                    // First dead read — an artifact passes next pass, a
+                    // corpse confirms. Nothing booked yet; the debug line
+                    // makes the confirmation visible in the log.
+                    m_PendingDeaths[event.FormId] =
+                        std::chrono::steady_clock::now();
+
+                    REX::DEBUG(
+                        "lifecycle: settler {:#x} reads dead — first pass, "
+                        "not booked (confirming).",
+                        event.FormId);
+                }
                 break;
             case Lifecycle::EventKind::Departure:
                 RemoveMind(event.FormId, false);
@@ -807,6 +852,7 @@ namespace TLC
         m_FeederLogged.clear();
         m_StallKeepers.clear();
         m_Walks.clear();
+        m_PendingDeaths.clear();
         m_TickCalled = false;
         m_FirstPassLogged = false;
         m_Started = false;
