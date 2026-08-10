@@ -31,6 +31,25 @@ radstorms.
 | `00222394` | CommonwealthGSRadstormOld | excluded — editor record, never set at runtime |
 | `002392A3` | CommonwealthGSRadstormBackup | excluded — editor record, never set at runtime |
 
+## The live classification (the weather-memory stone)
+
+`WorldFacts::ClassifyWeather` maps the forms the game actually sets to
+the six weather categories (see `Docs/Design/WeatherFacts.md`). All are
+`00`-prefixed vanilla forms — stable across load orders.
+
+| Category | Forms (FormID — name) |
+|---|---|
+| Clear | `0002B52A` CommonwealthClear, `001D670E` ClearestSkies, `0012A18E` SanctuaryClear |
+| Overcast | `001C8556` CommonwealthOvercast, `000F1033` GSOvercast |
+| Rain | `001CA7E4` CommonwealthRain |
+| Fog | `001C3473` CommonwealthFoggy, `001BD481` GSFoggy |
+| Misty | `001CC186` CommonwealthMisty, `001CD096` MistyRainy |
+| Radstorm | `001C3D5E` CommonwealthGSRadstorm |
+
+Everything else is `Unknown` — no fact. Editor backups (the `0022…`
+family), interior weathers, FX, and modded skies deliberately leave no
+memory.
+
 ## The full catalog (dump order, FormID descending)
 
 | FormID | Name | Ver |

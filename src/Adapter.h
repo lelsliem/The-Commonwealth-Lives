@@ -195,6 +195,17 @@ namespace TLC
         bool m_MarketClosed = false;
         bool m_Radstorm = false;
 
+        // Weather memory (0.5.x): the day's sky. m_Weather is the current
+        // classification (transition logs); m_WeatherDay/m_WeatherSeen
+        // track which categories today's sky has shown, so "it rained
+        // this morning" stays remembered until the world turns. Session
+        // state, never persisted — weather is re-derived from the live
+        // sky on every start.
+        WorldFacts::WeatherKind m_Weather =
+            WorldFacts::WeatherKind::Unknown;
+        std::uint64_t m_WeatherDay = 0;
+        std::uint8_t m_WeatherSeen = 0;
+
         // The animal's feeder: its owner when the game assigns one and
         // the owner is a sim entity, else the settlement. Resolved per
         // mind at seed time (the 0.5.0 food-source resolver).

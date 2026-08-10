@@ -166,6 +166,16 @@ Goal: the real test from the contract.
     when it reopens. Implemented 2026-08-10; in-game verification
     pending (the transition lines + settlers stopping at night) — see
     Docs/Design/WorldFacts.md
+[✓] Weather memory events — the day's sky, remembered (not gated): the
+    live weather forms (verified xEdit dump) classify into six
+    categories, pushed as day-stamped world facts ({ invalid,
+    WeatherRain, 1.0, day } — the engine grew the Weather kinds,
+    appended save-safe). Today's categories refresh all day ("it rained
+    this morning" survives until the world turns); yesterday's fade;
+    the day-turn logs. Re-derived at the edge — never co-save state.
+    Implemented 2026-08-10; in-game verification pending (the sky-turn
+    + world-turns lines; `fw 1ca7e4` forces rain) — see
+    Docs/Design/WeatherFacts.md
 [✓] Tuning from the Configuration service — one text file next to the
     DLL (Data\F4SE\Plugins\TheLivingCommonwealth.ini): the sim.* keys
     feed SimulationTuning::FromConfiguration (memory fade, drift, trust,

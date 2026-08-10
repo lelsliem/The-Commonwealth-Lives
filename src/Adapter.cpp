@@ -23,6 +23,7 @@
 #include <F4SE/Impl/PCH.h>
 
 #include <RE/A/Actor.h>
+#include <RE/C/Calendar.h>
 #include <RE/N/NiAVObject.h>
 #include <RE/P/ProcessLists.h>
 #include <RE/S/Sky.h>
@@ -792,6 +793,89 @@ namespace TLC
             {
                 REX::INFO("world fact: the radstorm passes — gatherings resume.");
             }
+        }
+
+        // --- The day's weather: a memory, not a door. --------------------
+        // The sky is classified into a category and today's categories are
+        // pushed as day-stamped world facts ({ invalid, WeatherRain, 1.0,
+        // day } — "day 12 was rainy"). These kinds are never gated, so
+        // rain never closes the market; they are pure labels the sim
+        // remembers. Re-derived at the edge: after a load the re-push
+        // re-seeds today's sky within a second, so weather never needs
+        // the co-save. Weather is global knowledge — every mind shares
+        // the same sky — so, like the gates, it reaches all minds.
+        const auto* calendar = RE::Calendar::GetSingleton();
+        const auto day = std::uint64_t(
+            calendar != nullptr && calendar->gameDaysPassed != nullptr
+                ? calendar->gameDaysPassed->value
+                : 0.0f);
+
+        const auto weather = WorldFacts::ClassifyWeather(
+            sky != nullptr && sky->currentWeather != nullptr
+                ? sky->currentWeather->GetFormID()
+                : 0);
+
+        if (day != m_WeatherDay)
+        {
+            // The world turned: yesterday's categories are left to fade
+            // and today's start empty. The turn gets a line — it proves
+            // the day tracking in the log.
+            m_WeatherDay = day;
+            m_WeatherSeen = 0;
+
+            REX::INFO(
+                "world fact: the world turns — day {} begins with a {} sky.",
+                day, WorldFacts::WeatherLabel(weather));
+        }
+        else if (weather != m_Weather)
+        {
+            // A sky change within the day — transitions only.
+            m_Weather = weather;
+
+            if (weather != WorldFacts::WeatherKind::Unknown)
+            {
+                REX::INFO(
+                    "world fact: the sky turns {} (day {}) — the day's weather is remembered.",
+                    WorldFacts::WeatherLabel(weather), day);
+            }
+            else
+            {
+                REX::INFO("world fact: the sky is unclassified — no weather memory.");
+            }
+        }
+
+        if (weather != WorldFacts::WeatherKind::Unknown)
+        {
+            // The seen-set is a bitmask over WeatherKind (Clear=1..Radstorm=6).
+            m_WeatherSeen |= 1u << (static_cast<unsigned>(weather) - 1u);
+        }
+
+        // Refresh every category seen today, stamped with today — "it
+        // rained this morning" stays remembered until the world turns.
+        // Yesterday's categories are not refreshed, and the tick fades
+        // them out: the designed forget.
+        if (m_WeatherSeen != 0)
+        {
+            m_Registry.ForEachWithComponent<Memory>(
+                [this, day](EntityId, Memory& a_memory)
+                {
+                    for (unsigned i = 0; i < 6; ++i)
+                    {
+                        if ((m_WeatherSeen & (1u << i)) == 0)
+                        {
+                            continue;
+                        }
+
+                        const auto factKind = WorldFacts::WeatherFactKind(
+                            static_cast<WorldFacts::WeatherKind>(i + 1));
+
+                        if (factKind)
+                        {
+                            WorldFacts::ApplyFact(
+                                a_memory, *factKind, true, day);
+                        }
+                    }
+                });
         }
 
         if (!closed && !radstorm)

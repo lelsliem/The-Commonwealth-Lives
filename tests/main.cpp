@@ -1157,6 +1157,112 @@ namespace TLC::Tests
             }
         }
 
+        //-------------------------------------------------------------------------
+        // ClassifyWeather — the verified live-weather forms (xEdit dump
+        // 2026-08-10). Only the forms the game actually sets classify;
+        // editor backups, interiors, and the unknown leave no fact (we
+        // do not remember what we do not know).
+        //-------------------------------------------------------------------------
+        if (ClassifyWeather(0x0002B52A) != WeatherKind::Clear    // CommonwealthClear
+            || ClassifyWeather(0x001D670E) != WeatherKind::Clear // ClearestSkies
+            || ClassifyWeather(0x0012A18E) != WeatherKind::Clear // SanctuaryClear
+            || ClassifyWeather(0x001C8556) != WeatherKind::Overcast // Overcast
+            || ClassifyWeather(0x000F1033) != WeatherKind::Overcast // GSOvercast
+            || ClassifyWeather(0x001CA7E4) != WeatherKind::Rain   // CommonwealthRain
+            || ClassifyWeather(0x001C3473) != WeatherKind::Fog    // Foggy
+            || ClassifyWeather(0x001BD481) != WeatherKind::Fog    // GSFoggy
+            || ClassifyWeather(0x001CC186) != WeatherKind::Misty  // Misty
+            || ClassifyWeather(0x001CD096) != WeatherKind::Misty  // MistyRainy
+            || ClassifyWeather(0x001C3D5E) != WeatherKind::Radstorm) // GSRadstorm
+        {
+            return false;
+        }
+
+        // Editor backups are never set at runtime; interiors, FX, and
+        // unknown forms classify as Unknown.
+        if (ClassifyWeather(0x0022239A) != WeatherKind::Unknown   // RainBackup
+            || ClassifyWeather(0x002392A3) != WeatherKind::Unknown // GSRadstormBackup
+            || ClassifyWeather(0x001A65F0) != WeatherKind::Unknown // DefaultInteriorWeather
+            || ClassifyWeather(0x001F61FD) != WeatherKind::Unknown // CGPrewarNukeFXWeather
+            || ClassifyWeather(0) != WeatherKind::Unknown
+            || ClassifyWeather(0xDEADBEEF) != WeatherKind::Unknown)
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // WeatherFactKind — the category as the fact label the sim
+        // memory carries. Unknown has no fact.
+        //-------------------------------------------------------------------------
+        if (WeatherFactKind(WeatherKind::Clear) != InteractionKind::WeatherClear
+            || WeatherFactKind(WeatherKind::Overcast) != InteractionKind::WeatherOvercast
+            || WeatherFactKind(WeatherKind::Rain) != InteractionKind::WeatherRain
+            || WeatherFactKind(WeatherKind::Fog) != InteractionKind::WeatherFog
+            || WeatherFactKind(WeatherKind::Misty) != InteractionKind::WeatherMisty
+            || WeatherFactKind(WeatherKind::Radstorm) != InteractionKind::WeatherRadstorm
+            || WeatherFactKind(WeatherKind::Unknown).has_value())
+        {
+            return false;
+        }
+
+        // WeatherLabel — the player-facing word.
+        if (std::string_view(WeatherLabel(WeatherKind::Rain)) != "rain"
+            || std::string_view(WeatherLabel(WeatherKind::Radstorm)) != "a radstorm"
+            || std::string_view(WeatherLabel(WeatherKind::Unknown)) != "unclassified")
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // ApplyFact with a day — the weather stamp. A pushed weather fact
+        // carries the world day it was remembered; a refresh tops the
+        // weight AND re-stamps (re-seen today is remembered today). The
+        // gates call with no day and stay unstamped. Weather kinds are
+        // distinct fact slots — rain and a closed market coexist.
+        //-------------------------------------------------------------------------
+        {
+            Memory memory;
+
+            ApplyFact(memory, InteractionKind::WeatherRain, true, 12);
+            ApplyFact(memory, InteractionKind::WeatherRain, true, 12);
+
+            if (memory.Events.size() != 1
+                || memory.Events[0].Day != 12
+                || memory.Events[0].Weight != kFactWeight)
+            {
+                return false;
+            }
+
+            // A refresh on a later day re-stamps: the rain is today's again.
+            memory.Events[0].Weight -= 0.2f;
+
+            ApplyFact(memory, InteractionKind::WeatherRain, true, 13);
+
+            if (memory.Events.size() != 1
+                || memory.Events[0].Day != 13
+                || memory.Events[0].Weight != kFactWeight)
+            {
+                return false;
+            }
+
+            // Distinct slots: rain + a closed market are two events.
+            ApplyFact(memory, InteractionKind::Trade, true);
+
+            if (memory.Events.size() != 2)
+            {
+                return false;
+            }
+
+            // The no-day call stays unstamped (Day 0) — gates are doors,
+            // not day memories.
+            ApplyFact(memory, InteractionKind::Social, true);
+
+            if (memory.Events.size() != 3 || memory.Events[2].Day != 0)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
