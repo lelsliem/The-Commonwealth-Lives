@@ -47,12 +47,12 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
 | 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **species/behaviour split implemented** (groundwork); arrival outcomes pending |
+| 0.5.0 | Living world ("The Settler Goes to Market") | ⬜ in progress — **species split, arrival outcomes, real test, world facts all implemented**; real test verified in-game (hungry settler walks, gets fed, stops); tuning + Nexus publish pending |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **7/7 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **8/8 suites green.**
 
 ---
 
@@ -155,23 +155,24 @@ split lives in the adapter (see `Docs/Design/Behaviour.md`):
 
 The core has shipped everything the adapter needs (see the canonical
 handoff — tuning stone 01, outcome channel stone 02, seeded RNG stone 05
-all live). Remaining adapter work:
+all live). Adapter progress:
 
-1. **World facts via `Remember`** — shipped in the core (0.3.1). Weather,
-   market open/closed: push as memory events with an *invalid* Other.
-   While remembered, the interaction is unavailable to the mind; when it
-   fades, it reopens. The adapter controls duration by re-pushing.
-2. **Tuning from Configuration** — core stone 01. Feed a user-editable
+1. ✅ **World facts** (implemented 2026-08-10, in-game verification
+   pending) — the market's trading hours gate the hungry walk (a
+   remembered `{ invalid, Trade }` fact makes Decide explore; the
+   refresh pattern keeps the door shut at night with no flicker) and a
+   radstorm shuts the gatherings (`{ invalid, Social }`; weather forms
+   TO-VERIFY, table inert until pinned). See Docs/Design/WorldFacts.md.
+2. ⬜ **Tuning from Configuration** — core stone 01. Feed a user-editable
    text file to `SimulationTuning::FromConfiguration(config)`; the
-   adapter's own keys ride in the same file.
-3. **Arrival outcomes** — core stone 02. When a walk reaches the market,
-   report what actually happened per species: Human →
-   `{ trader, Trade, Result }` (trust with the merchant scales by
-   result); Child/Animal → `{ settlement, Aid, Result }` (fed — no trust
-   ledger, no barter). Use `OutcomeResult` honestly: never reached =
-   `Failure`, reached but no trade = `Partial`, fair trade = `Success`.
-   The intent is consumed — the next tick decides fresh with the outcome
-   in memory: the learning settler.
+   adapter's own keys (the market hours, `WorldFacts.h`) ride in the
+   same file.
+3. ✅ **Arrival outcomes + the real test** (verified in-game 2026-08-10)
+   — walks report per species: Human → `{ market, Trade, Partial }` (no
+   trade yet), Child/Animal → `{ feeder, Aid, Success }` (fed, gives
+   nothing in return); the hunger write-through closes the loop (fed:
+   Hunger X -> 1.00; the fed dog decided Rest, not MoveTo, 6 ms later;
+   19 feeds across the session).
 4. **The real test:** a settler goes to market because they are hungry —
    no script. Needs decay → goal urgency → `MoveTo` → the executor walks
    them (all proven pieces; this stone assembles them).

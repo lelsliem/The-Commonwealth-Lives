@@ -11,6 +11,7 @@
 #include "Market.h"
 #include "Serialization.h"
 #include "Translator.h"
+#include "WorldFacts.h"
 
 #include "LCE/Simulation/Behaviour.h"
 #include "LCE/Simulation/EntityRegistry.h"
@@ -36,6 +37,7 @@ namespace TLC::Tests
     bool CoSaveTest();
     bool PlanBuilderTest();
     bool MarketTest();
+    bool WorldFactsTest();
 }
 
 namespace
@@ -72,6 +74,7 @@ int main()
     Run("CoSaveTest", TLC::Tests::CoSaveTest);
     Run("PlanBuilderTest", TLC::Tests::PlanBuilderTest);
     Run("MarketTest", TLC::Tests::MarketTest);
+    Run("WorldFactsTest", TLC::Tests::WorldFactsTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -925,6 +928,136 @@ namespace TLC::Tests
             const auto strayMemory = world.GetComponent<Memory>(stray);
 
             if (!strayMemory || !strayMemory->Events.empty())
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool WorldFactsTest()
+    {
+        using namespace TLC::WorldFacts;
+
+        //-------------------------------------------------------------------------
+        // IsMarketClosed — the pure hour gate behind the world-facts
+        // stone. Default hours 8–20: open from 08:00 (inclusive) through
+        // 19:59, closed from 20:00 (exclusive) through 07:59.
+        //-------------------------------------------------------------------------
+        if (!IsMarketClosed(6.0f, kMarketOpenHour, kMarketCloseHour)
+            || IsMarketClosed(8.0f, kMarketOpenHour, kMarketCloseHour)
+            || IsMarketClosed(12.0f, kMarketOpenHour, kMarketCloseHour)
+            || IsMarketClosed(19.99f, kMarketOpenHour, kMarketCloseHour)
+            || !IsMarketClosed(20.0f, kMarketOpenHour, kMarketCloseHour)
+            || !IsMarketClosed(23.0f, kMarketOpenHour, kMarketCloseHour))
+        {
+            return false;
+        }
+
+        // Overnight hours wrap: open 20:00–08:00 trades through midnight.
+        if (IsMarketClosed(22.0f, 20.0f, 8.0f)
+            || IsMarketClosed(23.99f, 20.0f, 8.0f)
+            || IsMarketClosed(0.0f, 20.0f, 8.0f)
+            || IsMarketClosed(7.99f, 20.0f, 8.0f)
+            || !IsMarketClosed(8.0f, 20.0f, 8.0f)
+            || !IsMarketClosed(12.0f, 20.0f, 8.0f))
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // HasFact — the idempotent guard. A fact is a memory event with
+        // an invalid Other. The market-location memory (a valid Other)
+        // must NOT read as a fact: knowing where the market is is not the
+        // same as the door being shut.
+        //-------------------------------------------------------------------------
+        {
+            Memory memory;
+
+            if (HasFact(memory, InteractionKind::Trade))
+            {
+                return false;
+            }
+
+            memory.Events.push_back(MemoryEvent{
+                EntityId{ 42 }, InteractionKind::Trade, 1.0f });
+
+            if (HasFact(memory, InteractionKind::Trade))
+            {
+                return false;   // location memory — not a fact
+            }
+
+            ApplyFact(memory, InteractionKind::Trade, true);
+            ApplyFact(memory, InteractionKind::Social, true);
+
+            if (!HasFact(memory, InteractionKind::Trade)
+                || !HasFact(memory, InteractionKind::Social)
+                || HasFact(memory, InteractionKind::Combat))
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // ApplyFact — the refresh pattern. While active, the fact is
+        // remembered at full weight: repeated applies never duplicate it
+        // (one event per kind — memory does not grow), and an eroded
+        // weight is topped back up so the tick's fade cannot erase a shut
+        // door. Inactive applies leave the mind alone: the core's fade is
+        // the designed reopen.
+        //-------------------------------------------------------------------------
+        {
+            Memory memory;
+
+            ApplyFact(memory, InteractionKind::Trade, true);
+            ApplyFact(memory, InteractionKind::Trade, true);
+            ApplyFact(memory, InteractionKind::Trade, true);
+
+            if (memory.Events.size() != 1
+                || !HasFact(memory, InteractionKind::Trade)
+                || memory.Events[0].Weight != kFactWeight)
+            {
+                return false;
+            }
+
+            // The tick erodes salience; the next refresh restores it.
+            memory.Events[0].Weight -= 0.2f;
+
+            ApplyFact(memory, InteractionKind::Trade, true);
+
+            if (memory.Events.size() != 1
+                || memory.Events[0].Weight != kFactWeight)
+            {
+                return false;
+            }
+
+            // A second active door is a second event, not a collision.
+            ApplyFact(memory, InteractionKind::Social, true);
+
+            if (memory.Events.size() != 2)
+            {
+                return false;
+            }
+
+            // Inactive leaves the memory alone — the fact fades on the
+            // core's clock, which is what reopens the door.
+            const auto before = memory.Events.size();
+
+            ApplyFact(memory, InteractionKind::Combat, false);
+
+            if (memory.Events.size() != before)
+            {
+                return false;
+            }
+
+            // A truly forgotten fact (the core erased it) is re-pushed.
+            memory.Events.clear();
+
+            ApplyFact(memory, InteractionKind::Trade, true);
+
+            if (memory.Events.size() != 1
+                || !HasFact(memory, InteractionKind::Trade))
             {
                 return false;
             }

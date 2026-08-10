@@ -145,7 +145,17 @@ Goal: the real test from the contract.
     Socialize/Work intents); the market memory keeps Trade-kind so the
     dog still walks; the profile decides what arrival means (Aid, not
     Trade) — see Docs/Design/Behaviour.md
-[ ] World facts — Remember pushes (weather, market open/closed)
+[✓] World facts — the doors the world shuts, pushed as memory events
+    with an invalid Other (Remember's world-fact channel): the market's
+    trading hours (08:00–20:00, the first tuning keys) gate the hungry
+    walk — a remembered { invalid, Trade } fact makes Decide Explore
+    instead of MoveTo — and a radstorm gates the gatherings ({ invalid,
+    Social }; weather forms TO-VERIFY, table inert until pinned). The
+    refresh pattern keeps a shut door shut (fact topped to full weight
+    each second — no flicker, no memory growth) and lets it fade (~4.5 s)
+    when it reopens. Implemented 2026-08-10; in-game verification
+    pending (the transition lines + settlers stopping at night) — see
+    Docs/Design/WorldFacts.md
 [ ] Tuning from the Configuration service
 [✓] Food sources + arrival outcomes — per-species food sources (a dog
     is fed by its owner when the game assigns one, else the settlement;

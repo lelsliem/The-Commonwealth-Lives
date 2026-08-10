@@ -12,6 +12,7 @@
 #include "Behaviour.h"
 #include "Components.h"
 #include "Market.h"
+#include "WorldFacts.h"
 #include "Movement.h"
 #include "Serialization.h"
 #include "SimRelevant.h"
@@ -23,10 +24,12 @@
 #include <RE/A/Actor.h>
 #include <RE/N/NiAVObject.h>
 #include <RE/P/ProcessLists.h>
+#include <RE/S/Sky.h>
 #include <RE/T/TESForm.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
 #include <RE/T/TESObjectREFR.h>
 #include <RE/T/TESRace.h>
+#include <RE/T/TESWeather.h>
 
 #include <LCE/Logging/Logger.h>
 
@@ -37,6 +40,7 @@
 
 #include <REX/LOG.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -261,6 +265,28 @@ namespace TLC
 
             const auto formId = a_translator.FormFor(a_entity);
             return formId != 0 && RE::TESForm::GetFormByID<RE::TESObjectREFR>(formId) != nullptr;
+        }
+
+        //-------------------------------------------------------------------------
+        // The game clock, read once at the edge (the world-facts stone).
+        // Sky::currentGameHour is the running hour 0–24 the game itself
+        // shows in the HUD clock. Formatted as HH:MM for the log lines
+        // the player reads.
+        //-------------------------------------------------------------------------
+        float CurrentGameHour()
+        {
+            const auto* sky = RE::Sky::GetSingleton();
+            return sky != nullptr ? sky->currentGameHour : 0.0f;
+        }
+
+        std::string FormatGameHour(float a_hour)
+        {
+            const auto whole = static_cast<int>(a_hour);
+            const auto minutes = static_cast<int>((a_hour - static_cast<float>(whole)) * 60.0f);
+
+            char buffer[8];
+            std::snprintf(buffer, sizeof(buffer), "%02d:%02d", whole, minutes);
+            return buffer;
         }
     }
 
@@ -596,13 +622,122 @@ namespace TLC
 
             if (a_announce)
             {
-                REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
+                // Hour-aware since the world-facts stone: the classic line
+                // only when the market is actually open. At night the seed
+                // still plants *where* the market is (the location memory
+                // is independent of the hours gate) — the announce just
+                // tells the truth about what the world is doing now.
+                const auto hour = CurrentGameHour();
+
+                if (WorldFacts::IsMarketClosed(hour, WorldFacts::kMarketOpenHour, WorldFacts::kMarketCloseHour))
+                {
+                    REX::INFO(
+                        "The market is remembered but closed ({}): trade resumes at {:02.0f}:00.",
+                        FormatGameHour(hour), WorldFacts::kMarketOpenHour);
+                }
+                else
+                {
+                    REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
+                }
             }
         }
         else if (a_announce)
         {
             REX::INFO("The market is not loaded — settlers explore until it is.");
         }
+    }
+
+    bool Adapter::IsRadstorm(const RE::TESWeather* a_weather) const
+    {
+        // Radstorms shut the gatherings: a { invalid, Social } world fact
+        // — nobody meets in the green air. The weather forms come from
+        // the xEdit weather list, TO-VERIFY 2026-08-10 (the same ritual
+        // as the races — paste the list, pin the forms here). Until the
+        // pins land the table is deliberately empty: no unverified pins
+        // in production code, and an inert gate is a safe gate.
+        if (a_weather != nullptr)
+        {
+            switch (a_weather->GetFormID())
+            {
+            // case 0x00000000:   // TO-VERIFY: CommonwealthRadstorm
+            // case 0x00000000:   // TO-VERIFY: CommonwealthRadstorm2
+            //     return true;
+            default:
+                break;
+            }
+        }
+
+        return false;
+    }
+
+    void Adapter::PushWorldFacts()
+    {
+        using namespace LCE::Simulation;
+
+        const auto hour = CurrentGameHour();
+        const bool closed =
+            WorldFacts::IsMarketClosed(hour, WorldFacts::kMarketOpenHour, WorldFacts::kMarketCloseHour);
+
+        const auto* sky = RE::Sky::GetSingleton();
+        const bool radstorm =
+            IsRadstorm(sky != nullptr ? sky->currentWeather : nullptr);
+
+        // Transitions only — these are the lines the player reads. The
+        // push below is silent; announcing every second would drown the
+        // log in facts.
+        if (closed != m_MarketClosed)
+        {
+            m_MarketClosed = closed;
+
+            if (closed)
+            {
+                REX::INFO(
+                    "world fact: the market is closed ({}) — trade unavailable until {:02.0f}:00.",
+                    FormatGameHour(hour), WorldFacts::kMarketOpenHour);
+            }
+            else
+            {
+                REX::INFO(
+                    "world fact: the market is open ({}) — trade available.",
+                    FormatGameHour(hour));
+            }
+        }
+
+        if (radstorm != m_Radstorm)
+        {
+            m_Radstorm = radstorm;
+
+            if (radstorm)
+            {
+                REX::INFO("world fact: a radstorm rolls in — no one gathers while it lasts.");
+            }
+            else
+            {
+                REX::INFO("world fact: the radstorm passes — gatherings resume.");
+            }
+        }
+
+        if (!closed && !radstorm)
+        {
+            return;   // no doors shut — nothing to push
+        }
+
+        // The refresh pattern, one door at a time (WorldFacts::ApplyFact):
+        // while a door is shut, top the fact back to full weight every
+        // second so the tick's fade never erases it — no flicker, no
+        // memory growth. When the condition flips, refreshing stops and
+        // the tick fades the fact out in ~4.5 s: the close-down the
+        // transition line promised. World facts are global knowledge —
+        // every mind hears the market shut, loaded or not, near or far
+        // (unlike the market-location seed, which is radius-filtered).
+        m_Registry.ForEachWithComponent<Memory>(
+            [closed, radstorm](EntityId, Memory& a_memory)
+            {
+                WorldFacts::ApplyFact(
+                    a_memory, InteractionKind::Trade, closed);
+                WorldFacts::ApplyFact(
+                    a_memory, InteractionKind::Social, radstorm);
+            });
     }
 
     void Adapter::Tick(double a_deltaSeconds)
@@ -669,6 +804,11 @@ namespace TLC
         {
             m_LastMarketSeed = std::chrono::steady_clock::now();
             SeedMarket(false);
+
+            // The world's doors: the market's trading hours and the
+            // weather. Pushed on the same cadence as the seed — silent
+            // unless a door changes.
+            PushWorldFacts();
         }
 
         // The core's stateless tick: needs decay, memory fade, goal

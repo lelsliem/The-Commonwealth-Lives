@@ -11,6 +11,7 @@
 
 #include "Executor.h"
 #include "Translator.h"
+#include "WorldFacts.h"
 
 #include "LCE/Simulation/EntityRegistry.h"
 #include "LCE/Simulation/RegistrySnapshot.h"
@@ -23,6 +24,11 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+
+namespace RE
+{
+    class TESWeather;
+}
 
 namespace TLC
 {
@@ -158,6 +164,25 @@ namespace TLC
         // brings 637 entities back, but their actors load gradually —
         // still learn where to trade.
         std::chrono::steady_clock::time_point m_LastMarketSeed{};
+
+        // World facts (0.5.0): the doors the world shuts. The market
+        // closes outside its trading hours — a remembered { invalid,
+        // Trade } fact blocks the hungry walk until it fades — and a
+        // radstorm shuts the gatherings ( { invalid, Social } ). The
+        // adapter reads the game clock and the sky once per second,
+        // pushes the active facts (refresh-in-place so they never die
+        // while the door is shut), and logs on transition only. Pure
+        // logic lives in WorldFacts.h; this is the edge read.
+        void PushWorldFacts();
+
+        // Whether the radstorm fact is active — a FormID table in
+        // Adapter.cpp (TO-VERIFY: the CommonwealthRadstorm forms). An
+        // empty table means no weather facts; the gate stays open until
+        // the pins are verified in xEdit.
+        bool IsRadstorm(const RE::TESWeather* a_weather) const;
+
+        bool m_MarketClosed = false;
+        bool m_Radstorm = false;
 
         // The animal's feeder: its owner when the game assigns one and
         // the owner is a sim entity, else the settlement. Resolved per
