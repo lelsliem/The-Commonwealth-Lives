@@ -270,6 +270,8 @@ namespace TLC
         m_Translator.Clear();
         m_LastLogged.clear();
         m_Walks.clear();
+        m_TickCalled = false;
+        m_FirstPassLogged = false;
         m_Started = false;
     }
 
@@ -297,6 +299,16 @@ namespace TLC
     {
         if (!m_Started)
         {
+            // One-time proof the tick hook fires even before a world
+            // exists (the hooks install at Load; worlds start on
+            // GameLoaded). If neither this nor the first-pass line ever
+            // appears, the game is not simulating — a paused, unfocused,
+            // or occluded window throttles the per-frame VM ticks.
+            if (!m_TickCalled)
+            {
+                m_TickCalled = true;
+                REX::INFO("Tick: called before the world started (once).");
+            }
             return;
         }
 
@@ -316,6 +328,17 @@ namespace TLC
 
         ExecutePlan(plan);
         ProbeWalks();
+
+        // One-time proof the whole first pass completed. If the intent
+        // lines printed but this is missing, the pass is stuck in
+        // ProbeWalks; if neither printed, the hooks didn't fire.
+        if (!m_FirstPassLogged)
+        {
+            m_FirstPassLogged = true;
+            REX::INFO(
+                "Tick: first pass complete — {} intents, {} active walks.",
+                plan.size(), m_Walks.size());
+        }
     }
 
     void Adapter::ExecutePlan(const std::vector<PlanEntry>& a_plan)

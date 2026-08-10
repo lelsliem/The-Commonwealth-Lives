@@ -99,6 +99,13 @@ namespace TLC
         LCE::Simulation::EntityRegistry m_Registry;
         Translator m_Translator;
         bool m_Started = false;
+
+        // First-pass instrumentation (the walking stone's verification):
+        // one-time lines that prove the tick hook fires and that a full
+        // pass (Update → plan → execute → probe) completed.
+        bool m_TickCalled = false;
+        bool m_FirstPassLogged = false;
+
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
     };
