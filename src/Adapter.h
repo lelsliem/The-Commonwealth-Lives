@@ -187,9 +187,9 @@ namespace TLC
         void PushWorldFacts();
 
         // Whether the radstorm fact is active — a FormID table in
-        // Adapter.cpp (TO-VERIFY: the CommonwealthRadstorm forms). An
-        // empty table means no weather facts; the gate stays open until
-        // the pins are verified in xEdit.
+        // Adapter.cpp, pinned from the xEdit weather dump 2026-08-10:
+        // only CommonwealthGSRadstorm (001C3D5E) matches (see
+        // Docs/WeatherForms.md for the exclusion decisions).
         bool IsRadstorm(const RE::TESWeather* a_weather) const;
 
         bool m_MarketClosed = false;

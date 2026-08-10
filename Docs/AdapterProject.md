@@ -163,7 +163,8 @@ all live). Adapter progress:
    hungry walk (a remembered `{ invalid, Trade }` fact makes Decide
    explore; the refresh pattern keeps the door shut at night with no
    flicker) and a radstorm shuts the gatherings (`{ invalid, Social }`;
-   weather forms TO-VERIFY, table inert until pinned). See
+   weather forms pinned from the xEdit dump — only CommonwealthGSRadstorm
+   `001C3D5E` matches, see Docs/WeatherForms.md). See
    Docs/Design/WorldFacts.md.
 2. ✅ **Tuning from Configuration** (implemented 2026-08-10, in-game
    verification pending) — one text file next to the DLL

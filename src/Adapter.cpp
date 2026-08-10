@@ -726,18 +726,19 @@ namespace TLC
     bool Adapter::IsRadstorm(const RE::TESWeather* a_weather) const
     {
         // Radstorms shut the gatherings: a { invalid, Social } world fact
-        // — nobody meets in the green air. The weather forms come from
-        // the xEdit weather list, TO-VERIFY 2026-08-10 (the same ritual
-        // as the races — paste the list, pin the forms here). Until the
-        // pins land the table is deliberately empty: no unverified pins
-        // in production code, and an inert gate is a safe gate.
+        // — nobody meets in the green air. Verified against the full xEdit
+        // weather list 2026-08-10: only CommonwealthGSRadstorm (001C3D5E)
+        // is the live radstorm. The other GS radstorm forms were reviewed
+        // and deliberately excluded — Old/Backup (00222394/002392A3) are
+        // editor records the game never sets, and NoHazard (0024A3C0)
+        // removes the hazard by design: the gate is the green air, not
+        // the colour of the sky.
         if (a_weather != nullptr)
         {
             switch (a_weather->GetFormID())
             {
-            // case 0x00000000:   // TO-VERIFY: CommonwealthRadstorm
-            // case 0x00000000:   // TO-VERIFY: CommonwealthRadstorm2
-            //     return true;
+            case 0x001C3D5E:   // CommonwealthGSRadstorm
+                return true;
             default:
                 break;
             }

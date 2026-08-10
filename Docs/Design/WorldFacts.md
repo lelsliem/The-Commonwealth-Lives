@@ -2,8 +2,9 @@
 
 **Stone:** adapter 0.5.0 (world facts)
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — market-hours gate live (no
-pins), radstorm gate built behind a TO-VERIFY weather table (inert until
-the forms are pinned); 8/8 adapter suites green (WorldFactsTest among
+pins), radstorm gate live (CommonwealthGSRadstorm `001C3D5E` pinned from
+the xEdit dump — see `Docs/WeatherForms.md` for the full catalog and the
+exclusion decisions); 9/9 adapter suites green (WorldFactsTest among
 them). In-game verification pending: the transition lines, and settlers
 stopping their market walks at night.
 **Related:** the core's `Remember` world-fact channel (`Simulation.h`:
@@ -86,12 +87,13 @@ being broken.)
 ## The radstorm gate
 
 `Adapter::IsRadstorm` classifies `Sky::GetSingleton()->currentWeather`
-by FormID. The weather forms are **TO-VERIFY** — the same xEdit ritual
-as the races (paste the weather list, pin the radstorm forms, done).
-Until then the table is deliberately empty: no unverified pins in
-production code, and an inert gate is a safe gate. (commonlibf4 does not
-model TESWeather's flag storage, so there is no pin-free signal to lean
-on — the FormID table is the honest route.)
+by FormID. The table is **pinned** (2026-08-10) from the xEdit dump:
+only CommonwealthGSRadstorm (`001C3D5E`) matches. The NoHazard variant
+is excluded by design — no hazard, and the gate is the green air, not
+the sky — and the Old/Backup records are editor-only. See
+`Docs/WeatherForms.md` for the full catalog. (commonlibf4 does not model
+TESWeather's flag storage, so there is no pin-free signal to lean on —
+the FormID table is the honest route.)
 
 ## What is deliberately not here
 

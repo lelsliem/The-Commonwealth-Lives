@@ -158,7 +158,9 @@ Goal: the real test from the contract.
     trading hours (08:00–20:00, the first tuning keys) gate the hungry
     walk — a remembered { invalid, Trade } fact makes Decide Explore
     instead of MoveTo — and a radstorm gates the gatherings ({ invalid,
-    Social }; weather forms TO-VERIFY, table inert until pinned). The
+    Social }; weather forms pinned from the xEdit dump — only
+    CommonwealthGSRadstorm 001C3D5E matches, see Docs/WeatherForms.md).
+    The
     refresh pattern keeps a shut door shut (fact topped to full weight
     each second — no flicker, no memory growth) and lets it fade (~4.5 s)
     when it reopens. Implemented 2026-08-10; in-game verification
