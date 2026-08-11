@@ -310,12 +310,11 @@ Goal: settlers are born, live, and die; they make friends and enemies;
 and quests happen because life happens — no scripts. The quest is the
 behaviour, visible in the world and the log.
 
-STATUS: IN PROGRESS — Stone 1 verified in-game (2026-08-10) and Stone 2
-built + harness-green (11/11, 2026-08-11), in-game verification pending.
-The engine hand-over (Requests A–C) is in the engine's AdapterProject.md
-— the engine has since shipped stone 08 (RelationshipChangedEvent +
-sim.bond.threshold.*) and stone 09 (Society — Groups & Traits), and
-gained InteractionKind::Death for this stone.
+STATUS: IN PROGRESS — Stone 1 and Stone 2 verified in-game (2026-08-10 /
+2026-08-11), 11/11 suites green. The engine hand-over (Requests A–C) is
+in the engine's AdapterProject.md — the engine has since shipped stone 08
+(RelationshipChangedEvent + sim.bond.threshold.*) and stone 09 (Society
+— Groups & Traits), and gained InteractionKind::Death for this stone.
 
 [x] Stone 1 — The world keeps its books: the per-second census
     (Lifecycle::Diff, pure + tested) — arrivals become minds mid-session
@@ -331,13 +330,17 @@ gained InteractionKind::Death for this stone.
 [x] Stone 2 — Bonds: named relationship states (friend / sweetheart /
     spouse / rival / enemy) from Disposition/Trust thresholds, persisted
     in the co-save (record v5). **Built + tested 2026-08-11 (11/11
-    suites)** — the EventBus subscription (Request A), the adapter's own
-    sim.bond.threshold.* defaults + INI keys, a mutual + sticky
-    derivation (formation at the line, dissolution halfway back; the
-    1-second reconcile pass catches the quiet dissolves), the event
-    channel for instant formation, and the v5 bond section (form pair,
-    kind, since-day) in the co-save. In-game verification pending:
-    watch two settlers socialize into a bond, reload, the bond stands.
+    suites) and VERIFIED in-game** — the EventBus subscription (Request
+    A), the adapter's own sim.bond.threshold.* defaults + INI keys, a
+    mutual + sticky derivation (formation at the line, dissolution
+    halfway back; the 1-second reconcile pass catches the quiet
+    dissolves), the event channel for instant formation, the v5 bond
+    section (form pair, kind, since-day) in the co-save, and the two
+    in-game discoveries that made bonds real: the buyer's half of a
+    trade is Remember({keeper, Social}) (Trade builds trust, never
+    disposition) and the living drift clock (sim.drift.rate = 0.0002,
+    ~1 h half-life — the core's 0.05/s demo default erased feelings
+    between meals). ADR-0012.
 [ ] Stone 3 — Households: couples share a pouch, a stall, a bench, a
     bed; the shared wallet round-trips
 [ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind

@@ -64,7 +64,7 @@ order; each one leaves the world strictly more alive.
   burst after a big load reads the same actors dead on first sight for
   ~2 s, and only an alive reading un-parks them).
 
-### Stone 2 — Bonds (relationships, good and bad) — BUILT + TESTED (2026-08-11), in-game verification pending
+### Stone 2 — Bonds (relationships, good and bad) — VERIFIED IN-GAME (2026-08-11)
 
 - Named bond states derived from the core's `Relationship`
   (Disposition + Trust), thresholds from the INI:
