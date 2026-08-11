@@ -447,6 +447,13 @@ namespace TLC
             Bonds::BondKind a_new,
             std::uint64_t a_sinceDay);
 
+        // The sim-only population (0.6.0 Stone 6): entities with a
+        // SpeciesTag of Child and no FormRef — children born to spouse
+        // households, with no game actor. Counted at wake and after a
+        // restore so the world's log is honest: the census counts
+        // actors, the children are minds that only the log can show.
+        [[nodiscard]] std::size_t CountSimOnlyChildren();
+
         // Which animals already got their feeder announced this world
         // (one line per animal, cleared on EndWorld).
         std::unordered_set<LCE::Simulation::EntityId> m_FeederLogged;

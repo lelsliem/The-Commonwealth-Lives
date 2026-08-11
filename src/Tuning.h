@@ -178,6 +178,15 @@ namespace TLC::Tuning
         // the settlement covers. 5 caps, a modest market.
         float MealPrice = 5.0f;
 
+        // The meal-cadence wander (0.6.0 Stone 3.75): how often a
+        // resting or exploring mind is re-commanded to a real nearby
+        // reference (seconds — re-issuing mid-walk would yank the
+        // actor, so the cooldown must exceed a short walk) and how far
+        // the wander may range (game units, ~1.4 cm each — 4000 is a
+        // settlement-sized circle around the actor).
+        float WanderCooldown = 30.0f;
+        float WanderRadius = 4000.0f;
+
         // The grief arc (0.6.0 Stone 5): how much faster a grieving
         // mind's Social need empties, per second — they seek company.
         // 0.01/s is a quiet ache; higher makes the bereaved visibly
@@ -236,6 +245,11 @@ namespace TLC::Tuning
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
         settings.RestRecovery =
             read("sim.rest.recovery", settings.RestRecovery);
+
+        settings.WanderCooldown =
+            read("sim.wander.cooldown", settings.WanderCooldown);
+        settings.WanderRadius =
+            read("sim.wander.radius", settings.WanderRadius);
 
         settings.GriefDecay =
             read("sim.arc.grief.decay", settings.GriefDecay);

@@ -545,3 +545,16 @@ issue was refactored into a silent `IssueTravel` helper so the wander
 (a command every cooldown across hundreds of minds) never floods the
 log; the plan-entry decision line is the narrative. `HoldPlace` stays
 as the empty-cell fallback only.
+
+**Addendum 3 — the 0.6.0 truth items (same day).** Three small items
+so the remaining stones are *verifiable* instead of silent. (1) The
+sim-only population shows in the log: `The Commonwealth wakes up: N
+sim-only children born to their households.` (and `restored too` on
+the restore path) — the census counts actors, so without the line a
+born child is invisible. (2) Gossip's observable half: a death logs
+`gossip: N minds remember settler X is gone.` — the count
+`Gossip::Spread` returned, one line per death, no per-mind flood. (3)
+The wander is tunable: `sim.wander.cooldown` (seconds between
+commands, default 30) and `sim.wander.radius` (game units, default
+4000) replace the constants, matching the project's every-number-is-a-
+key rule.

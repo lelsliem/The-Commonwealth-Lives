@@ -1064,6 +1064,20 @@ namespace TLC
         LCE::Logging::Info(
             "The Commonwealth wakes up: " + std::to_string(a_snapshot.Entities.size())
             + " minds restored from the co-save.");
+
+        const auto children = CountSimOnlyChildren();
+
+        if (children > 0)
+        {
+            REX::INFO(
+                "The Commonwealth wakes up: {} sim-only {} restored too — fed by their households.",
+                children, children == 1 ? "child" : "children");
+            LCE::Logging::Info(
+                "The Commonwealth wakes up: " + std::to_string(children)
+                + (children == 1 ? " sim-only child restored too — fed by its household."
+                                 : " sim-only children restored too — fed by their households."));
+        }
+
         LCE::Logging::Flush();
 
         m_Started = true;
@@ -1370,10 +1384,18 @@ namespace TLC
             // trade. Survivors carry it across the co-save; the dead
             // themselves are simply absent (they do not restore).
             // Grief reads it in Stone 5.
-            Gossip::Spread(
+            const auto mourning = Gossip::Spread(
                 m_Registry, entity,
                 LCE::Simulation::InteractionKind::Death,
                 CurrentDay());
+
+            // The gossip stone's observable half: one line per death —
+            // how many minds remember who is gone. The fact itself is
+            // silent (a memory is not a door); this is the verify.
+            REX::INFO(
+                "gossip: {} {} remember settler {:#x} is gone.",
+                mourning, mourning == 1 ? "mind" : "minds",
+                a_formId);
         }
 
         m_Registry.DestroyEntity(entity);
@@ -1411,6 +1433,20 @@ namespace TLC
         REX::INFO("The Commonwealth wakes up: {} settlers became minds.", count);
         LCE::Logging::Info(
             "The Commonwealth wakes up: " + std::to_string(count) + " settlers became minds.");
+
+        const auto children = CountSimOnlyChildren();
+
+        if (children > 0)
+        {
+            REX::INFO(
+                "The Commonwealth wakes up: {} sim-only {} born to their households.",
+                children, children == 1 ? "child" : "children");
+            LCE::Logging::Info(
+                "The Commonwealth wakes up: " + std::to_string(children)
+                + (children == 1 ? " sim-only child born to its household."
+                                 : " sim-only children born to their households."));
+        }
+
         LCE::Logging::Flush();
 
         m_Started = true;
@@ -1440,6 +1476,24 @@ namespace TLC
         m_TickCalled = false;
         m_FirstPassLogged = false;
         m_Started = false;
+    }
+
+    std::size_t Adapter::CountSimOnlyChildren()
+    {
+        std::size_t count = 0;
+
+        m_Registry.ForEachWithComponent<SpeciesTag>(
+            [&](LCE::Simulation::EntityId a_entity,
+                const SpeciesTag& a_tag)
+            {
+                if (a_tag.Value == Species::Child
+                    && m_Registry.GetComponent<FormRef>(a_entity) == nullptr)
+                {
+                    ++count;
+                }
+            });
+
+        return count;
     }
 
     void Adapter::EnsureWorkshop(std::uint32_t a_formId)
@@ -2626,8 +2680,9 @@ namespace TLC
                 // alive, and the game plays its own idles between
                 // commands (it may even sit a settler at the bench it
                 // walked to). Rate-limited to one wander per mind per
-                // 30 s — re-issuing mid-walk would yank the actor to a
-                // new target.
+                // sim.wander.cooldown (default 30 s — re-issuing
+                // mid-walk would yank the actor to a new target),
+                // ranging sim.wander.radius (default 4000 units).
                 char confidence[16];
                 std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
 
@@ -2640,10 +2695,11 @@ namespace TLC
                 const auto wanderIt = m_LastWander.find(entry.Entity);
 
                 if (wanderIt == m_LastWander.end()
-                    || now - wanderIt->second >= std::chrono::seconds(30))
+                    || now - wanderIt->second
+                        >= std::chrono::duration<float>(m_Settings.WanderCooldown))
                 {
                     m_LastWander[entry.Entity] = now;
-                    Movement::WanderNear(actor);
+                    Movement::WanderNear(actor, m_Settings.WanderRadius);
                 }
             }
             break;

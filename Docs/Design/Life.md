@@ -231,9 +231,13 @@ order; each one leaves the world strictly more alive.
 - Wired into both news channels: `OnBondChange` (every formation names
   both participants) and `RemoveMind` (a death names the dead — the fact
   the grief arc reads). Pure, harness-tested without the game.
-- **Verify (pending):** kill a settler — a bystander across town
-  remembers the death (a `Death` memory); a newly arrived settler
-  doesn't know.
+- The observable half: a death logs `gossip: N minds remember settler
+  X is gone.` (one line per death — the count `Gossip::Spread`
+  returned), so the stone is verifiable in the log instead of silent.
+- **Verify (pending):** kill a settler — the gossip line shows the
+  settlement remembers the death; the survivor's grief line follows
+  (Stone 5); a newly arrived settler never hears it (written once,
+  never replayed).
 
 ### Stone 5 — Emergent arcs (the quests) — BUILT + TESTED (2026-08-11)
 
@@ -285,6 +289,10 @@ other three stay sketched below.
   never the registry, so a mind with no form is simply never scanned.
 - **Verify (pending):** the log records `birth: a child is born to …`;
   the child mind exists, fed, and bonded — and returns from the co-save.
+  The wake line makes the sim-only population visible: `The Commonwealth
+  wakes up: N sim-only children born to their households.` (or
+  `restored too` after a save/load) — the census counts actors, the
+  log counts minds.
 
 ### Co-save — no v6 bump needed
 
@@ -301,9 +309,11 @@ form refs). Gossip and arcs are *derived* from persisted components
 
 Bond thresholds (friend / sweetheart / spouse / rival / enemy),
 grief decay (`sim.arc.grief.decay`), mediation on/off
-(`sim.arc.mediation`), births on/off (`sim.birth.enabled`). Every new
-number is a `sim.*` or `bond.*` key the adapter reads — same file, same
-rules (unknown keys ignored, broken lines keep defaults).
+(`sim.arc.mediation`), births on/off (`sim.birth.enabled`), the wander
+(`sim.wander.cooldown` seconds between commands, `sim.wander.radius`
+in game units). Every new number is a `sim.*` or `bond.*` key the
+adapter reads — same file, same rules (unknown keys ignored, broken
+lines keep defaults).
 
 ## What the adapter wants from the engine
 
