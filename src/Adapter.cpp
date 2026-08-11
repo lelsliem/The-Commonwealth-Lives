@@ -2284,7 +2284,8 @@ namespace TLC
 
                 bool walked = false;
 
-                if (session.Target == targetFormId
+                if (!session.Reached
+                    && session.Target == targetFormId
                     && now - session.Issued < std::chrono::seconds(120))
                 {
                     walked = true;   // already walking that way
@@ -2471,6 +2472,16 @@ namespace TLC
                 REX::INFO(
                     "LCE: settler {} arrived (d = {:.1f} u).",
                     FormatHex8(actorFormId), d);
+
+                // The trip is done — end the session now so the walk
+                // slot frees immediately (the sleep-cycle discovery:
+                // the 120 s timeout kept a completed trip occupying one
+                // of the 16 walk slots, and the "already walking"
+                // short-circuit then swallowed the fed mind's next
+                // MoveTo for the whole 120 s — no new walk, no second
+                // meal, no repeat pair, no bond).
+                it = m_Walks.erase(it);
+                continue;
             }
             else if (now - session.LastProbe >= std::chrono::seconds(2)
                 && (session.LastDistance < 0.0f
