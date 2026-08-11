@@ -22,7 +22,8 @@ species split), `Market.h`'s sibling `SettlementMarkets.md` (the census
 events), `Identity.md` (0.7.0 — names, conflict source, the radio),
 `RealEvents.md` (0.8.0 plan — trade with anyone, talk, rows, fights),
 `ReleasePlan.md` (the staged path to 1.0.0, including the honest cuts),
-`RealTest.md` (the live log evidence). Each is flipped to
+`Landscape.md` (the Nexus survey — what exists, what we own, what to
+borrow, what to skip), `RealTest.md` (the live log evidence). Each is flipped to
 **verified in-game** as its stone lands; the ones that aren't verified
 yet say so.
 

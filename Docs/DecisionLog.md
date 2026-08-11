@@ -906,3 +906,23 @@ scene. Three decisions:
    no game types, tested in the harness); the adapter supplies the
    words (`Say`) and the log. Physical escalation (a shove, a punch)
    stays 0.7.3, where the game's own combat animates everything.
+## 0025 — Own the mind, borrow the polish (2026-08-11)
+
+A Nexus-wide survey (Landscape.md) before 0.7.3: what exists, what we
+own, what to borrow. Three decisions:
+
+1. **The core is ours and stays ours.** No mod gives settlers minds —
+   needs, decisions, walks, trades, relationships, life and death. The
+   relationship/family space is entirely player-facing on the Nexus.
+   The release story claims the empty space, not a crowded one.
+2. **Don't chase the crowds.** Sim Settlements owns building (the
+   "hands" pillar stays cut); a dozen cosmetic renamers own record
+   edits (our runtime naming wins on stickiness, species, co-save);
+   player-survival mods own the player's needs. Compatible, never
+   competing.
+3. **Borrow, don't build, the polish.** Settler Sandbox Expansion
+   (idle sandbox life), Barter (vendor economy depth for 0.8.0), NPCs
+   Travel (road life for provisioners), and voiced settler dialogue
+   (the audio path, later) are noted as optional companion mods and
+   idea sources. The only dependency pursued: Baby Sim, permission
+   pending.
