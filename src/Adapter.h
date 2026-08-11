@@ -519,6 +519,14 @@ namespace TLC
         // registry slot never collides.
         std::unordered_map<std::uint64_t, std::uint32_t> m_RecentDeaths;
 
+        // Which (mind, dead) pairs already got their grief line this
+        // session — the announce fires on the fresh crossing (weight ≥
+        // 0.9, ~0.5 s of frames), once per bereavement, not every frame
+        // (the 2026-08-11 flood: 34 lines in half a second). Bounded by
+        // the session's deaths; cleared on EndWorld, so a restored
+        // bereavement re-announces once — honest, the line is cheap.
+        std::set<std::pair<std::uint64_t, std::uint64_t>> m_GriefAnnounced;
+
         // The world the co-save held for this save. Set by QueueRestore
         // during the load, consumed by GameLoaded; absent or empty means
         // this session starts fresh (a new game, or a save made while the

@@ -1490,6 +1490,7 @@ namespace TLC
         m_ArrivedAt.clear();
         m_LastWander.clear();
         m_RecentDeaths.clear();
+        m_GriefAnnounced.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
         m_TickCalled = false;
@@ -2453,6 +2454,17 @@ namespace TLC
                 const auto deadIt = m_RecentDeaths.find(dead.Value());
 
                 if (formId == 0 || deadIt == m_RecentDeaths.end())
+                {
+                    continue;
+                }
+
+                // Once per bereavement, not every frame: the fresh
+                // window (weight ≥ 0.9) is ~0.5 s of frames, and the
+                // first version announced in all of them (34 lines in
+                // half a second, 2026-08-11).
+                const auto key = std::make_pair(mind.Value(), dead.Value());
+
+                if (!m_GriefAnnounced.insert(key).second)
                 {
                     continue;
                 }

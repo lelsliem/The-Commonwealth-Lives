@@ -589,3 +589,15 @@ The family meal is now the marriage's heartbeat: a shared meal at home
 warms both directions (Remember(Social) + RecordSale, the same warmth
 a bench-sale carries), so marriages stay warm and grief for a spouse
 finds the love there.
+
+**Addendum 6 — the grief line, once per bereavement (same day).** The
+first real grief announce (ca16aa7) worked — `arcs: settler 0x50976
+grieves for 0x2f2a7` — but printed 34 times in half a second: the
+fresh window (memory weight ≥ 0.9) is ~0.5 s of frames, and the
+announce ran in every frame of it. It is now once per (mind, dead)
+pair per session (`m_GriefAnnounced`, cleared on EndWorld — a restored
+bereavement re-announces once, cheap and honest). The same session
+also showed the death being re-booked (the census re-observed the
+corpse alive-then-dead after it streamed into the loaded cell) — the
+lifecycle's honest per-session transition, which re-stamped the death
+fact and is what let the whole chain fire in this session.
