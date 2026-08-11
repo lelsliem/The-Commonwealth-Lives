@@ -44,6 +44,7 @@ serves the show.
 | **0.7.2 — Rows** | Verbal altercations: `dialogue.row` lines, Wronged outcomes, gossip spread | Feuds stop being log lines and become *heard* shouting |
 | **0.7.3 — Fights** | Physical escalation via real combat (the game's own punch/shove anims); feedback into bonds and news | The feud's payoff — the escalation line lands and they go at it |
 | **0.8.0 — Trade with anyone** | Vendor census: traders, marketplaces, provisioners as trade targets; caps change hands on the road | The world feels connected, not bench-to-bench; the player's provisioner is now part of the economy |
+| **0.8.1 — Illness & Medicine** | A `Health` component (adapter-owned, hold-then-recover — the engine's locked shape); radstorm/food/wound/contagion vectors; the sick rest and buy medicine; untreated sickness can die | The wasteland has a price beyond hunger — settlements feel seasons, the radio reports the ill, and medicine makes the economy real |
 
 **The reliability gate (0.9.0, hard):**
 
@@ -102,6 +103,7 @@ These are the hard calls. The author can overrule any of them.
 0.7.2   Rows — verbal altercations, gossip
 0.7.3   Fights — real combat escalation
 0.8.0   Trade with anyone — vendor census
+0.8.1   Illness & Medicine — health holds, recovers, or ends
 0.9.0   The release gate — scale verified, docs, news polish
 1.0.0   Freeze, ship
 ```

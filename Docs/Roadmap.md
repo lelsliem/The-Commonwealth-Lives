@@ -48,8 +48,8 @@ Current Stage   : Identity & the Player Window — every 0.7.0 stone
 Next Milestone  : 0.7.1 — Talk, then the staged run to 1.0.0
                    (Docs/Design/ReleasePlan.md): 0.7.1 Talk → 0.7.2
                    Rows → 0.7.3 Fights → 0.8.0 Trade with anyone →
-                   0.9.0 the release gate (scale verified, docs) →
-                   1.0.0 freeze and ship
+                   0.8.1 Illness & Medicine → 0.9.0 the release gate
+                   (scale verified, docs) → 1.0.0 freeze and ship
 
 ═══════════════════════════════════════════════
 
@@ -580,6 +580,14 @@ STATUS: PLANNED — design docs written, no code.
 [ ] 0.8.0 — Trade with anyone who sells: a vendor census (traders,
     marketplaces, provisioners as mobile traders) — the hungry walk
     resolves to a person, not only the bench
+[ ] 0.8.1 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
+    component (adapter-owned, co-save additive — the engine's locked
+    hold-then-recover shape, answered as fact-plus-tick, not a new
+    NeedType); radstorm/food/wound/contagion vectors at the edge; a
+    Fatigue multiplier makes the sick rest; medicine is the trade
+    stone's second good; untreated sickness can die (the existing
+    death path). No engine change — the handoff's one open design
+    question answered in the doc
 [ ] 0.9.0 — The release gate (hard): performance at scale verified
     in-game (a normal save with hundreds of settlers ticks inside a
     frame budget), the remove-the-DLL trust story documented, player

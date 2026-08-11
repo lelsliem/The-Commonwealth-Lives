@@ -799,3 +799,34 @@ decisions were made together with the author, and recorded in
    committed to the INI (`dialogue.*`), one-liners only; the row pool
    is the author's five-line verbal→physical ramp. The keys parse and
    sit unused until 0.7.1 reads them.
+
+## 0021 — Illness is a component, not a need (2026-08-11)
+
+The engine's endgame handover named disease as the one accepted new
+surface, locked its shape (hold-then-recover: health holds reduced
+while ill, climbs at a rate after the recovery time), and asked the
+adapter to decide between a new `NeedType` and a fact-plus-tick rule.
+
+**Decision: fact-plus-tick, adapter-owned** — a `Health` component at
+the edge, co-save additive like `name`, with the hold and the recovery
+driven by the adapter's own tick. Not a `NeedType`:
+
+1. **Health's curve is not a need's curve.** The five needs decay toward
+   0 and urgency grows; health holds then recovers. A `NeedType` would
+   confuse `Decide`'s urgency model for a value that deliberately does
+   not behave like a drive.
+2. **Every cause is already an edge read** — radstorms (the weather
+   fact rides memory), food quality, Combat wounds, contagion through
+   the settlement Groups. The edge owns the vectors; the edge should
+   own the state.
+3. **The adapter already owns stateful components** (CapPouch, Name,
+   SpeciesTag) with the proven co-save pattern. Health slots in.
+4. **The cost flows through an existing need** — while ill, the
+   adapter multiplies Fatigue decay, so a sick mind tires faster and
+   rests more (the sleep cycle already exists). No new goals, no new
+   commands, no engine surface.
+
+The engine keeps `Decide` vocabulary-free. The design is
+`Docs/Design/Illness.md`; the stone lands as 0.8.1, after Trade with
+anyone (medicine is the trade stone's second good — caps for a cure,
+so a broke settlement suffers honestly).

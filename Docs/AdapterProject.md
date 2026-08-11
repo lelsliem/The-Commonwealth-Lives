@@ -314,14 +314,17 @@ all live). Adapter progress:
 
 0.7.0 is shipped (tag `0.7.0`, release live). The staged run to 1.0.0
 is planned in `Docs/Design/ReleasePlan.md` (and the stones in
-`Docs/Design/RealEvents.md`): **0.7.1 Talk** (the drafted `dialogue.*`
-pools in the INI speak on the sim's existing social interactions;
-captions via the radio channel) → 0.7.2 Rows (verbal altercations,
-Wronged outcomes, gossip) → 0.7.3 Fights (real-combat escalation —
-the game animates everything) → 0.8.0 Trade with anyone (the vendor
-census) → 0.9.0 the release gate (scale verified in-game, docs) →
-1.0.0 freeze and ship. The engine is building its side in parallel;
-wait for its handover before starting the first stone.
+`Docs/Design/RealEvents.md` + `Docs/Design/Illness.md`): **0.7.1
+Talk** (the drafted `dialogue.*` pools in the INI speak on the sim's
+existing social interactions; captions via the radio channel) → 0.7.2
+Rows (verbal altercations, Wronged outcomes, gossip) → 0.7.3 Fights
+(real-combat escalation — the game animates everything) → 0.8.0 Trade
+with anyone (the vendor census) → **0.8.1 Illness & Medicine** (a
+`Health` component at the edge — the engine's locked hold-then-recover
+shape, answered as fact-plus-tick; no engine change) → 0.9.0 the
+release gate (scale verified in-game, docs) → 1.0.0 freeze and ship.
+The engine is building its side in parallel; its 0.8.0 Scale handover
+is committed (unpushed, awaiting our in-game verification).
 
 ---
 
@@ -355,6 +358,38 @@ wait for its handover before starting the first stone.
   reaches the F4SE plugin registry (the Nexus release).
 - A `Robot` species (no biological needs, its own market rule) — noted in
   Behaviour.md as the next category to grow.
+
+## The engine's endgame questions — our answers (2026-08-11)
+
+The engine's handoff (Core `Docs/AdapterProject.md`, "The endgame
+plan") asks the adapter for verdicts before its 1.0.0 cuts are final.
+Answers:
+
+- **Disease / health mechanic** — **accepted, as fact-plus-tick.** The
+  engine's locked shape (hold-then-recover) is right; the adapter owns
+  a `Health` component at the edge (co-save additive, like `name`),
+  drives the hold and the recovery in its own tick, and expresses the
+  cost through the existing Fatigue need (sick minds tire faster and
+  rest). No `NeedType::Health`, no new goals — health is not a drive,
+  and every cause (radstorm, bad food, wounds, contagion) is already
+  an edge read. Full design: `Docs/Design/Illness.md`. **No engine
+  change needed.**
+- **Threading the tick** — measure first, thread only if the number
+  says so. FixedStep (0.8.0) is the plan; a TickReport log once a
+  minute in-game decides it. Likely: game thread stays.
+- **C ABI / Papyrus natives** — not before 1.0.0. The adapter is the
+  only consumer; the C++ API is the surface.
+- **Networking / replication** — not needed. Single-player mod.
+- **Multi-agent negotiation / deep planning** — deferred, as proposed.
+- **LCE Studio (GUI)** — post-1.0 is fine; the CLI Doctor and the log
+  are enough for now.
+- **Per-fact legacy decay** — only if the soak data or a mechanic
+  demands it; nothing in the 0.9.0 plan needs fading legacies.
+- **MCM / radio audio** — both stay deferred past 1.0.0 (the INI
+  delivers tuning; captions deliver the radio; audio is an asset
+  question).
+- **Point releases, one at a time** — agreed: 0.8.1, 0.8.2, … each a
+  verifiable tag.
 
 ---
 

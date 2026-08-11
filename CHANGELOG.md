@@ -43,6 +43,8 @@ Settlers have **names**, relationships can go **bad**, and the player
   (row/trade), and the ugly (grief/fight/feud)
 - `a804256` Plan the path to 1.0.0: the staged run, the release gate,
   and the honest cuts
+- `e5c065f` Polish pass: docs caught up to shipped 0.7.0, the CoSave
+  test's future-version gate fixed, warnings cleared
 
 **Verified in-game:** names on actors, slights on closed markets, rival →
 enemy crossings ("is feuding with"), feud gossip through the settlement,
