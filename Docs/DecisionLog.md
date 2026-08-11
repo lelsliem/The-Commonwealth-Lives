@@ -410,3 +410,42 @@ simplification (one rate for three needs); the Social need and the
 game-side bed remain deferred as before. The `(defaults)` markers on the
 tuning lines are a nicety, not a guarantee — the printed values are the
 truth.
+
+## 0016 — The walk layer must not flood: per-market budgets and the arrival cooldown
+
+**Date.** 2026-08-11. The 0.3/s hunger tests (fast demo) exposed two
+floods that the earlier walk fixes (ADR-0015) had left standing.
+
+**The per-market cap (59d0caa).** ADR-0015's cap logging worked too
+well: in the 600-mind revival world every hungry settler decides MoveTo
+every frame, so the per-entity deferral line wrote 5.1M log lines in
+five minutes — and the single global 16-slot cap starved every market
+(two Sanctuary trades, then nothing). The cap is now a **per-market
+budget**: each market's walkers share its own slice (16), counted by
+walking sessions targeting that form, so one settlement's hunger can no
+longer be starved by the Commonwealth-wide flood. The deferral log is
+one aggregate line per pass, rate-limited to every 5 s.
+
+**The arrival cooldown (1237baa).** Even per-market, a fed mind standing
+at its market is always the most-urgent-hungry need at fast decay rates
+(0.3/s vs 0.002/s — 100×), so it re-decides MoveTo every frame, the walk
+layer re-issued the trip it just completed, the arrival fired instantly,
+and the arrival → feed loop ran 18k times in under a minute (the dog was
+fed every frame: `Hunger 1.00 -> 1.00`). Arrival erases the session
+(ADR-0015 — the slot must free), so the walk table alone cannot answer
+"was this mind just here?". A new `m_ArrivedAt` map (entity → target +
+time) records each arrival; the MoveTo branch treats a mind that arrived
+at this target within 10 s as satisfied — no new walk, no arrival, no
+feed, no spam. One feed per cooldown per mind, bounded and quiet.
+
+**Decision.** The walk layer is the adapter's throttle on the game's
+movement flood; it must be bounded per destination, and a completed
+arrival must answer the "just here" question even after its session is
+gone. Both are tuning/state, not new records — no co-save bump.
+
+**Costs and deferrals.** A 10 s cooldown lengthens the meal cycle for a
+mind standing at the market (bounded, predictable); the cooldown is a
+constant, not yet an INI key. The observed 7–10 min meal gaps for
+settlers who wander (Rest/Explore are table slots; the game's sandbox
+moves them) are a separate gap, deferred to a game-side Rest/Explore
+execution stone.

@@ -107,7 +107,7 @@ order; each one leaves the world strictly more alive.
   names none). Four shared meals cross the friend line; meals every
   ~10 s (the fast demo rhythm) bond in under a minute.
 
-### Stone 3 — Households — BUILT + TESTED (2026-08-11; 13/13 suites current), in-game verification pending
+### Stone 3 — Households — BUILT + TESTED (2026-08-11; 13/13 suites current) and VERIFIED in-game
 
 - A household is the deepest bond made concrete (`Households.h`, pure +
   tested): the moment a pair's bond becomes **Spouse** (the +0.8 mutual
@@ -132,10 +132,24 @@ order; each one leaves the world strictly more alive.
   path coordination) — the shared-bench behavior is the observable half,
   and it waits for the companionship intents of a later stone. The same
   *bed* was the rest intent's work — delivered below as the sleep cycle.
-- **Verify:** a married pair trades as one wallet — watch for
-  `households: settler X and settler Y are now a household — one pouch,
-  one bench.` then a trade line reading `(household; N left, M now)`;
-  save, reload, the shared pouch is still one.
+- **Verified in-game 2026-08-11:** the spouse bond emerged organically
+  from shared meals — `0x2a8a7` and the Sanctuary keeper `0x50976`
+  went friend → sweetheart → spouse across sessions (each meal warms
+  both directions +0.1). The marriage rode the co-save's v5 bond map
+  (`bonds: 23 bonds restored`), the household reformed silently on
+  restore (ADR-0013), and the family bench fed the spouse for free:
+  `settler 0x2a8a7 is at the family stall at market 0x1d0e2 — fed from
+  the household's meal.` The remaining cosmetic — a `(household; N
+  left, M now)` wallet line when the pair buys elsewhere — is a matter
+  of the pair meeting more.
+- **The meal-cadence gap (observed, deferred):** the sim's Rest and
+  Explore intents are table slots that execute nothing in-game, so the
+  game's sandbox wanders settlers away from the market between meals —
+  a pair shares a meal every 7–10 minutes instead of every ~10 s. A
+  future stone (game-side Rest/Explore execution — a commanded
+  rest/wander that holds settlers near the bench) would collapse the
+  meal cadence and make bonds and marriages form in minutes. This is
+  the missing half of the sleep cycle's in-world presence.
 
 ### Stone 3.5 — The sleep cycle — BUILT + TESTED (2026-08-11, 13/13 suites)
 

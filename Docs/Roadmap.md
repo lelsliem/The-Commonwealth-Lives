@@ -15,17 +15,21 @@ Status
 Current Version : 0.6.0 — in progress (0.5.0 complete and shipped,
                    tag `0.5.0-beta`, release page live)
 
-Current Stage   : Life & Emergent Quests — 0.6.0 Stones 1–3.5 built,
-                   tested, and verified in-game (2026-08-10/11): the
-                   world keeps its books (arrivals, deaths,
-                   departures), bonds (named relationships + co-save
-                   v5), households (one pouch, one bench), and the
-                   sleep cycle (rest restores fatigue/safety/comfort,
-                   so the same pair finally shares repeated meals).
-                   Review pass 2026-08-11 closed the remaining
-                   structural gaps: rest now rescues parked minds, the
-                   walk cap is INI-tunable, and the log tells the truth
-                   about the live rhythm (ADR-0015).
+Current Stage   : Life & Emergent Quests — 0.6.0 Stones 1–3 verified
+                   in-game (2026-08-10/11): the world keeps its books
+                   (arrivals, deaths, departures), bonds (named
+                   relationships + co-save v5 — friends, sweethearts,
+                   and a first marriage observed), households (one
+                   pouch, one bench — the family stall verified
+                   in-game and the marriage survived save/load), and
+                   the sleep cycle (rest restores fatigue/safety/
+                   comfort, so the same pair finally shares repeated
+                   meals). Review + walk-layer pass 2026-08-11 closed
+                   the structural gaps: rest rescues parked minds, the
+                   walk cap is per-market and INI-tunable, the log
+                   tells the truth about the live rhythm, and the
+                   arrival cooldown stops the per-frame feed loop
+                   (ADRs 0015–0016).
 
 Next Milestone  : 0.6.0 complete — gossip, emergent arcs, birth —
                    then the engine's next hand-over (seeds: the Robot
@@ -317,17 +321,19 @@ Goal: settlers are born, live, and die; they make friends and enemies;
 and quests happen because life happens — no scripts. The quest is the
 behaviour, visible in the world and the log.
 
-STATUS: IN PROGRESS — Stones 1, 2, and the walk-layer fix verified
-in-game (2026-08-10/11); Stones 3 and 3.5 built + harness-green
-(13/13, 2026-08-11), in-game verification pending. Review pass
-2026-08-11: rest now restores Fatigue + Safety + Comfort and rescues
-parked (intent-less) minds, the walk cap is INI-tunable
-(`sim.walk.cap`), the log prints every live need rate at launch, and
-arrival ends a walk session so a fed mind can re-walk immediately —
-without that last fix the sleep cycle's payoff was swallowed by the
-walk layer (7 trades, 7 buyers, zero repeats; ADR-0015). The engine
-hand-over (Requests A–C) is in the engine's AdapterProject.md — the
-engine has since shipped stone 08 (RelationshipChangedEvent +
+STATUS: IN PROGRESS — Stones 1, 2, and 3 verified in-game
+(2026-08-10/11); Stone 3.5 (sleep cycle) built + harness-green (13/13),
+the 24h/0.3s-market tests verified the walk-layer fixes in-game, and
+the review pass (ADR-0015) closed the structural gaps. **Stone 3
+VERIFIED in-game 2026-08-11**: the spouse bond emerged from shared
+meals (friend → sweetheart → spouse across sessions), survived
+save/load through the v5 bond map (household reforms silently on
+restore — ADR-0013), and the family bench fed the spouse for free
+(`settler 0x2a8a7 is at the family stall … fed from the household's
+meal`). The 0.3/s + 10x tests also exposed and fixed two walk-layer
+floods (per-market walk cap, arrival cooldown — ADR-0015/0016). The
+engine hand-over (Requests A–C) is in the engine's AdapterProject.md
+— the engine has since shipped stone 08 (RelationshipChangedEvent +
 sim.bond.threshold.*) and stone 09 (Society — Groups & Traits), and
 gained InteractionKind::Death for this stone.
 
@@ -358,15 +364,21 @@ gained InteractionKind::Death for this stone.
     between meals). ADR-0012.
 [x] Stone 3 — Households: couples share a pouch, a stall, a bench, a
     bed; the shared wallet round-trips. **Built + tested 2026-08-11
-    (12/12 at build; 13/13 current)** — the Spouse bond forms a
-    household (`Households.h`, pure): the pouches merge into one shared
-    wallet (split on dissolve), the family bench feeds the keeper's
-    spouse without exchange, PouchOf resolves the wallet on both sides
-    of the bench, and the one-pouch invariant is enforced silently on
-    restore (derived state — no record bump, ADR-0013). The bed and
-    walking-together are deferred (no rest / companionship intents
-    yet). In-game verification pending: a married pair trades as one
-    wallet; save, reload, still one.
+    (12/12 at build; 13/13 current) and VERIFIED in-game** — the
+    Spouse bond forms a household (`Households.h`, pure): the pouches
+    merge into one shared wallet (split on dissolve), the family bench
+    feeds the keeper's spouse without exchange, PouchOf resolves the
+    wallet on both sides of the bench, and the one-pouch invariant is
+    enforced silently on restore (derived state — no record bump,
+    ADR-0013). In-game 2026-08-11: a real marriage emerged from shared
+    meals (0x2a8a7 + keeper 0x50976, sweetheart then spouse across
+    sessions), the spouse rode the co-save's v5 bond map
+    (23 bonds restored), and the family bench fed the spouse for free
+    (`fed from the household's meal`). The bed and walking-together
+    stay deferred; the game-side Rest/Explore execution (the missing
+    half that gates the meal cadence — settlers wander off between
+    meals because those intents are table slots) is a documented gap
+    for a later stone.
 [x] Stone 3.5 — The sleep cycle: a resting mind recovers the needs a
     nap fixes — Fatigue, Safety, Comfort (sim.rest.recovery, default
     0.2/s) — so a fed mind wakes and walks again. **Built + tested
