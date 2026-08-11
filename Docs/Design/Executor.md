@@ -1,12 +1,13 @@
 # Intent Executor — "The Farmer Walks"
 
 **Stone:** adapter 0.3 (after translation, verified in-game)
-**Status:** Implemented — the tick is **verified in-game**: per-hook fire
-counters proved two of ProcessVMTick's call sites fire once per frame
-(12,600+ frames), intents log cleanly (9 settlers at Sanctuary logged
-`decides Explore`), and the refusal fix for targetless intents is tested
-(adapter tests 4/4). One open item remains: the walking call (flagged
-below).
+**Status:** ✅ **VERIFIED in-game 2026-08-10** — the tick hooks fire
+once per frame (per-hook fire counters, 12,600+ frames), intents log
+cleanly (9 settlers at Sanctuary logged `decides Explore`), the
+refusal fix for targetless intents is tested (adapter tests 4/4), and
+**the walking call shipped** — see Walking.md (the farmer walks to
+market via the command-mode travel package, pinned and byte-verified;
+this doc predates that stone and its "open item" below is historical).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026
 (free functions over static classes), Law 001 (simple things; compose the
 complex). The contract's guarantee this stone honors: **an intent is a
@@ -109,15 +110,15 @@ The game already knows how to walk NPCs — the adapter invokes it through
 form's `GetPosition()` — resolved through the Translator, never from the
 core.
 
-The honest open item: the game's walking call, `AIProcess::CreateMovementPlanner`
-(the call the game uses to walk settlers to workshop jobs), is **not
-wrapped in CommonLibF4 and has no address-library ID** — the FO4
-community declares it per runtime. Its 1.11.221 RVA is the one value this
-stone could not verify from the clone or the database, so the seam ships
-refusing (intent dropped, sim re-decides — never a teleport) and logs a
-clear `WalkTo — movement planner pending verification` line. When the RVA
-is confirmed in-game, one constant in `src/Movement.cpp` completes the
-farmer's road.
+*Historical note (written before the walking stone):* the original
+candidate was `AIProcess::CreateMovementPlanner` (not wrapped in
+CommonLibF4, no address-library ID — the FO4 community declares it per
+runtime), so the seam first shipped refusing (intent dropped, sim
+re-decides — never a teleport). The walking stone then replaced it with
+the game's real move-here, `Actor::InitiateCommandModeTravelPackage`,
+pinned to 1.11.221 and byte-verified in-game — the farmer walks. See
+Walking.md for the full story, including the wrong-pin lesson and the
+corrupt-save crash attribution.
 
 Logging discipline: intents are logged when they **change**, not every
 frame; a per-settler log line like
@@ -160,7 +161,7 @@ tests/                — plan-building suites (4/4 green)
 | Where | Proves |
 |-------|--------|
 | Adapter tests (on every build) | **Implemented — `PlanBuilderTest`** (4/4 suites green): given registry intents + injected loaded/available answers, produces the right plan and the right refusals (unloaded actor, unloaded target, busy actor, and the targetless rule — an intent without a target is never refused for one) — pure, no game required. |
-| In-game (author) | **Verified 2026-08-10:** per-hook fire counters proved ProcessVMTick sites `[0]`/`[1]` fire once per frame (12,600+ frames); 9 settlers at Sanctuary logged clean `decides Explore (0.5x)` lines within 88ms of the world waking. Remaining: a `MoveTo` executes — a settler walks. The farmer's road. |
+| In-game (author) | **Verified 2026-08-10:** per-hook fire counters proved ProcessVMTick sites `[0]`/`[1]` fire once per frame (12,600+ frames); 9 settlers at Sanctuary logged clean `decides Explore (0.5x)` lines within 88ms of the world waking; and the farmer's road closed — a `MoveTo` executes and the settler walks to market (Walking.md). |
 
 ## The four questions
 
@@ -189,8 +190,8 @@ tests/                — plan-building suites (4/4 green)
 3. **MoveTo: real walking, never teleport** — the author's call. The
    engine (core) creates nothing: it only hands the adapter
    `Intent{MoveTo, target}`; the walking is the game's own machinery,
-   invoked by the adapter. The one open item is the movement-planner RVA
-   for 1.11.221, flagged above.
+   invoked by the adapter via `Movement::WalkTo`
+   (`InitiateCommandModeTravelPackage`, verified in-game — Walking.md).
 4. **One action end-to-end this stone** — `MoveTo` implemented; the other
    four actions get table slots and log lines. The loop is the proof.
 5. **Real-time delta for now** — time-scale becomes a tuning input later.

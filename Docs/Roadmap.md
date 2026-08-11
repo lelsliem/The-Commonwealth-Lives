@@ -12,9 +12,10 @@ Project Roadmap
 
 Status
 
-Current Version : 0.7.0 — complete, verified in-game, and ready to
-                   ship (tag + release pending; 0.6.0 shipped as tag
-                   `0.6.0` 2026-08-11, 0.5.0 as `0.5.0-beta`)
+Current Version : 0.7.0 — complete, verified in-game, and shipped
+                   (tag `0.7.0`, release live 2026-08-11; 0.6.0
+                   shipped as tag `0.6.0` 2026-08-11, 0.5.0 as
+                   `0.5.0-beta`)
 
 Current Stage   : Identity & the Player Window — every 0.7.0 stone
                    built, 19/19 harness suites green, and verified
@@ -473,7 +474,8 @@ happening and tunes the world in-game. Drafted 2026-08-11
 (Docs/Design/Life.md, "Beyond 0.6.0").
 
 STATUS: COMPLETE ✅ — every stone built, 19/19 harness suites green,
-verified in-game 2026-08-11, and ready to ship as tag `0.7.0`.
+verified in-game 2026-08-11, and shipped as tag `0.7.0` (release
+live 2026-08-11).
 Design: Docs/Design/Identity.md. The verification legs: names live
 on the actors (the base-form read fix — the reference full-name
 lookup is empty for most actors, so Mama Murphy was being renamed

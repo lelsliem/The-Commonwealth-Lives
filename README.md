@@ -22,8 +22,10 @@ survives save/load.
 ## Roadmap
 
 Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
-through **0.7.0** is in and verified in-game (2026-08-11); **0.8.0**
-(settler agency — hands in the world) is the next milestone:
+through **0.7.0** is in and verified in-game (2026-08-11). The staged run
+to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.7.1 Talk →
+0.7.2 Rows → 0.7.3 Fights → 0.8.0 Trade with anyone → 0.9.0 the release
+gate → 1.0.0 freeze and ship. The milestone stones so far:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -69,8 +71,9 @@ through **0.7.0** is in and verified in-game (2026-08-11); **0.8.0**
   parents' memories of the people). Record **v6**.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
-releases published: `0.5.0-beta` and **`0.6.0`** (2026-08-11, notes in
-[RELEASE_NOTES.md](RELEASE_NOTES.md)). Nexus comes later.
+releases published: `0.5.0-beta`, **`0.6.0`**, and **`0.7.0`**
+(2026-08-11, notes in [RELEASE_NOTES.md](RELEASE_NOTES.md)). Nexus
+comes later.
 
 ## What this is
 

@@ -33,11 +33,21 @@ Settlers have **names**, relationships can go **bad**, and the player
   day pass
 - `a89b562` Docs: 0.7.0 is complete and verified in-game — every doc
   flipped
+- `f69379a` Release materials for 0.7.0: full changelog and the
+  copy-paste release description
+- `9027e3c` Plan 0.8.0 Real Events: trade with anyone who sells,
+  conversations, and altercations
+- `f2335c0` RealEvents plan: simple one-liner dialogue with the author's
+  five-line escalation ramp
+- `908ca0b` Draft the dialogue pools: the good (greet/gossip), the bad
+  (row/trade), and the ugly (grief/fight/feud)
+- `a804256` Plan the path to 1.0.0: the staged run, the release gate,
+  and the honest cuts
 
 **Verified in-game:** names on actors, slights on closed markets, rival →
 enemy crossings ("is feuding with"), feud gossip through the settlement,
 mediation by a well-liked neighbor, HUD news + radio captions, co-save v6
-round-trip.
+round-trip. **Shipped** as tag `0.7.0` (release live 2026-08-11).
 
 ---
 

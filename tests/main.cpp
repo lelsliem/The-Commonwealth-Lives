@@ -1036,7 +1036,12 @@ namespace TLC::Tests
         {
             TLC::Codec::Writer writer;
 
-            writer.U32(6);   // newer than this build — refuse, never half-apply
+            // A version one past this build — refuse, never half-apply.
+            // (Self-maintaining: when kRecordVersion bumps, this stays a
+            // genuinely future version instead of silently matching the
+            // current one, which is what happened when 6 caught up to the
+            // original hardcoded 6.)
+            writer.U32(TLC::CoSave::kRecordVersion + 1);
             writer.U32(0);
             writer.U32(0);
 
@@ -2529,7 +2534,7 @@ namespace TLC::Tests
             auto needs = SeededNeeds(Species::Human);
 
             // Drain every need a nap restores: 0.2/s over 5 s.
-            RestRecovery(needs, 0.2f, -5.0f);
+            (void)RestRecovery(needs, 0.2f, -5.0f);
 
             const auto find = [&needs](LCE::Simulation::NeedType a_type)
             {
@@ -2643,7 +2648,7 @@ namespace TLC::Tests
 
             // The sleep cycle: rest recovers fatigue, and the next
             // Update decides from the rested mind.
-            RestRecovery(*needs, 0.2f, 5.0f);   // a full nap
+            (void)RestRecovery(*needs, 0.2f, 5.0f);   // a full nap
 
             Update(registry, 1.0);
 
@@ -2720,7 +2725,7 @@ namespace TLC::Tests
 
             // The recovery pass (reads needs, not intents) sees the
             // most-urgent Safety as rest and recovers it — a nap.
-            RestRecovery(*needs, 0.2f, 6.0f);
+            (void)RestRecovery(*needs, 0.2f, 6.0f);
 
             // The next Update decides again — the mind is un-parked.
             Update(registry, 1.0);

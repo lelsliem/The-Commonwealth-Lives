@@ -47,11 +47,11 @@ types cross them, so they are testable without the game (CoSaveTest).
 - **Type / UID:** `'LCEW'` (0x4C434557) — the UID is a placeholder for
   the F4SE-assigned one (the author-handle TODO in `xmake.lua` is the
   same open item).
-- **Version:** `kRecordVersion = 4`, the adapter's schema version. Bumped
+- **Version:** `kRecordVersion = 6`, the adapter's schema version. Bumped
   only on a breaking change to the record *format* (the header, a
   trailing section, or a component payload); old versions are migrated
   forward, never dropped.
-- **Layout (v4), all little-endian:**
+- **Layout (v6), all little-endian:**
 
   ```
   u32 recordVersion
@@ -74,6 +74,16 @@ types cross them, so they are testable without the game (CoSaveTest).
   per stall:                       each market's stall, in form ids —
       u32 marketFormId             stable across sessions, unlike the
       u32 keeperFormId             session-local entity ids
+  u32 bondCount                  ← v5 (the bonds stone): who feels how
+  per bond:                       about whom, in form ids (entity ids
+      u32 formA, formB            are session-local) — the kind ordinal
+      u32 kind                    (append-only, never reorder) and the
+      u64 sinceDay                world day the bond formed
+  u32 legacyCount                ← v6 (the identity stone): the
+  per legacy:                     registry-level legacy store — the
+      u32 formId                  dead's stories, which the names
+      u32 nameLength, name bytes  stone keys by name. Permanent until
+      f32 value                   the world forgets it.
   ```
 
   Decode reads `rngState` only when the record version is ≥ 2; a v1
@@ -82,7 +92,9 @@ types cross them, so they are testable without the game (CoSaveTest).
   honest). The stall section is read only when the record version is ≥ 3;
   older records end after the entities, so a restored market's stall
   re-derives on the first arrival (a safe default, like a missing
-  component).
+  component). The bond section is read only when the record version is
+  ≥ 5, the legacy section only when ≥ 6 — each older record simply
+  restores without that section, and the world re-derives it.
 
 - **Stable names** (chosen once, never renamed — a rename is a schema
   change, migrate instead):
@@ -97,6 +109,11 @@ types cross them, so they are testable without the game (CoSaveTest).
   | `FormRef` (adapter) | `formref` |
   | `SpeciesTag` (adapter) | `species` |
   | `CapPouch` (adapter) | `cappouch` |
+  | `Name` (adapter) | `name` |
+
+  The `name` component is additive — it never bumps the record version
+  (a new component type is self-describing; an old record simply decodes
+  without it and names are back-filled on restore).
 
 - **Refusal is the contract:** `Decode` returns false — the load is never
   half-applied — when the record version is unsupported, a component name
@@ -184,14 +201,22 @@ The first real changes in the wild were additive — `species` (the
 species/behaviour stone) and `cappouch` (the economy stone) — which is
 why the version never bumped and old saves kept loading: the format
 didn't change, the contents did. The version bumped only when the
-*format* itself changed: v2 (the decay-jitter wiring) added the `Rng`
-state to the header, and v3 (the stall-keepers stone) added the stall
-section after the entities. v4 (the world-calendar stone) was the first
-*per-component* format change: memory events gained their world day.
-Pre-v4 memory blobs are migrated at decode — rewritten with `Day = 0`
-("time immemorial"), which is honest for facts saved before the
-calendar existed — so the version-blind component deserializer never
-sees two formats.
+*format* itself changed:
+
+- **v2** (the decay-jitter wiring) added the `Rng` state to the header.
+- **v3** (the stall-keepers stone) added the stall section after the
+  entities.
+- **v4** (the world-calendar stone) was the first *per-component*
+  format change: memory events gained their world day. Pre-v4 memory
+  blobs are migrated at decode — rewritten with `Day = 0`
+  ("time immemorial"), which is honest for facts saved before the
+  calendar existed — so the version-blind component deserializer never
+  sees two formats.
+- **v5** (the bonds stone) added the per-world bond section after the
+  stalls.
+- **v6** (the identity stone) added the registry-level legacy section
+  after the bonds — the dead's stories, which the names stone keys by
+  name.
 
 **Tested:** CoSaveTest crafts a v0 record (no `species`, plus a `legacy`
 component) → decodes, drops `legacy`, restores with the tag absent, the
@@ -199,11 +224,14 @@ caller's default Rng stream untouched, and the stall list empty; a v1
 record (no `Rng` state) → decodes with the default stream standing and
 no stall section; a crafted v3 record with an old-format memory blob →
 decodes with the migrated events reading `Day = 0` and the stall list
-empty; a v5 record → refused; the round-trip record with a `needs`
-name patched to unknown → decodes with exactly that one component
-dropped; the v4 round-trip → the encoded Rng state handed back
-exactly, the (market, keeper) stall pair round-tripping as form ids,
-and a memory's `Day = 42` surviving the trip.
+empty; a record at `kRecordVersion + 1` → refused (a future format is
+not ours to guess — the test is self-maintaining so a version bump
+never silently turns it into the current version); the round-trip
+record with a `needs` name patched to unknown → decodes with exactly
+that one component dropped; the v6 round-trip → the encoded Rng state
+handed back exactly, the (market, keeper) stall pair round-tripping as
+form ids, a memory's `Day = 42` surviving the trip, the bond pair and
+the legacy store round-tripping with them.
 
 ## Files
 
@@ -213,7 +241,7 @@ src/BlobCodec.h   — U8/Raw/Remaining added to the little-endian codec
 src/Adapter.h/.cpp— CaptureWorld, QueueRestore, ApplyRestore; GameLoaded
                     applies the pending restore
 src/main.cpp      — F4SE serialization callbacks (Save/Load/Revert glue)
-tests/main.cpp    — CoSaveTest (6/6 suites green)
+tests/main.cpp    — CoSaveTest (one of the 19/19 harness suites)
 ```
 
 ## Test plan

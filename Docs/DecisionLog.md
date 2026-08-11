@@ -701,8 +701,8 @@ agrees, and a feud begins — no script.
 ### Addendum 1 — The 0.7.0 verification hunt (2026-08-11)
 
 0.7.0 is complete and verified in-game. The hunt surfaced eight real
-finds — six fixes and two structural discoveries — all committed
-locally (push pending):
+finds — six fixes and two structural discoveries — all committed and
+pushed (tag `0.7.0`, release live 2026-08-11):
 
 1. **Names were a no-show on the actors** (`7458cb2` → `09194c0`). The
    sim spoke names in the log, but the workshop view still read
@@ -770,3 +770,32 @@ locally (push pending):
 crossing runs a full mediation pass, so a pair can be mediated twice
 back-to-back (a duplicated `arcs:` line). Harmless — the second pass
 just cools +0.05 more and self-corrects.
+
+## 0020 — 0.7.0 shipped; the staged run to 1.0.0 (2026-08-11)
+
+0.7.0 shipped as tag `0.7.0` (release live 2026-08-11). The next
+decisions were made together with the author, and recorded in
+`Docs/Design/ReleasePlan.md`:
+
+1. **The mod is its own product, not just an engine proof.** It is a
+   *show*: people visibly living. Everything serves the show, hardens
+   the stage, or is cut.
+2. **The path is staged** so each piece lands, tests, and ships
+   in-game before the next: 0.7.1 Talk → 0.7.2 Rows → 0.7.3 Fights →
+   0.8.0 Trade with anyone → 0.9.0 the release gate → 1.0.0 freeze and
+   ship.
+3. **The cuts (the honest calls):** the "hands" pillar (build / move
+   items / destroy — riskiest, collides with the workshop ecosystem,
+   and the player wants people, not construction) is out of 1.0.0;
+   pex-driven scripted scenes are out (real combat covers fights with
+   the game's own animations); MCM is out of 1.0.0 (the INI already
+   delivers every knob; the page is author-asset work); audio radio is
+   out (captions work; voices need assets); visible child actors are
+   out (sim-only children stay).
+4. **The only hard gate is scale** (0.9.0): a normal save with hundreds
+   of settlers must tick inside a frame budget, verified in-game.
+5. **The dialogue pools** were drafted in the author's tone (the good —
+   greet/gossip, the bad — row/trade, the ugly — grief/fight/feud) and
+   committed to the INI (`dialogue.*`), one-liners only; the row pool
+   is the author's five-line verbal→physical ramp. The keys parse and
+   sit unused until 0.7.1 reads them.
