@@ -36,6 +36,31 @@ co-saved, world-persistent) also outclasses the cosmetic renamers.
 | **Old World Radio** (9048), **Galaxy News Radio** (16339) | Music/DJ radio stations | **Ambience.** Our radio is a caption channel for sim news; content stations coexist. |
 | **Companions also need to eat and sleep** (55908), **Survive the Wasteland** (10997), **Simple Survival** | Player/companion needs | **Proof of demand** for needs-driven life, but player-facing. We're the only one giving *settlers* needs. |
 
+## Release-page companions — the final list (2026-08-11)
+
+Recommendations for the release page (all suggestions — link + credit,
+no permission needed; the player downloads from Nexus, nothing is
+bundled):
+
+- **Sim Settlements / SS2** (21872) — the building sim; we're the mind
+  sim. Coexist, never compete.
+- **Settler & Companion Dialogue Overhaul** (41785) — 2,300 voiced
+  settler lines; the future audio path for speech. (Author has used it;
+  sits in the mods folder.)
+- **Barter – Vendor & Economy Overhaul** (72654) — depth for 0.8.0
+  vendor trades. **Its listed Skyrim requirement (MXPF, Skyrim
+  68617) is a patcher tool, not a game dependency** — install the
+  Main File ESP, ignore MXPF unless re-running the patcher yourself.
+- **Settler Sandbox Expansion** (20442) — idle sandbox life. Workshop
+  Framework (35004, Kinggath) is the standard base if listed — have it
+  anyway, SS2 needs it too.
+- **NPCs Travel** (16987) — road life for the 0.8.0 provisioners.
+- **Pet And Talk To Cats** (98576) — placeable cats, pet/talk; ambience
+  for our cat species (owned → named, fed at market). Player-facing;
+  no sim impact.
+- **We Have Names** (74287) — NOT listed. We name better (runtime,
+  sticky, co-saved, species-aware); we do it ourselves.
+
 ## What this means for the plan
 
 1. **Keep the core ours, and say so.** The release story writes itself:
