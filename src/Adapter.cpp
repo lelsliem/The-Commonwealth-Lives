@@ -1863,6 +1863,36 @@ namespace TLC
 
                 // A generic base ("Settler", "Dog"): write the sim's
                 // name once — an actor already showing it is left alone.
+                // An animal whose mind still holds the raw species word
+                // (a kept game name from before the naming rule) or a
+                // stale generated name converges to the rule: owned → a
+                // real name from the pool; a stray → nameless, its
+                // stamp dropped.
+                if (species == Species::Animal
+                    && TLC::Names::IsGenericName(
+                        name->Full, Species::Animal))
+                {
+                    if (actor->GetOwner() != nullptr)
+                    {
+                        m_Registry.GetComponent<Name>(entity)->Full =
+                            TLC::Names::GenerateUniqueAnimal(
+                                m_UsedNames, entity, m_Names);
+                    }
+                    else
+                    {
+                        m_Registry.RemoveComponent<Name>(entity);
+
+                        if (actor->extraList->HasType(
+                                RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                        {
+                            actor->extraList->RemoveExtra(
+                                RE::EXTRA_DATA_TYPE::kTextDisplayData);
+                        }
+
+                        return;
+                    }
+                }
+
                 // A provisioner from before the role-naming landed holds
                 // the bare role; upgrade it to "Provisioner Hank" once.
                 if (species == Species::Human
