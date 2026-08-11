@@ -77,25 +77,78 @@ namespace TLC::Names
 
     inline NamePool DefaultPool()
     {
+        // The author's curated Commonwealth, from Docs/name.md: the
+        // canon's characters keep their game names through the
+        // game-name-first rule, so these are only for the nameless. The
+        // tail of each list is the author's family first names — kept
+        // as a quiet easter egg, never reordered.
         static const NamePool kPool{
-            // Male firsts
-            { "Cole", "Titus", "Wes", "Sal", "Otis", "Bram",
-              "Rook", "Tommy", "Hank", "Lester", "Cyrus", "Gus",
-              "Deke", "Milo", "Rafe", "Zeke" },
-            // Female firsts
-            { "Vera", "Mara", "June", "Dot", "Petra", "Lila",
-              "Nessa", "Ida", "Greta", "Poppy", "Mae", "Willa",
-              "Sable", "Fern", "Corrin", "Ada" },
-            // Animal firsts — a separate pool: dogs, brahmin, cats and
-            // the rest of the Commonwealth's companions get their own
-            // kind of name, not a human one.
-            { "Rex", "Bessie", "Bandit", "Daisy", "Mutt", "Ruff",
-              "Patch", "Sadie", "Bruiser", "Fern", "Biscuit", "Scout",
-              "Mabel", "Tater", "Widget", "Bones" },
-            // Lasts
-            { "Hart", "Wells", "Price", "Kade", "Marsh", "Ortiz",
-              "Slater", "Vance", "Bishop", "Crane", "Dale", "Fitch",
-              "Hawke", "Grey", "Nash", "Pratt", "Quinn", "Sutton" },
+            // Male firsts (82)
+            { "Aiden", "Alexander", "Asher", "Benjamin", "Caleb",
+              "Daniel", "Dylan", "Elias", "Elijah", "Ethan", "Ezra",
+              "Gabriel", "Grayson", "Henry", "Hudson", "Isaac",
+              "Jack", "Jacob", "James", "Joseph", "Julian", "Leo",
+              "Levi", "Liam", "Logan", "Luke", "Mason", "Michael",
+              "Miles", "Nathan", "Noah", "Oliver", "Owen", "Samuel",
+              "Sebastian", "Theodore", "Thomas", "William", "Wyatt",
+              "Zachary", "Zane", "Archer", "Atlas", "Beckett",
+              "Callum", "Colton", "Declan", "Enzo", "Finn",
+              "Holden", "Jasper", "Jonah", "Landon", "Luca",
+              "Maddox", "Micah", "Nico", "Parker", "Reid", "Rowan",
+              "Sawyer", "Silas", "Theo", "Tucker", "Walker",
+              "Weston", "Milo", "Kai", "Ronan", "Ellis", "Flynn",
+              // The family names — the tail, kept as-is.
+              "Corey", "Leslie", "Frederick", "Amos", "Tyler",
+              "Steven", "Harrison", "Damien", "Kassius", "Sebastien",
+              "Shea" },
+            // Female firsts (78)
+            { "Olivia", "Amelia", "Isla", "Ava", "Ivy", "Freya",
+              "Lily", "Florence", "Mia", "Willow", "Rosie",
+              "Sophia", "Isabella", "Grace", "Daisy", "Sienna",
+              "Poppy", "Elsie", "Emily", "Ella", "Evelyn", "Phoebe",
+              "Sofia", "Evie", "Charlotte", "Harper", "Millie",
+              "Matilda", "Maya", "Sophie", "Alice", "Emilia",
+              "Isabelle", "Ruby", "Luna", "Maisie", "Aria",
+              "Penelope", "Mila", "Bonnie", "Eva", "Hallie",
+              "Eliza", "Ada", "Violet", "Esme", "Arabella",
+              "Imogen", "Delilah", "Lottie", "Chloe", "Thea",
+              "Layla", "Eleanor", "Aurora", "Margot", "Mabel",
+              "Elizabeth", "Emma", "Scarlett", "Harriet", "Lola",
+              "Nancy", "Rose", "Zara", "Iris", "Robyn", "Molly",
+              "Olive", "Ellie", "Beatrice", "Sara",
+              // The family names — the tail, kept as-is.
+              "Áine", "Rosalee", "Debbie", "Pheonix", "Teresa",
+              "Rita" },
+            // Animal firsts (54) — a separate pool: dogs, brahmin, cats
+            // and the rest of the Commonwealth's companions get their
+            // own kind of name, not a human one. Only owned animals are
+            // named; a stray stays nameless.
+            { "Rex", "Bandit", "Daisy", "Sadie", "Biscuit", "Scout",
+              "Bear", "Benji", "Bentley", "Buddy", "Charlie",
+              "Chewie", "Coco", "Duke", "Echo", "Gizmo", "Gracie",
+              "Gus", "Hank", "Harley", "Honey", "Hooch", "Jack",
+              "Jasper", "Jax", "Jet", "Juno", "Koda", "Lucky",
+              "Maggie", "Max", "Milo", "Misty", "Mocha", "Nala",
+              "Nellie", "Patch", "Pebbles", "Penny", "Pepper",
+              "Rocco", "Rocky", "Rusty", "Sam", "Scrappy", "Shadow",
+              "Simba", "Socks", "Sparky", "Tank", "Toby", "Wally",
+              // The family names — the tail, kept as-is.
+              "Fluffy", "Winston" },
+            // Lasts (75) — the Commonwealth's common families.
+            { "Smith", "Johnson", "Williams", "Brown", "Jones",
+              "Garcia", "Miller", "Davis", "Rodriguez", "Martinez",
+              "Hernandez", "Lopez", "Wilson", "Anderson", "Thomas",
+              "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez",
+              "Thompson", "White", "Harris", "Sanchez", "Clark",
+              "Lewis", "Robinson", "Walker", "Young", "Allen",
+              "King", "Wright", "Scott", "Torres", "Hill", "Green",
+              "Adams", "Baker", "Hall", "Rivera", "Campbell",
+              "Mitchell", "Carter", "Roberts", "Turner", "Parker",
+              "Edwards", "Collins", "Stewart", "Morris", "Murphy",
+              "Cook", "Rogers", "Morgan", "Cooper", "Bailey",
+              "Reed", "Kelly", "Howard", "Ward", "Brooks", "Wood",
+              "James", "Bennett", "Gray", "Price", "Wells", "Hart",
+              "Ford", "Cole", "Burns", "Stone", "Fox", "Rose" },
         };
 
         return kPool;

@@ -1212,6 +1212,22 @@ namespace TLC
                 m_UsedNames.insert(backfilled);
             });
 
+        // The name's visible half after a restore: every mind whose
+        // actor is loaded gets its name written onto the actor. The
+        // co-save is the truth — an actor's extra data may predate the
+        // naming feature, so re-apply here (and again as actors load;
+        // SetOverrideName is idempotent). Game-named NPCs never have a
+        // mind Name that wasn't generated, so they are never touched.
+        m_Registry.ForEachWithComponent<FormRef>(
+            [this](LCE::Simulation::EntityId a_entity, const FormRef& a_ref)
+            {
+                if (const auto name =
+                        m_Registry.GetComponent<Name>(a_entity))
+                {
+                    ApplyActorName(a_ref.FormId, name->Full);
+                }
+            });
+
         // The market was saved with the world (it owns a FormRef); now
         // that the world is back, every mind must remember where to trade
         // again. The seed is a fading memory event (weight 1.0, forgotten
@@ -1384,6 +1400,12 @@ namespace TLC
                 fullName = TLC::Names::GenerateUnique(
                     m_UsedNames, id, m_Names, gender);
             }
+
+            // The name's visible half: write it onto the actor's extra
+            // data so the game shows it — the pip-boy, the hover, the
+            // workshop. Only for a name the sim generated here; a
+            // game-named NPC (Sturges) is never touched.
+            ApplyActorName(formId, fullName);
         }
         else
         {
@@ -1747,6 +1769,62 @@ namespace TLC
         }
 
         return FormatHex8(a_formId);
+    }
+
+    void Adapter::ApplyActorName(
+        std::uint32_t a_formId, const std::string& a_name) const
+    {
+        if (a_name.empty())
+        {
+            return;
+        }
+
+        auto* actor = RE::TESForm::GetFormByID<RE::Actor>(a_formId);
+
+        if (actor == nullptr || actor->extraList == nullptr)
+        {
+            // Not loaded (a restored world's actors stream in slowly) —
+            // the restore pass re-applies names as actors load, and the
+            // actor's own extra data persists it once written.
+            return;
+        }
+
+        actor->extraList->SetOverrideName(a_name.c_str());
+    }
+
+    void Adapter::ApplyLoadedActorNames()
+    {
+        ForEachLoadedActor(
+            [this](const RE::Actor* a_actor)
+            {
+                const auto formId = a_actor->GetFormID();
+                const auto entity = m_Translator.EntityFor(formId);
+
+                if (!entity.IsValid())
+                {
+                    return;
+                }
+
+                const auto name = m_Registry.GetComponent<Name>(entity);
+
+                if (name == nullptr || name->Full.empty())
+                {
+                    return;
+                }
+
+                auto* actor = const_cast<RE::Actor*>(a_actor);
+
+                // Write once: an actor already carrying a display name
+                // (ours, or the game's own) is left alone.
+                if (actor->extraList == nullptr
+                    || actor->extraList->HasType(
+                        RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                {
+                    return;
+                }
+
+                actor->extraList->SetOverrideName(name->Full.c_str());
+            });
     }
 
     void Adapter::AssignSettlementGroups()
@@ -2935,6 +3013,12 @@ namespace TLC
             // become minds, deaths and departures leave the book. Runs
             // before the seed so this tick's Update sees consistent state.
             KeepBooks();
+
+            // 0.7.0 Stone 1's visible tail: a restored world's actors
+            // stream in gradually — this names a mind's actor the first
+            // time it appears (idempotent; fresh arrivals were already
+            // named at seed).
+            ApplyLoadedActorNames();
 
             // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
             // event channel is instant; this pass is complete — quiet

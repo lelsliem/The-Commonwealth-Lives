@@ -373,6 +373,24 @@ namespace TLC
         [[nodiscard]] std::string MindLabelForm(std::uint32_t a_formId) const;
         [[nodiscard]] std::string MarketLabel(std::uint32_t a_formId) const;
 
+        // The identity stone's visible half (0.7.0 Stone 1): write a
+        // mind's name onto its actor's extra data (the same mechanism as
+        // the console SetDisplayName), so the name shows in-game — the
+        // pip-boy, the hover, the workshop — and persists in the save
+        // with the actor. Only ever called with a name the sim itself
+        // generated; a game-named NPC is never renamed (Sturges stays
+        // Sturges). No-op when the actor isn't loaded.
+        void ApplyActorName(
+            std::uint32_t a_formId, const std::string& a_name) const;
+
+        // The per-second tail of the same stone: a restored world's
+        // actors stream in gradually, so the restore-time pass only
+        // names the ones already loaded. This sweep names a loaded
+        // mind's actor the first time it appears — idempotent (an actor
+        // already carrying a display name is skipped), and never touches
+        // an actor with no mind. Runs inside the per-second block.
+        void ApplyLoadedActorNames();
+
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // remembers its market as a Trade-kind event whose Other is the
         // workshop entity — this walks the memories and gives each mind
