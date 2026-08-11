@@ -87,11 +87,19 @@ when two minds interact socially, they say something.
   LCE: settler 0001A4D7 to 0001CA7D: "Market's open again."
   LCE: settler 0001CA7D to 0001A4D7: "Aye. Rads are free."
   ```
-- **Line pools in the INI** — the same pattern as the name pools:
-  `dialogue.greet.*`, `dialogue.gossip.*`, `dialogue.row.*` (and
-  `dialogue.fight.*` for the escalation). The author curates the
-  words, like the names. A seeded picker (like names) per mind, so
-  everyone doesn't say the same line.
+- **Line pools in the INI** — the same pattern as the name pools,
+  comma-separated lists the author curates, a seeded picker (like
+  names) per mind so everyone doesn't say the same line. The starter
+  sets are already drafted in the INI (2026-08-11): `dialogue.greet`
+  (the good — "Mornin'", "Still breathing — good"), `dialogue.gossip`
+  ("Heard about the market?", "There's trouble brewing"),
+  `dialogue.row` (the bad — the author's ramp plus "You looking at
+  me?", "Keep walking"), `dialogue.trade` ("Caps first", "Don't
+  short me"), `dialogue.family` ("Dinner's ready", "Home's where
+  the bench is"), `dialogue.grief` (the ugly — "Who feeds us now?",
+  "The house is too quiet"), `dialogue.fight` ("Come on then!",
+  "Put 'em up"), and `dialogue.feud` ("I'll remember this", "Don't
+  turn your back").
 - **Altercation lines escalate in order.** The author's starter set is
   the verbal→physical ramp in five lines: the complaint ("you ripped
   me off"), the dare ("you do that again, i dare you"), the taunt
