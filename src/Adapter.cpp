@@ -1212,6 +1212,30 @@ namespace TLC
                 m_UsedNames.insert(backfilled);
             });
 
+        // Pet names are unique per world: an old co-save can hold
+        // duplicates (the five "Bandit" dogs from earlier builds). The
+        // first keeps its name; each later one is re-drawn
+        // deterministically against the world's used set — self-heals
+        // once, and every future session dedups as it names. The
+        // corrected names persist on the next save.
+        m_Registry.ForEachWithComponent<Name>(
+            [this](LCE::Simulation::EntityId a_entity, Name& a_name)
+            {
+                const auto tag =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                if (tag == nullptr || tag->Value != Species::Animal)
+                {
+                    return;
+                }
+
+                if (!m_UsedNames.insert(a_name.Full).second)
+                {
+                    a_name.Full = TLC::Names::GenerateUniqueAnimal(
+                        m_UsedNames, a_entity, m_Names);
+                }
+            });
+
         // The name's visible half after a restore: every mind whose
         // actor is loaded gets its name written onto the actor — the
         // same reconcile-aware rule as the per-second sweep (the base
@@ -1396,19 +1420,8 @@ namespace TLC
                     gender = TLC::Names::Gender::Female;
                 }
 
-                // A provisioner keeps the role and gains a first name —
-                // "Provisioner Hank", not a whole new identity.
-                if (TLC::Names::IsProvisioner(gameName))
-                {
-                    fullName = "Provisioner "
-                        + TLC::Names::GenerateFirstName(
-                            id, m_Names, gender);
-                }
-                else
-                {
-                    fullName = TLC::Names::GenerateUnique(
-                        m_UsedNames, id, m_Names, gender);
-                }
+                fullName = TLC::Names::GenerateUnique(
+                    m_UsedNames, id, m_Names, gender);
             }
 
             // The name's visible half: write it onto the actor's extra
@@ -1891,29 +1904,6 @@ namespace TLC
 
                         return;
                     }
-                }
-
-                // A provisioner from before the role-naming landed holds
-                // the bare role; upgrade it to "Provisioner Hank" once.
-                if (species == Species::Human
-                    && TLC::Names::IsProvisioner(baseName)
-                    && name->Full == "Provisioner")
-                {
-                    auto gender = TLC::Names::GenderOf(entity);
-                    const auto sex = actor->GetSex();
-
-                    if (sex == RE::SEX::kMale)
-                    {
-                        gender = TLC::Names::Gender::Male;
-                    }
-                    else if (sex == RE::SEX::kFemale)
-                    {
-                        gender = TLC::Names::Gender::Female;
-                    }
-
-                    m_Registry.GetComponent<Name>(entity)->Full =
-                        "Provisioner " + TLC::Names::GenerateFirstName(
-                            entity, m_Names, gender);
                 }
 
                 if (!actor->extraList->HasType(

@@ -3234,25 +3234,16 @@ namespace TLC::Tests
             return false;
         }
 
-        // Provisioners keep the role and gain a first name.
-        if (!IsGenericName("Provisioner") || !IsProvisioner("Provisioner")
-            || !IsProvisioner("provisioner") || IsProvisioner("Sturges"))
+        // A role label is not a name to give out: "Provisioner" keeps
+        // itself (the caravan NPCs are named by their role, not the
+        // sim), while the workshop placeholders are generic.
+        if (IsGenericName("Provisioner")
+            || !IsGenericName("Settler") || !IsGenericName("Workshop Worker"))
         {
             return false;
         }
 
         const auto pool = DefaultPool();
-
-        // A provisioner's first name: drawn once, deterministic.
-        const auto provisionerFirst = GenerateFirstName(
-            EntityId{ 42 }, pool, Gender::Male);
-
-        if (provisionerFirst.empty()
-            || GenerateFirstName(EntityId{ 42 }, pool, Gender::Male)
-                != provisionerFirst)
-        {
-            return false;
-        }
 
         // The gendered pools are disjoint — the same id draws different
         // names for a man and a woman.

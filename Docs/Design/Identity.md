@@ -153,8 +153,9 @@ at boot, every key surviving reload (that half of the verify sentence
 is proven by the tuning stone). The missing half is the *UI page*,
 which needs the MCM mod (a soft dependency) and a Papyrus surface
 compiled with the Creation Kit. Both are an author-side asset task,
-not a sim task; the INI does the job meanwhile. Real radio *audio*
-stays deferred too — voice needs assets; captions don't.
+not a sim task; the INI does the job meanwhile. Real radio *audio* is
+scheduled after 0.9.0 — voice needs assets; captions don't, so the
+settlement radio speaks in text now.
 
 ## What the adapter asked from the engine — answered
 
@@ -179,7 +180,7 @@ group echo).
       spread the echo, rival and enemy bonds form and the feud arc
       begins on its own
 - [x] Stone 3 — The radio: the news feed (HUD notifications + feed),
-      then settlement-radio captions; audio deferred
+      then settlement-radio captions; audio radio scheduled after 0.9.0
 - [ ] MCM + Settings Manager — **deferred**: the INI already delivers
       the tuning behavior; the UI page needs MCM + the CK (author-side
       asset task)
@@ -188,6 +189,7 @@ group echo).
       `names.first.male/female/animal`, `names.last`, the engine's
       `sim.group.inheritance` + legacy keys — all in the shipped INI
 
-**Deferred, honestly:** MCM's UI page (above), real radio audio
-(assets), the famine arc's scarcity engine (shares Stone 2's
-machinery), 0.8.0's agency pillar (hands in the world).
+**Deferred, honestly:** MCM's UI page (above), the radio's real audio
+(after 0.9.0 — voice needs assets), the famine arc's scarcity engine
+(shares Stone 2's machinery), 0.8.0's agency pillar (hands in the
+world).
