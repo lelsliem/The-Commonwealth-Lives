@@ -1003,6 +1003,17 @@ namespace TLC
         // which is honest: that world never had a saved stream.)
         m_Rng.SetState(m_PendingRngState);
 
+        // The arcs' day gates are session state — a restore must not
+        // re-fire today's birth or mediation. The max sentinel says
+        // "never ran", which is exactly wrong after a reload: the first
+        // tick would birth a child and re-mediate every feud even
+        // though the day hasn't turned (the 2026-08-11 restore-birth:
+        // a child 1 s after every load). Seeded to today — the world
+        // has already had its day's chances; tomorrow turns the gates
+        // again.
+        m_LastMediationDay = CurrentDay();
+        m_LastBirthDay = CurrentDay();
+
         // Rebuild the edge's memory: which form is which entity, from the
         // restored FormRef components. The translator is adapter state,
         // not core state — it never rides inside the snapshot.

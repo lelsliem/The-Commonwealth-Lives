@@ -558,3 +558,16 @@ The wander is tunable: `sim.wander.cooldown` (seconds between
 commands, default 30) and `sim.wander.radius` (game units, default
 4000) replace the constants, matching the project's every-number-is-a-
 key rule.
+
+**Addendum 4 — the restore-birth (same day).** The first in-game run
+of the truth items showed a birth one second after every load: the
+arcs' day gates (`m_LastBirthDay` / `m_LastMediationDay`) are session
+state initialized to the max sentinel ("never ran"), so the first
+tick after a restore always fired today's birth and mediation — a
+reload was treated as a new day. On restore the gates are now seeded
+to `CurrentDay()`: the world has already had its day's chances, and
+tomorrow turns them again. The same session also showed why the
+children wake-line was absent — the loaded save predated the births
+(Capture iterates all live registry slots, formless children
+included — verified in the engine's `EntityRegistry::Capture`), so
+the line will appear once a save is made after a birth.
