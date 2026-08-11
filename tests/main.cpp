@@ -11,6 +11,7 @@
 #include "Bonds.h"
 #include "CoSave.h"
 #include "Components.h"
+#include "Dialogue.h"
 #include "Executor.h"
 #include "Gossip.h"
 #include "Households.h"
@@ -66,6 +67,7 @@ namespace TLC::Tests
     bool ArcsTest();
     bool BirthTest();
     bool NamesTest();
+    bool DialogueTest();
     bool SocietyTest();
     bool CoSaveV6Test();
 }
@@ -114,6 +116,7 @@ int main()
     Run("ArcsTest", TLC::Tests::ArcsTest);
     Run("BirthTest", TLC::Tests::BirthTest);
     Run("NamesTest", TLC::Tests::NamesTest);
+    Run("DialogueTest", TLC::Tests::DialogueTest);
     Run("SocietyTest", TLC::Tests::SocietyTest);
     Run("CoSaveV6Test", TLC::Tests::CoSaveV6Test);
 
@@ -3394,6 +3397,108 @@ namespace TLC::Tests
         feed.Add("fourth");   // pushes out "first"
 
         if (feed.Lines.size() != 3 || feed.NextLine() != "second")
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool DialogueTest()
+    {
+        using namespace TLC::Dialogue;
+
+        const auto pool = DefaultPool();
+
+        // Every pool is populated — the author's starter sets are all
+        // non-empty, so a mind always has something to say.
+        if (pool.Greet.empty() || pool.Gossip.empty() || pool.Row.empty()
+            || pool.Trade.empty() || pool.Family.empty()
+            || pool.Grief.empty() || pool.Fight.empty()
+            || pool.Feud.empty())
+        {
+            return false;
+        }
+
+        // The author's five-line row ramp is the pool's core: the
+        // complaint, the dare, the taunt, the break point, and the
+        // escalation, in order.
+        const auto& row = pool.Row;
+
+        if (row.size() < 5 || row[0] != "You ripped me off"
+            || row[1] != "You do that again, I dare you"
+            || row[2] != "Go on, one more time"
+            || row[3] != "I've had it with you"
+            || row[4] != "Want some? Let's go")
+        {
+            return false;
+        }
+
+        // Determinism: the same mind, the same day, the same pool — the
+        // same line, every time.
+        const auto id = EntityId{ 42 };
+        const auto line = Pick(pool, Pool::Trade, id, 10);
+
+        if (line.empty() || Pick(pool, Pool::Trade, id, 10) != line)
+        {
+            return false;
+        }
+
+        // A new day changes the line — the world moves on, so a mind
+        // does not say the same thing forever. The day is an input to
+        // the seed (determinism proves it is used); across a week of
+        // days a real pool of many lines cannot hold one line forever
+        // (a 10-line pool across 7 days: a fixed line every day would
+        // need 7 collisions in a row — astronomically unlikely).
+        bool allSame = true;
+
+        for (std::uint64_t day = 11; day < 18; ++day)
+        {
+            if (Pick(pool, Pool::Trade, id, day) != line)
+            {
+                allSame = false;
+                break;
+            }
+        }
+
+        if (allSame)
+        {
+            return false;
+        }
+
+        // Two pools do not pick in lockstep: the same mind, same day,
+        // different categories are salted apart. (With large pools this
+        // is near-certain; the salt guarantees it structurally.)
+        const auto greet = Pick(pool, Pool::Greet, id, 10);
+        const auto gossip = Pick(pool, Pool::Gossip, id, 10);
+        const auto trade = Pick(pool, Pool::Trade, id, 10);
+
+        if (greet == gossip && gossip == trade)
+        {
+            return false;   // all three identical — the salt failed
+        }
+
+        // The INI pools: a provided list replaces its default, a missing
+        // list keeps its default, and a broken (empty) list keeps the
+        // default too — same contract as the names.
+        LCE::Config::Configuration config;
+        config.Set("dialogue.greet", "Mornin', Peaceful day");
+        config.Set("dialogue.row", "");
+
+        const auto fromIni = PoolFrom(config);
+
+        if (fromIni.Greet
+                != std::vector<std::string>{ "Mornin'", "Peaceful day" }
+            || fromIni.Row != pool.Row)
+        {
+            return false;
+        }
+
+        // An empty pool says nothing — silence is a safe default.
+        DialoguePool silent{ pool };
+        silent.Feud.clear();
+
+        if (!Pick(silent, Pool::Feud, id, 10).empty())
         {
             return false;
         }

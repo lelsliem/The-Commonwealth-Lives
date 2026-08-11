@@ -1,8 +1,12 @@
 # Real Events — "Trade With Anyone, Talk, and Fight"
 
-**Milestone:** 0.8.0 (planned after 0.7.0 ships)
-**Status:** PLAN (2026-08-11) — written before any code; the author's
-vision, grounded in the seams the 0.5.0–0.7.0 stones already cut.
+**Milestone:** 0.7.1–0.8.0 (staged — see ReleasePlan.md)
+**Status:** 0.7.1 Talk BUILT (2026-08-11) — `Dialogue.h`, the INI
+pools, `Say` on the trade/family/slight sites, 20/20 suites green,
+in-game verification pending. Pillars 2–3 (rows, fights) and 0.8.0
+(trade with anyone) still PLANNED — design written, no code.
+Written before any code; the author's vision, grounded in the seams
+the 0.5.0–0.7.0 stones already cut.
 **Related:** Trade.md (the stall-keeper), SettlementMarkets.md (per-
 settlement benches), Identity.md (feuds — the conflict source),
 Behaviour.md (species profiles), Life.md (the original sketches).

@@ -11,6 +11,7 @@
 
 #include "Bonds.h"
 #include "CoSave.h"
+#include "Dialogue.h"
 #include "Executor.h"
 #include "Households.h"
 #include "Lifecycle.h"
@@ -588,6 +589,24 @@ namespace TLC
         // family names — overridable in the INI (names.* keys), defaults
         // otherwise. Built once at tuning load, before any world.
         Names::NamePool m_Names;
+
+        // The author's dialogue pools (0.7.1 Talk): one-liners for every
+        // situation life throws at a mind — the good (greet, gossip,
+        // family), the bad (trade, row), the ugly (grief, fight, feud) —
+        // overridable in the INI (dialogue.* keys), defaults otherwise.
+        // Built once at tuning load, like the names.
+        Dialogue::DialoguePool m_Dialogue;
+
+        // Says one line from a pool: picks a line for the mind and day,
+        // logs it as speech, and pushes it to the news feed so the
+        // settlement radio reads it as a caption. Speech is a
+        // presentation layer — the sim decides *when*, this decides
+        // *what*, and silence is a safe default (an empty pool says
+        // nothing).
+        void Say(
+            LCE::Simulation::EntityId a_speaker,
+            LCE::Simulation::EntityId a_listener,
+            Dialogue::Pool a_pool);
 
         // The news feed (0.7.0 Stone 3): the world's paper, capped and
         // rotated — the settlement radio reads it as captions. Session

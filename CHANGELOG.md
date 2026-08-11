@@ -53,6 +53,26 @@ round-trip. **Shipped** as tag `0.7.0` (release live 2026-08-11).
 
 ---
 
+## 0.7.1 — Talk (2026-08-11)
+
+The first Real Events stage: the sim's existing social interactions
+become visible — a mind that trades, eats with its family, or is
+slighted at a shut stall says a line.
+
+- `Dialogue.h` — the author's pools (the good greet/gossip/family, the
+  bad trade/row, the ugly grief/fight/feud), INI overrides
+  (`dialogue.*`), and a seeded picker (per mind and day — the same
+  line all day, a new one tomorrow; two pools never pick in lockstep;
+  the Rng stream untouched).
+- `Say` wired into the paid trade (buyer to keeper), the family meal
+  (spouse to spouse), and the shut-stall slight (the first words of a
+  feud); the line rides the news feed so the settlement radio reads it
+  as a caption.
+- 20/20 harness suites green (DialogueTest added). In-game
+  verification pending.
+
+---
+
 ## 0.6.0 — Life & Emergent Quests (2026-08-11)
 
 Settlers are born, live, and die; they make friends and enemies; quests

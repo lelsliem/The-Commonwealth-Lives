@@ -411,6 +411,11 @@ namespace TLC
         // defaults are the world's fallback, never a broken line.
         m_Names = TLC::Names::PoolFrom(config);
 
+        // The dialogue pools (0.7.1 Talk): the author's one-liners,
+        // overridable per list in the INI (dialogue.* keys), defaults
+        // otherwise — a missing or broken line never breaks the world.
+        m_Dialogue = TLC::Dialogue::PoolFrom(config);
+
         // The feeling rhythm (0.6.0 Stone 2): the core's drift default
         // (0.05/s — half-life ~14 s) was tuned for a fast demo and
         // erases a shared meal's warmth between meals (minutes apart),
@@ -2026,6 +2031,38 @@ namespace TLC
         }
     }
 
+    void Adapter::Say(
+        LCE::Simulation::EntityId a_speaker,
+        LCE::Simulation::EntityId a_listener,
+        Dialogue::Pool a_pool)
+    {
+        // One line, deterministic per mind and day — the same mind says
+        // the same line all day and a different one tomorrow (Pick). An
+        // empty pool says nothing: silence is a safe default.
+        const auto line =
+            Dialogue::Pick(m_Dialogue, a_pool, a_speaker, CurrentDay());
+
+        if (line.empty())
+        {
+            return;
+        }
+
+        const auto speakerForm = m_Translator.FormFor(a_speaker);
+        const auto listenerForm = m_Translator.FormFor(a_listener);
+
+        // The verify channel: the log reads as dialogue — who said what
+        // to whom.
+        REX::INFO(
+            "LCE: {} to {}: \"{}\"",
+            MindLabelForm(speakerForm), MindLabelForm(listenerForm), line);
+
+        // The radio channel: the same feed the settlement radio reads as
+        // on-screen captions, so a conversation line pops while the
+        // player is near. (PushNews would also pop a HUD notification;
+        // speech is quieter — the feed alone is the radio's story.)
+        m_News.Add(MindLabelForm(speakerForm) + ": \"" + line + "\"");
+    }
+
     void Adapter::RadioCaptions()
     {
         if (!m_Settings.NewsEnabled)
@@ -2515,6 +2552,15 @@ namespace TLC
                 MarketLabel(marketFormId), MindLabelForm(formId),
                 slighted ? " and blames the keeper" : "");
 
+            // The first words of a feud (0.7.1 Talk, feeding 0.7.2
+            // Rows): a slighted mind does not just blame silently — it
+            // says something to the keeper. The row pool's early lines
+            // ("You ripped me off") are exactly this moment.
+            if (slighted && keeper.IsValid())
+            {
+                Say(a_entity, keeper, Dialogue::Pool::Row);
+            }
+
             return;
         }
 
@@ -2611,6 +2657,12 @@ namespace TLC
                         paid,
                         paidFromHousehold ? "household; " : "",
                         buyerCaps, sellerCaps);
+
+                    // The market's words (0.7.1 Talk): a paid meal is a
+                    // conversation — the buyer says something to the
+                    // keeper while the caps change hands. Speech rides
+                    // the news feed, so the settlement radio reads it.
+                    Say(a_entity, counterparty, Dialogue::Pool::Trade);
                 }
                 else
                 {
@@ -2651,6 +2703,13 @@ namespace TLC
                             *spouseMemory, *spouseRelationships,
                             a_entity, m_Settings.SaleWarmth);
                     }
+                }
+
+                // The family's words (0.7.1 Talk): a meal at home is the
+                // warmest conversation there is.
+                if (familySpouse.IsValid() && familySpouse != a_entity)
+                {
+                    Say(a_entity, familySpouse, Dialogue::Pool::Family);
                 }
 
                 REX::INFO(

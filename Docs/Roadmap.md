@@ -570,8 +570,16 @@ in-game before the next (Docs/Design/ReleasePlan.md):
 
 STATUS: PLANNED — design docs written, no code.
 
-[ ] 0.7.1 — Talk: the dialogue pools speak on the social interactions
-    the sim already makes; captions via the radio channel
+[x] 0.7.1 — Talk: the dialogue pools speak on the social interactions
+    the sim already makes; captions via the radio channel. **Built
+    2026-08-11** — `Dialogue.h` (the author's pools: the good
+    greet/gossip/family, the bad trade/row, the ugly grief/fight/
+    feud), INI overrides (`dialogue.*`), a seeded picker (per mind
+    and day — the same line all day, a new one tomorrow), `Say`
+    wired into the paid trade, the family meal, and the shut-stall
+    slight (the first words of a feud); speech rides the news feed
+    so the settlement radio reads it. 20/20 harness suites green
+    (DialogueTest). In-game verification pending (needs a session).
 [ ] 0.7.2 — Rows: verbal altercations — `dialogue.row` lines, Wronged
     outcomes, gossip spread
 [ ] 0.7.3 — Fights: physical escalation via real combat (the game's

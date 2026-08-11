@@ -830,3 +830,34 @@ The engine keeps `Decide` vocabulary-free. The design is
 `Docs/Design/Illness.md`; the stone lands as 0.8.1, after Trade with
 anyone (medicine is the trade stone's second good — caps for a cure,
 so a broke settlement suffers honestly).
+
+## 0022 — Speech is a presentation layer (0.7.1 Talk, 2026-08-11)
+
+The first Real Events stage makes the sim's existing social
+interactions *visible*: when a mind trades, eats with its family, or
+is slighted at a shut stall, it says a line. Three decisions:
+
+1. **The pools are INI data, not code** — `Dialogue.h` carries the
+   author's starter one-liners as defaults, overridable per list
+   (`dialogue.*`, comma-separated) with the same contract as the name
+   pools: a missing or broken line keeps the default, never breaks the
+   world. The words are content; the author curates them without a
+   recompile.
+2. **The picker is per mind and per day, seeded — not per utterance.**
+   The same mind says the same line all day (a greeting you can get
+   used to) and a different one tomorrow (the world moves on). Seeded
+   like the names (a splitmix fold with the entity, the day, and a
+   per-category salt) so two pools never pick in lockstep and nothing
+   consumes the Rng stream — the co-save's randomness is untouched.
+3. **The sim decides *when*; this decides *what*; silence is safe.** A
+   pool that is empty (or a list the author deliberately emptied)
+   says nothing — speech never gates a trade or a meal. The line rides
+   the news feed, so the settlement radio reads it as a caption; it
+   does not pop a HUD notification (speech is quieter than news).
+
+Wired in 0.7.1: the paid trade (buyer to keeper, the `trade` pool),
+the family meal (spouse to spouse, the `family` pool), and the
+shut-stall slight (the slighted mind to the keeper, the `row` pool —
+the first words of a feud, feeding 0.7.2 Rows). 20/20 harness suites
+green (DialogueTest pins the pools, the ramp's order, determinism,
+the day input, the salt, the INI contract, and empty-pool silence).
