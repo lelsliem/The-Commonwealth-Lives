@@ -861,3 +861,24 @@ shut-stall slight (the slighted mind to the keeper, the `row` pool —
 the first words of a feud, feeding 0.7.2 Rows). 20/20 harness suites
 green (DialogueTest pins the pools, the ramp's order, determinism,
 the day input, the salt, the INI contract, and empty-pool silence).
+## 0023 — The body is buried; the child is a mind (0.7.1 pre-test, 2026-08-11)
+
+Asked before the 0.7.1 test: *when one dies the body never moves —
+wouldn't it be buried or disappear another way? and a birth child
+never gets spawned — the whole life/death cycle?* Two decisions:
+
+1. **The corpse must not linger forever — planned stone 0.8.2
+   (Burial).** The sim's death path is complete in the books (death
+   fact, grief, legacy) but the game corpse stays in the settlement
+   cell forever (no cell reset). After the mourning window
+   (`sim.death.burialDays`, INI-tunable), the adapter disables the
+   corpse ref and logs `the settlement laid X to rest` (+ a news
+   line). Body state is game state — adapter-owned, no engine change.
+2. **A child is a mind, not a body — the honest cut.** Born children
+   are sim-only by design: no FormRef, no actor, no game presence.
+   Making a child visible requires a Creation Kit child template
+   (race, markers, no-combat) — an author-asset stone, genuinely
+   post-1.0. The visible story is the household (parents walk, eat,
+   trade, grieve; the child is fed, bonded, named, counted at wake).
+   Confirmed as a decision, not an accident (ReleasePlan, life/death
+   visibility).

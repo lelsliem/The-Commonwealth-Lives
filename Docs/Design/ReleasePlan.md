@@ -95,6 +95,29 @@ These are the hard calls. The author can overrule any of them.
   guards/raiders isn't the point), pet-name collisions (unique per
   world), naming generic NPCs the player never owns.
 
+## Life/death visibility — the author's two questions (2026-08-11)
+
+Asked before the 0.7.1 test: *when one dies the body never moves —
+wouldn't it be buried or disappear another way? and a birth child never
+gets spawned — the whole life/death cycle?*
+
+1. **The body must not linger forever.** The sim's death path is
+   complete in the books (death fact, grief, legacy) but the game
+   corpse stays in the settlement cell forever (no cell reset there).
+   **Planned stone:** the burial — after the mourning window
+   (`sim.death.burialDays`), the adapter disables the corpse ref and
+   logs `the settlement laid X to rest` (+ a news line). Body state is
+   game state — the adapter owns it, no engine change. Lands with the
+   life/death polish, before 0.9.0's gate.
+2. **A child is a mind, not a body — honestly.** Born children are
+   sim-only by design: no FormRef, no actor. Making a child visible
+   means a Creation Kit child template (race, markers, no-combat) — an
+   author-asset stone, genuinely post-1.0. The visible story is the
+   household: parents walk, eat, trade, grieve; the child is fed,
+   bonded, named, and counted in the co-save. The sim-only child is
+   the design, not a missing feature — noted so the cut is a decision,
+   not an accident.
+
 ## The staged path to 1.0.0
 
 ```

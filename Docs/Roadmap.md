@@ -596,6 +596,11 @@ STATUS: PLANNED — design docs written, no code.
     stone's second good; untreated sickness can die (the existing
     death path). No engine change — the handoff's one open design
     question answered in the doc
+[ ] 0.8.2 — Burial: after the mourning window (`sim.death.burialDays`),
+    the adapter disables the corpse ref and logs the settlement laid
+    X to rest (+ news) — the body doesn't linger forever (no cell
+    reset in settlement cells). Game state, adapter-owned, no engine
+    change (ReleasePlan: life/death visibility)
 [ ] 0.9.0 — The release gate (hard): performance at scale verified
     in-game (a normal save with hundreds of settlers ticks inside a
     frame budget), the remove-the-DLL trust story documented, player
