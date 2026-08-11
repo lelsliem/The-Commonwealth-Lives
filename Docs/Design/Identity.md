@@ -15,7 +15,10 @@ owned; children carry no barter), the co-save (`CoSave.md` — record
 is additive and never bumps), the engine's decided negative-social
 channels (2026-08-11 — kind and result, never a sign), the engine's
 stone 09 (Society — Groups & Traits: the echo and traits substrate),
-the 0.6.0 close-out (ADR-0018).
+the 0.6.0 close-out (ADR-0018), **0.7.2 Rows** (`RealEvents.md` — the
+feud's verbal scene: rivals and enemies crossing at the same bench
+row, the engine's Wronged channel, gossip spread; the conflict source
+stays the shut stall, ADR-0024).
 
 ---
 

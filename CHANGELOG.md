@@ -83,6 +83,30 @@ slighted at a shut stall says a line.
 
 ---
 
+## 0.7.2 — Rows: the verbal altercation (2026-08-11)
+
+A feud gets a scene: rivals and enemies who cross paths at the same
+bench have words. Each remembers the other wronged them — the engine's
+unprompted-wrong channel (Wronged, −0.25), distinct from the shut-
+stall's executed let-down (−0.1) — the settlement hears the shouting
+(gossip), and a crossing can push a pair over the enemy line the
+instant it lands.
+
+- `src/Rows.h` — the crossing-row logic, pure like Gossip:
+  `Exchange` (Wronged both ways + gossip) and `AlreadyRowedToday` (the
+  once-a-day gate, co-saved so save/load never double-rows).
+- Wired at bench arrivals: an ephemeral per-day attendance book (who
+  walked to each market today, pruned, never co-saved); each arriving
+  mind rows with any rival/enemy already there — two `Say` lines (the
+  row pool) + the `words first` log line, the radio reads the row as
+  a caption.
+- The shut-stall slight keeps its −0.1 channel and its Say, unless
+  the keeper already rowed this arrival (no repeated line).
+- 21/21 harness suites green (RowsTest added). In-game verification
+  pending.
+
+---
+
 ## 0.6.0 — Life & Emergent Quests (2026-08-11)
 
 Settlers are born, live, and die; they make friends and enemies; quests

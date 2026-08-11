@@ -580,8 +580,12 @@ STATUS: PLANNED — design docs written, no code.
     slight (the first words of a feud); speech rides the news feed
     so the settlement radio reads it. 20/20 harness suites green
     (DialogueTest). In-game verification pending (needs a session).
-[ ] 0.7.2 — Rows: verbal altercations — `dialogue.row` lines, Wronged
-    outcomes, gossip spread
+[x] 0.7.2 — Rows: the verbal altercation — rivals and enemies who
+    cross paths at the same bench row: each remembers the other wronged
+    them (engine Wronged, −0.25), the settlement hears the shouting
+    (gossip), and the row can push a pair over the feud line. The
+    crossing is `src/Rows.h` (pure), wired at arrival; the shut-stall
+    slight keeps its −0.1 channel; physical escalation stays 0.7.3
 [ ] 0.7.3 — Fights: physical escalation via real combat (the game's
     own punch/shove anims — no pex needed); feedback into bonds and
     news

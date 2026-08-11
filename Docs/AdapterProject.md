@@ -59,11 +59,12 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.6.0 | Life & Emergent Quests ("The Commonwealth Remembers") | ✅ complete (2026-08-11) — **every stone built (16/16 harness suites), verified in-game, and shipped as tag `0.6.0`. The world keeps its books (a real kill books confirming → died one second apart; the dead never restore, never ghost-walk; fresh games book zero false deaths — ADR-0011). Bonds: the adapter owns an EventBus (Request A, stone 08) subscribed to `RelationshipChangedEvent`; `sim.bond.threshold.*` from the INI; mutual + sticky derivation in `Bonds.h`; co-save v5; the buyer's half of a trade is `Remember({keeper, Social})`; the living drift clock (`sim.drift.rate = 0.0002`) — a real marriage emerged from shared meals and survived save/load (ADR-0012). Households: the Spouse bond forms one (two pouches → one shared wallet, family bench feeds the spouse free, one-pouch enforced on restore, ADR-0013) — the family stall verified in-game. The sleep cycle closed the loop (eat → rest → recover → walk → eat, ADR-0014/0015). Stone 3.75 — Rest/Explore execute in-game as a bounded wander (`Movement::WanderNear`, ADR-0017 addendum 2): settlers mill around instead of freezing at the bench. Stone 4 gossip verified: `643 minds remember settler X is gone`. Stone 5 arcs verified: grief fired exactly once (`arcs: settler 0x50976 grieves for 0x2f2a7 — they seek company.`) — two bugs found and fixed in test (the announce's dead-code form lookup, the family meal not warming couples; ADR-0017 addenda 5–6); the feud's organic appearance waits on 0.7.0's conflict source (nothing makes dispositions negative yet). Stone 6 birth verified: sim-only children born, fed, and `3 sim-only children restored too` across two save/load cycles (restore-birth fix, ADR-0017 addendum 4). Engine hand-over Requests A–C delivered; the engine shipped stone 08 (RelationshipChangedEvent + sim.bond.threshold.*) and stone 09 (Society — Groups & Traits)** |
 | 0.7.0 | Identity & the Player Window ("The Player Listens") | ✅ complete (2026-08-11) — **all three stones built, 19/19 harness suites green (NamesTest, SocietyTest, CoSaveV6Test), verified in-game, and shipped as tag `0.7.0`. Stone 1 names: a `Name` component (additive — record v6 is the legacy section), game names first, gender-split pools + a separate animal pool curated in the INI (`names.first.male/.female/.animal`, `names.last`), owned animals named / strays nameless, back-filled on restore — verified live with the fixes the hunt surfaced: the game name reads from the **base form** (the reference read is empty for most actors and was renaming Mama Murphy/Marcy/Jun), names are **written onto the actors** (SetOverrideName — the workshop view reads "Mara Price"), a per-second sweep names streaming actors and heals stale stamps, the shipped INI synced to the curated pools, pets deduped per world, provisioners keep the bare role. Stone 2 conflict source: the engine's decided channels — a hungry arrival at a closed market reports `ReportOutcome({keeper, Social, Failure})` (−0.1), the temper line (`sim.slight.temper`) decides who blames, settlement `Groups` spread the echo, rival/enemy bonds form and the feud arc begins — **verified end-to-end in-game** after the engine shipped the desperate-hunger gate (`sim.hunger.desperate`, core commit `509a54d`): `is shut … and blames the keeper` → rivals → `is feuding with` → gossip → `arcs: X cooled the feud between …` (127 mediation attempts in the stressed run); two adapter fixes landed during the hunt (the feud headline fires on any crossing into Enemy; the feud is mediated at formation because gossip dies in ~4.5 s at `sim.memory.fade` 0.2 — the once-per-day pass could never find a mediator). Stone 3 the player window: one-line news as throttled HUD notifications (verified on-screen) + the news feed, and a settlement radio (configurable `radio.base.formid`) speaking captions (verified on-screen); audio after 0.9.0. Engine 0.7.0 (Legacy — Bequeath, InheritMemory, the legacy store) wired into the death/birth paths. MCM's UI page honestly deferred (the INI already delivers the tuning; the page needs MCM + the CK)** |
 | 0.7.1 | Talk (the first Real Events stage) | 🚧 built (2026-08-11), in-game verification pending — **`Dialogue.h` (the author's pools: the good greet/gossip/family, the bad trade/row, the ugly grief/fight/feud), INI overrides (`dialogue.*`), a seeded picker (per mind and day — the same line all day, a new one tomorrow), and `Say` wired into the paid trade, the family meal, and the shut-stall slight (the first words of a feud); speech rides the news feed so the settlement radio reads it. 20/20 harness suites green (DialogueTest added). Design: Docs/Design/RealEvents.md + the staged run in Docs/Design/ReleasePlan.md** |
+| 0.7.2 | Rows (the verbal altercation) | 🚧 built (2026-08-11), in-game verification pending — **rivals and enemies who cross paths at the same bench have words (`src/Rows.h`, pure like Gossip): each remembers the other wronged them (engine Wronged, −0.25 — the unprompted-wrong channel, distinct from the shut-stall's −0.1 executed let-down), the settlement hears the shouting (SpreadBond gossip), and the wrongs publish on the bus so a crossing can push the pair over the enemy line the instant it lands. The crossing scan runs at bench arrivals (an ephemeral per-day attendance book, pruned, never co-saved); the once-a-day gate is the Wronged memory (co-saved — save/load never double-rows); the shut-stall slight keeps its own Say unless the keeper already rowed this arrival. Physical escalation (0.7.3) still planned. 21/21 harness suites green (RowsTest added)** |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **20/20 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **21/21 suites green.**
 
 ---
 
@@ -315,15 +316,16 @@ all live). Adapter progress:
 
 0.7.0 is shipped (tag `0.7.0`, release live). The staged run to 1.0.0
 is planned in `Docs/Design/ReleasePlan.md` (and the stones in
-`Docs/Design/RealEvents.md` + `Docs/Design/Illness.md`): **0.7.1
-Talk** (the drafted `dialogue.*` pools in the INI speak on the sim's
-existing social interactions; captions via the radio channel) → 0.7.2
-Rows (verbal altercations, Wronged outcomes, gossip) → 0.7.3 Fights
-(real-combat escalation — the game animates everything) → 0.8.0 Trade
-with anyone (the vendor census) → **0.8.1 Illness & Medicine** (a
-`Health` component at the edge — the engine's locked hold-then-recover
-shape, answered as fact-plus-tick; no engine change) → 0.9.0 the
-release gate (scale verified in-game, docs) → 1.0.0 freeze and ship.
+`Docs/Design/RealEvents.md` + `Docs/Design/Illness.md`): 0.7.1 Talk
+and **0.7.2 Rows** are built (the drafted `dialogue.*` pools speak on
+the sim's social interactions; rivals and enemies crossing at the same
+bench row — Wronged both ways, gossip spread) and await in-game
+verification → 0.7.3 Fights (real-combat escalation — the game
+animates everything) → 0.8.0 Trade with anyone (the vendor census) →
+**0.8.1 Illness & Medicine** (a `Health` component at the edge — the
+engine's locked hold-then-recover shape, answered as fact-plus-tick;
+no engine change) → 0.9.0 the release gate (scale verified in-game,
+docs) → 1.0.0 freeze and ship.
 The engine is building its side in parallel; its 0.8.0 Scale handover
 is committed (unpushed, awaiting our in-game verification).
 

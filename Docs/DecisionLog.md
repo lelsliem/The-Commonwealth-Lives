@@ -882,3 +882,27 @@ never gets spawned — the whole life/death cycle?* Two decisions:
    trade, grieve; the child is fed, bonded, named, counted at wake).
    Confirmed as a decision, not an accident (ReleasePlan, life/death
    visibility).
+## 0024 — A row is a crossing, not a let-down (0.7.2 Rows, 2026-08-11)
+
+The feud's conflict source (0.7.0) feeds a feud; Rows gives it a
+scene. Three decisions:
+
+1. **The row is the engine's Wronged channel; the shut-stall stays
+   Social/Failure.** A shut stall is an executed interaction that went
+   badly (−0.1, verified feud pacing). A row — two rivals or enemies
+   who cross paths — is the *unprompted* wrong (−0.25, full loss), the
+   channel Identity.md named but nothing yet used. The two channels do
+   not mix, so 0.7.0's verified pacing is untouched and the row is a
+   new, harsher event on top.
+2. **Words once a day, gated by the co-saved memory — not ephemeral
+   state.** The once-a-day gate is a Wronged memory of the other
+   stamped today (either direction). It rides the co-save, so a row
+   survives save/load without ever repeating; the crossing's attendance
+   book (who walked to each bench today) is ephemeral and pruned, and
+   the co-save never touches it.
+3. **The crossing is the bench, and the exchange is pure.** The feud's
+   geography is the stall (Identity.md), so the scan runs only at bench
+   arrivals. The bookkeeping lives in `Rows.h` (pure, like Gossip —
+   no game types, tested in the harness); the adapter supplies the
+   words (`Say`) and the log. Physical escalation (a shove, a punch)
+   stays 0.7.3, where the game's own combat animates everything.

@@ -14,6 +14,7 @@
 #include "Birth.h"
 #include "Components.h"
 #include "Gossip.h"
+#include "Rows.h"
 #include "Market.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
@@ -2200,6 +2201,7 @@ namespace TLC
         m_Bonds.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
+        m_MarketAttendance.clear();
         m_LastWander.clear();
         m_RecentDeaths.clear();
         m_GriefAnnounced.clear();
@@ -2440,11 +2442,17 @@ namespace TLC
         LCE::Simulation::EntityId familySpouse{};   // who the family meal warms
         std::uint32_t marketFormId = a_targetFormId;
 
+        // The walk target is a bench when it carries no species tag —
+        // the market itself. (A person target resolves to a merchant or
+        // a remembered trader — a mind, not a place.) The Rows crossing
+        // scan runs only at benches: the feud's geography (Identity.md)
+        // is the stall.
+        const auto targetTag =
+            m_Registry.GetComponent<SpeciesTag>(target);
+        const bool atBench = targetTag == nullptr;
+
         if (species == Species::Human)
         {
-            const auto targetTag =
-                m_Registry.GetComponent<SpeciesTag>(target);
-
             if (targetTag == nullptr)
             {
                 // The bench: resolve the stall-keeper for this market.
@@ -2509,6 +2517,59 @@ namespace TLC
             }
         }
 
+        // The row (0.7.2 Rows): rivals and enemies who cross paths at
+        // the same bench have words — the feud's audible half. The
+        // attendance book is who walked here today (ephemeral, pruned
+        // to the day); the scan finds a feud partner already here, and
+        // Rows::Exchange books the wrong on both sides (engine Wronged,
+        // −0.25 — an unprompted wrong, not the −0.1 executed let-down
+        // of a shut stall), gossips the shouting to the settlement, and
+        // publishes on the bus — so a crossing that pushes the pair
+        // over the enemy line fires OnBondChange the instant it
+        // happens. Words once a day per pair: the memory gate is
+        // co-saved, so save/load never double-rows.
+        if (atBench)
+        {
+            const auto day = CurrentDay();
+            auto& attendees = m_MarketAttendance[marketFormId];
+
+            attendees.erase(
+                std::remove_if(
+                    attendees.begin(), attendees.end(),
+                    [day](const auto& entry)
+                    {
+                        return entry.second != day;
+                    }),
+                attendees.end());
+
+            for (const auto& [other, otherDay] : attendees)
+            {
+                if (otherDay != day || other == a_entity)
+                {
+                    continue;
+                }
+
+                if (Rows::Exchange(
+                        m_Registry, m_Bonds,
+                        a_entity, other, day, m_CoreTuning, &m_Bus))
+                {
+                    // The exchange itself: each says a line to the
+                    // other — two voices, the shouting the settlement
+                    // hears. Speech rides the news feed, so the radio
+                    // reads the row as a caption.
+                    Say(a_entity, other, Dialogue::Pool::Row);
+                    Say(other, a_entity, Dialogue::Pool::Row);
+
+                    REX::INFO(
+                        "LCE: {} and {} row at the market — words first.",
+                        MindLabelForm(formId),
+                        MindLabelForm(m_Translator.FormFor(other)));
+                }
+            }
+
+            attendees.emplace_back(a_entity, day);
+        }
+
         // The conflict source (0.7.0 Stone 2): a hungry human arrived
         // and the stall is shut. The world-facts gate stops new walks
         // after hours, but a walk already in flight when the hour turns
@@ -2555,8 +2616,14 @@ namespace TLC
             // The first words of a feud (0.7.1 Talk, feeding 0.7.2
             // Rows): a slighted mind does not just blame silently — it
             // says something to the keeper. The row pool's early lines
-            // ("You ripped me off") are exactly this moment.
-            if (slighted && keeper.IsValid())
+            // ("You ripped me off") are exactly this moment. When the
+            // keeper is a feud partner who already rowed here this
+            // arrival (the crossing above), the words are spoken — the
+            // slight's own Say would repeat the same line, so it stays
+            // silent.
+            if (slighted && keeper.IsValid()
+                && !Rows::AlreadyRowedToday(
+                    m_Registry, a_entity, keeper, CurrentDay()))
             {
                 Say(a_entity, keeper, Dialogue::Pool::Row);
             }

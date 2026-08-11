@@ -259,6 +259,20 @@ namespace TLC::Bonds
     using BondMap = std::map<BondKey, PairBond>;
 
     //-------------------------------------------------------------------------
+    // CurrentKind — the bond state the adapter's book currently holds
+    // for a pair (the 1-second pass's view; None when the pair is not in
+    // the book). The read the Rows crossing uses: a feud partner is
+    // someone the book already names.
+    //-------------------------------------------------------------------------
+    inline BondKind CurrentKind(
+        const BondMap& a_bonds, EntityId a_a, EntityId a_b) noexcept
+    {
+        const auto iterator = a_bonds.find(PairKey(a_a, a_b));
+        return iterator != a_bonds.end() ? iterator->second.Kind
+                                         : BondKind::None;
+    }
+
+    //-------------------------------------------------------------------------
     // The typed thresholds, from the core's watch-list (the values the
     // core is actually watching — never a second opinion). A name the
     // world configured (friend, sweetheart, ...) overrides the default;

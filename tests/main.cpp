@@ -19,6 +19,7 @@
 #include "Market.h"
 #include "Names.h"
 #include "News.h"
+#include "Rows.h"
 #include "Serialization.h"
 #include "Translator.h"
 #include "Tuning.h"
@@ -68,6 +69,7 @@ namespace TLC::Tests
     bool BirthTest();
     bool NamesTest();
     bool DialogueTest();
+    bool RowsTest();
     bool SocietyTest();
     bool CoSaveV6Test();
 }
@@ -117,6 +119,7 @@ int main()
     Run("BirthTest", TLC::Tests::BirthTest);
     Run("NamesTest", TLC::Tests::NamesTest);
     Run("DialogueTest", TLC::Tests::DialogueTest);
+    Run("RowsTest", TLC::Tests::RowsTest);
     Run("SocietyTest", TLC::Tests::SocietyTest);
     Run("CoSaveV6Test", TLC::Tests::CoSaveV6Test);
 
@@ -3499,6 +3502,155 @@ namespace TLC::Tests
         silent.Feud.clear();
 
         if (!Pick(silent, Pool::Feud, id, 10).empty())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool RowsTest()
+    {
+        using namespace LCE::Simulation;
+        using namespace TLC::Bonds;
+
+        // 0.7.2 Rows — the verbal altercation: rivals and enemies who
+        // cross paths have words. Each remembers the other wronged them
+        // (the engine's Wronged channel, −0.25 — an unprompted wrong,
+        // not the −0.1 executed let-down of a shut stall), the
+        // settlement hears the shouting (gossip), and the wrong can
+        // push the pair over the feud line.
+
+        EntityRegistry registry;
+
+        const auto a = registry.CreateEntity();
+        const auto b = registry.CreateEntity();
+        const auto c = registry.CreateEntity();   // the settlement
+
+        registry.AddComponent<Memory>(a, Memory{});
+        registry.AddComponent<Memory>(b, Memory{});
+        registry.AddComponent<Memory>(c, Memory{});
+
+        // A rival pair: dispositions −0.5 each (below the −0.6 enemy
+        // line, deep in rival country), booked as rivals.
+        registry.AddComponent<Relationships>(a, Relationships{});
+        registry.AddComponent<Relationships>(b, Relationships{});
+
+        auto& ra = *registry.GetComponent<Relationships>(a);
+        auto& rb = *registry.GetComponent<Relationships>(b);
+        ra.ByEntity[b] = Relationship{};
+        rb.ByEntity[a] = Relationship{};
+        ra.ByEntity[b].Disposition = -0.5f;
+        rb.ByEntity[a].Disposition = -0.5f;
+
+        BondMap bonds;
+        bonds[PairKey(a, b)] = PairBond{ BondKind::Rival, 10 };
+
+        // The row lands.
+        if (!TLC::Rows::Exchange(registry, bonds, a, b, 42, {}, nullptr))
+        {
+            return false;
+        }
+
+        // Both remember the other wronged them, today.
+        for (const auto& who : { a, b })
+        {
+            const auto other = who == a ? b : a;
+            const auto memory = registry.GetComponent<Memory>(who);
+            bool saw = false;
+
+            for (const auto& event : memory->Events)
+            {
+                if (event.Kind == InteractionKind::Wronged
+                    && event.Other == other && event.Day == 42)
+                {
+                    saw = true;
+                }
+            }
+
+            if (!saw)
+            {
+                return false;
+            }
+        }
+
+        // A wrong is a wrong — full loss, −0.25 each way.
+        if (std::fabs(ra.ByEntity[b].Disposition - (-0.75f)) > 0.0001f
+            || std::fabs(rb.ByEntity[a].Disposition - (-0.75f)) > 0.0001f)
+        {
+            return false;
+        }
+
+        // And the row pushed the pair over the feud line: the 1-second
+        // re-derive (the production path) now reads Enemy.
+        const auto thresholds =
+            ParseBondThresholds(DefaultBondThresholds());
+        ApplyPair(
+            bonds, PairKey(a, b), -0.75f, -0.75f, thresholds, 42, nullptr);
+
+        if (bonds[PairKey(a, b)].Kind != BondKind::Enemy)
+        {
+            return false;
+        }
+
+        // The settlement heard the shouting: the third mind knows both
+        // faces through the gossip channel.
+        const auto memoryC = registry.GetComponent<Memory>(c);
+        bool knowsA = false;
+        bool knowsB = false;
+
+        for (const auto& event : memoryC->Events)
+        {
+            knowsA = knowsA || event.Other == a;
+            knowsB = knowsB || event.Other == b;
+        }
+
+        if (!knowsA || !knowsB)
+        {
+            return false;
+        }
+
+        // Words once a day: the same pair rows again today — no.
+        if (TLC::Rows::Exchange(registry, bonds, a, b, 42, {}, nullptr))
+        {
+            return false;
+        }
+
+        // Tomorrow the words return.
+        if (!TLC::Rows::Exchange(registry, bonds, a, b, 43, {}, nullptr))
+        {
+            return false;
+        }
+
+        // A row needs a feud: friends and strangers stay quiet.
+        EntityRegistry quiet;
+
+        const auto f1 = quiet.CreateEntity();
+        const auto f2 = quiet.CreateEntity();
+        quiet.AddComponent<Memory>(f1, Memory{});
+        quiet.AddComponent<Memory>(f2, Memory{});
+        quiet.AddComponent<Relationships>(f1, Relationships{});
+        quiet.AddComponent<Relationships>(f2, Relationships{});
+
+        auto& r1 = *quiet.GetComponent<Relationships>(f1);
+        auto& r2 = *quiet.GetComponent<Relationships>(f2);
+        r1.ByEntity[f2] = Relationship{};
+        r2.ByEntity[f1] = Relationship{};
+        r1.ByEntity[f2].Disposition = 0.4f;
+        r2.ByEntity[f1].Disposition = 0.4f;
+
+        BondMap friendBonds;
+        friendBonds[PairKey(f1, f2)] = PairBond{ BondKind::Friend, 5 };
+
+        if (TLC::Rows::Exchange(
+                quiet, friendBonds, f1, f2, 1, {}, nullptr))
+        {
+            return false;
+        }
+
+        BondMap noneBonds;
+
+        if (TLC::Rows::Exchange(quiet, noneBonds, f1, f2, 1, {}, nullptr))
         {
             return false;
         }

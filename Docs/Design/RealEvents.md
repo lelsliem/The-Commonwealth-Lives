@@ -1,10 +1,14 @@
 # Real Events — "Trade With Anyone, Talk, and Fight"
 
 **Milestone:** 0.7.1–0.8.0 (staged — see ReleasePlan.md)
-**Status:** 0.7.1 Talk BUILT (2026-08-11) — `Dialogue.h`, the INI
-pools, `Say` on the trade/family/slight sites, 20/20 suites green,
-in-game verification pending. Pillars 2–3 (rows, fights) and 0.8.0
-(trade with anyone) still PLANNED — design written, no code.
+**Status:** 0.7.1 Talk and 0.7.2 Rows BUILT (2026-08-11) —
+`Dialogue.h` + `Say` on the trade/family/slight sites, and the verbal
+altercation: rivals and enemies crossing at the same bench row
+(`src/Rows.h`, pure) — Wronged memories both ways (engine −0.25),
+gossip spread, the row can push a pair over the feud line. 21/21
+suites green; in-game verification pending. Pillar 3 (fights, the
+physical escalation) and 0.8.0 (trade with anyone) still PLANNED —
+design written, no code.
 Written before any code; the author's vision, grounded in the seams
 the 0.5.0–0.7.0 stones already cut.
 **Related:** Trade.md (the stall-keeper), SettlementMarkets.md (per-
@@ -136,10 +140,14 @@ already happens. No engine change.
 The feud machinery (Identity.md) already produces **slights → rival →
 enemy**. Pillar 3 gives a feud *scenes*:
 
-- **Mostly verbal.** A row is a conversation gone bad — a `dialogue.row`
-  exchange (the author's five-line ramp), a Wronged outcome,
-  disposition damage, gossip spread. Feuds are fought with words
-  first: the settlement *hears* the shouting.
+- **Mostly verbal (✅ built, 0.7.2 Rows).** A row is a conversation
+  gone bad — a `dialogue.row` exchange (the author's five-line ramp),
+  a Wronged outcome (engine Wronged, −0.25 each way), disposition
+  damage, gossip spread. Feuds are fought with words first: the
+  settlement *hears* the shouting. Rivals and enemies who cross paths
+  at the same bench row (`Rows.h`); the shut-stall slight keeps its
+  −0.1 channel (the executed let-down), the row is the unprompted
+  wrong.
 - **Sometimes physical.** When dispositions are deep enough (enemy) and
   tempers flare, an altercation escalates — a shove, a punch. The
   engine already has `Combat` as an InteractionKind; the adapter maps
@@ -160,7 +168,8 @@ The escalation rule (verbal → physical) is adapter-side, tunable:
 
 **Adapter work:**
 - Verbal altercation: a row exchange (pillar 2's line pool) + Wronged
-  outcome + gossip — on rival/enemy crossings and slights.
+  outcome + gossip — on rival/enemy crossings and slights. ✅ built
+  (0.7.2): the crossing row at the bench, once per pair per day.
 - Physical escalation: a chance roll at enemy level; on success, real
   combat or a pex-driven confrontation scene.
 - Consequences: the fight feeds back into bonds (a punch hurts trust)

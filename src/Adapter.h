@@ -564,6 +564,17 @@ namespace TLC
             std::pair<std::uint32_t, std::chrono::steady_clock::time_point>>
             m_ArrivedAt;
 
+        // Who walked to each bench today (0.7.2 Rows): market FormID →
+        // (mind, day) — the crossing scan's attendance book. Ephemeral,
+        // pruned to the current day, cleared on world reset; the
+        // co-save never touches it. The row's once-a-day gate is the
+        // Wronged memory (co-saved), so save/load never double-rows.
+        std::unordered_map<
+            std::uint32_t,
+            std::vector<std::pair<
+                LCE::Simulation::EntityId, std::uint64_t>>>
+            m_MarketAttendance;
+
         // When each mind was last commanded to wander (the meal-cadence
         // stone: Rest/Explore execute as a bounded wander near home — a
         // real nearby reference — so a fed mind mills around its
