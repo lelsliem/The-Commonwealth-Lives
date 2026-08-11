@@ -34,6 +34,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace RE
 {
@@ -450,6 +451,18 @@ namespace TLC
 
         std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
+
+        // When each mind last arrived, and where (target form id + time).
+        // The arrival-cooldown guard: a mind that just arrived at its
+        // destination has its next MoveTo there treated as satisfied, so
+        // a fed mind standing at its market cannot loop MoveTo → instant
+        // arrival → feed every frame (the 0.3/s hunger test: 18k
+        // animal-fed lines in under a minute — at fast decay a full mind
+        // is always most-urgent-hungry).
+        std::unordered_map<
+            LCE::Simulation::EntityId,
+            std::pair<std::uint32_t, std::chrono::steady_clock::time_point>>
+            m_ArrivedAt;
 
         // The world the co-save held for this save. Set by QueueRestore
         // during the load, consumed by GameLoaded; absent or empty means

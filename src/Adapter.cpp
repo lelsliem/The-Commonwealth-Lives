@@ -1162,6 +1162,7 @@ namespace TLC
         // no stall — a keeper's market re-derives its keeper on the next
         // arrival.
         m_Walks.erase(entity);
+        m_ArrivedAt.erase(entity);
         m_LastLogged.erase(entity);
         m_FeederLogged.erase(entity);
 
@@ -1291,6 +1292,7 @@ namespace TLC
         m_StallKeepers.clear();
         m_Bonds.clear();
         m_Walks.clear();
+        m_ArrivedAt.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
         m_TickCalled = false;
@@ -2330,11 +2332,30 @@ namespace TLC
 
                 bool walked = false;
 
-                if (!session.Reached
-                    && session.Target == targetFormId
-                    && now - session.Issued < std::chrono::seconds(120))
+                // The arrival-cooldown guard: a mind that arrived at
+                // this target within the cooldown is already where it
+                // wanted to be — its MoveTo is satisfied without a new
+                // walk. Without it, a fed mind standing at its market is
+                // always most-urgent-hungry (fast decay rates), so it
+                // re-decides MoveTo every frame, re-arrives instantly,
+                // and the arrival → feed loop floods the log (the 0.3/s
+                // test: 18k animal-fed lines in under a minute). The
+                // session was erased on arrival (the slot frees at
+                // once), so the walk table alone cannot answer "was this
+                // mind just here?" — this map can.
+                const auto arrivedIt = m_ArrivedAt.find(entry.Entity);
+
+                const bool justArrived = arrivedIt != m_ArrivedAt.end()
+                    && arrivedIt->second.first == targetFormId
+                    && now - arrivedIt->second.second
+                        < std::chrono::seconds(10);
+
+                if (justArrived
+                    || (!session.Reached
+                        && session.Target == targetFormId
+                        && now - session.Issued < std::chrono::seconds(120)))
                 {
-                    walked = true;   // already walking that way
+                    walked = true;   // already walking / just arrived
                 }
                 else
                 {
@@ -2549,6 +2570,17 @@ namespace TLC
             if (d < kArrivalRadius)
             {
                 session.Reached = true;
+
+                // Remember the arrival — the guard the MoveTo branch
+                // reads: a mind that just got here has its next MoveTo
+                // to the same place treated as satisfied, so a fed mind
+                // standing at its market cannot loop MoveTo → instant
+                // arrival → feed every frame (the 0.3/s hunger test:
+                // at fast decay a full mind is always most-urgent-
+                // hungry and the walk layer was re-issuing the trip it
+                // just completed).
+                m_ArrivedAt[it->first] = { session.Target, now };
+
                 ReportArrival(it->first, session.Target);
                 REX::INFO(
                     "LCE: settler {} arrived (d = {:.1f} u).",
