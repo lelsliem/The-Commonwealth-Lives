@@ -506,3 +506,20 @@ shape as households (ADR-0013).
 furniture/animation — game-side polish). Socialize/Work/Flee remain
 table slots. The grief's vengeance/comfort fork and the departure and
 famine arcs remain sketched. The 10 s hold cooldown is a constant.
+
+**Addendum — the polygamy edge (same day, first in-game run).** The
+birth test's session produced a second marriage for the Sanctuary
+keeper while its first was live — the bond layer honestly reads Spouse
+to two minds (bonds are pure derived disposition; a beloved settler
+crosses +0.8 with two people). A second `FormHousehold` merged the
+second spouse's pouch into the shared wallet, and a later 2-way split
+would have silently vanished the third member's caps. Fixed at the
+household layer, which stays monogamous by construction:
+`Households::InHousehold` (derived from the components — scan every
+spouse bond, shared iff exactly one pouch exists; order-independent,
+restore-proof) guards both callers: `OnBondChange` refuses to form a
+second household (the second marriage stands as a bond — the family
+bench still feeds both spouses — but the wallets stay personal), and
+`Enforce` (the silent per-pass repair) skips the same pairs, so the
+invariant can never be re-merged behind the events' back. No co-save
+bump — the guard reads components the v5 world already persists.

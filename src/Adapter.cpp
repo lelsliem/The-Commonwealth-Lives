@@ -925,10 +925,31 @@ namespace TLC
         // wallet; when the marriage dissolves, the wallet splits. Formed
         // exactly once — the pair rests at Spouse afterwards, so neither
         // the event channel nor the 1-second pass says it again.
+        //
+        // The one-wallet-per-mind guard (the polygamy edge, 2026-08-11):
+        // the bond layer may honestly read Spouse to two minds at once
+        // (pure derived disposition — a beloved settler can cross +0.8
+        // with two people), but a second merge would fold a third pouch
+        // into the shared wallet and a later 2-way split would vanish
+        // the third member's caps. The second marriage stands as a bond
+        // (the family bench still feeds both spouses); the wallets stay
+        // personal.
         if (a_new == Bonds::BondKind::Spouse
             && a_old != Bonds::BondKind::Spouse)
         {
-            if (Households::FormHousehold(m_Registry, a_entityA, a_entityB))
+            if (Households::InHousehold(
+                    m_Registry, m_Bonds, a_entityA)
+                || Households::InHousehold(
+                    m_Registry, m_Bonds, a_entityB))
+            {
+                REX::INFO(
+                    "households: {} {:#x} and {} {:#x} are spouses, but one "
+                    "already shares a household — the first pouch stands; "
+                    "their wallets stay personal.",
+                    labelA, formA, labelB, formB);
+            }
+            else if (Households::FormHousehold(
+                    m_Registry, a_entityA, a_entityB))
             {
                 REX::INFO(
                     "households: {} {:#x} and {} {:#x} are now a household — one pouch, one bench.",

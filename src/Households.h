@@ -97,6 +97,66 @@ namespace TLC::Households
         return nullptr;
     }
 
+    // Is a_entity already part of a shared household? Derived from the
+    // components — the merged wallet lives on one member, the other has
+    // no pouch — plus the bond book: scan EVERY spouse bond a_entity
+    // holds (a beloved settler can honestly read Spouse to two minds;
+    // SpouseOf alone would miss the second marriage) and ask, for each
+    // pair, whether exactly one pouch exists — shared. Order-independent
+    // and restore-proof: the merged pouch is a component, so the answer
+    // is true no matter which marriage formed first.
+    //
+    // This is the one-wallet-per-mind guard (the 2026-08-11 polygamy
+    // edge): the bond layer may honestly read Spouse to two minds at
+    // once (bonds are pure derived disposition), but the household layer
+    // must stay monogamous — a second FormHousehold would fold a third
+    // pouch into the shared wallet, and a later 2-way split would
+    // silently vanish the third member's caps.
+    inline bool InHousehold(
+        const EntityRegistry& a_registry,
+        const Bonds::BondMap& a_bonds,
+        EntityId a_entity) noexcept
+    {
+        const auto value = a_entity.Value();
+        const auto pouch = a_registry.GetComponent<CapPouch>(a_entity);
+
+        for (const auto& [key, bond] : a_bonds)
+        {
+            if (bond.Kind != Bonds::BondKind::Spouse)
+            {
+                continue;
+            }
+
+            EntityId spouse;
+
+            if (key.first == value)
+            {
+                spouse = EntityId{ key.second };
+            }
+            else if (key.second == value)
+            {
+                spouse = EntityId{ key.first };
+            }
+            else
+            {
+                continue;
+            }
+
+            const auto spousePouch =
+                a_registry.GetComponent<CapPouch>(spouse);
+
+            // Shared: exactly one of the pair carries the pouch. Two
+            // pouches = both personal (not yet merged); none = defensive
+            // (nothing shared to guard).
+            if ((pouch != nullptr) != (spousePouch != nullptr))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     //-------------------------------------------------------------------------
     // FormHousehold — merge the pair's pouches into one shared wallet on
     // the lower-id member. Returns true when a merge (or a defensive
@@ -226,6 +286,15 @@ namespace TLC::Households
 
             married.insert(a);
             married.insert(b);
+
+            // The one-wallet-per-mind guard (the polygamy edge): a pair
+            // where either side already shares a pouch must not merge a
+            // third one in — the first household stands.
+            if (InHousehold(a_registry, a_bonds, a)
+                || InHousehold(a_registry, a_bonds, b))
+            {
+                continue;
+            }
 
             FormHousehold(a_registry, a, b);
         }

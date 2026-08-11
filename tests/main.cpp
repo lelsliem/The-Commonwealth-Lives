@@ -2433,6 +2433,73 @@ namespace TLC::Tests
             }
         }
 
+        //-------------------------------------------------------------------------
+        // 6. The one-wallet-per-mind guard (the polygamy edge): the bond
+        //    layer can honestly read Spouse to two minds at once, but a
+        //    second merge must never fold a third pouch into the shared
+        //    wallet — InHousehold answers true for either role, and
+        //    Enforce skips the second marriage instead of merging it.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto keeper = registry.CreateEntity();
+            const auto first = registry.CreateEntity();
+            const auto second = registry.CreateEntity();
+
+            registry.AddComponent<CapPouch>(keeper, CapPouch{ 40 });
+            registry.AddComponent<CapPouch>(first, CapPouch{ 60 });
+            registry.AddComponent<CapPouch>(second, CapPouch{ 20 });
+
+            Bonds::BondMap bonds;
+            bonds[Bonds::PairKey(keeper, first)] =
+                Bonds::PairBond{ Bonds::BondKind::Spouse, 1 };
+
+            // The first marriage forms a household — the holder keeps
+            // the merged wallet, the other member has no pouch.
+            if (!FormHousehold(registry, keeper, first))
+            {
+                return false;
+            }
+
+            if (!InHousehold(registry, bonds, keeper)
+                || !InHousehold(registry, bonds, first))
+            {
+                return false;   // both roles of a shared wallet
+            }
+
+            // The keeper's second marriage (the bond layer honestly says
+            // Spouse to two minds). The guard lives at the callers' level
+            // — Enforce skips pairs where either side is already
+            // householded, so the second pouch must stay personal.
+            bonds[Bonds::PairKey(keeper, second)] =
+                Bonds::PairBond{ Bonds::BondKind::Spouse, 2 };
+
+            Enforce(registry, bonds);
+
+            const auto keeperPouch =
+                registry.GetComponent<CapPouch>(keeper);
+            const auto secondPouch =
+                registry.GetComponent<CapPouch>(second);
+
+            if (!keeperPouch || keeperPouch->Caps != 100
+                || !secondPouch || secondPouch->Caps != 20)
+            {
+                return false;   // 40+60 merged; 20 stays personal
+            }
+
+            // And the roles read right: the keeper and the first spouse
+            // are the two halves of the shared wallet (both in the
+            // household); the second spouse, still holding a personal
+            // pouch, is not.
+            if (!InHousehold(registry, bonds, keeper)
+                || InHousehold(registry, bonds, second)
+                || !InHousehold(registry, bonds, first))
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
