@@ -4,7 +4,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.5.0-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.6.0-emerald.svg)](Docs/Roadmap.md)
 
 The settlers aren't on quest scripts — they're **hungry**, they **remember**
 where to trade, they walk to **their own settlement's market** when they're
@@ -22,8 +22,8 @@ survives save/load.
 ## Roadmap
 
 Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
-through **0.5.0** is in and verified in-game; **0.6.0** (life) is in
-progress:
+through **0.6.0** is in and verified in-game; **0.7.0** (identity & the
+player window) is next:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -41,19 +41,24 @@ progress:
   hardenings: `DeleteGame` no longer kills a running world, and the walk
   probe reads the actor's data position instead of a lying 3D transform.
 - **0.6** the Commonwealth remembers — the world keeps its books
-  (arrivals wake mid-session, deaths and departures leave it, and every
-  survivor remembers who is gone — record **v5**), and settlers **bond**:
-  friendship, sweethearts, spouses, rivals, and feuds emerge from how
-  they treat each other, spoken in the log (`settler X and settler Y
-  became friends.` / `X is feuding with Y.`) and survived across
-  save/load. Couples become **households** — one pouch, one bench — and
-  the **sleep cycle** keeps the world moving: a fed mind rests, recovers
-  its Fatigue (`sim.rest.recovery`), and walks again, so the same
-  settlers keep meeting and their bonds deepen.
+  (arrivals wake mid-session, deaths and departures leave it, every
+  survivor remembers who is gone — record **v5**), and settlers **bond**
+  from how they treat each other: friends, sweethearts, and spouses
+  emerge from shared meals and survive save/load. Couples become
+  **households** (one pouch, one bench, one bed) and the **sleep cycle**
+  closes the loop — a fed mind rests, recovers its Fatigue
+  (`sim.rest.recovery`), and walks again, so the same settlers keep
+  meeting and their bonds deepen. Settlers **mill around** between meals
+  (the wander stone — Rest/Explore command a bounded walk to a real
+  nearby reference, furniture preferred), **gossip** spreads every death
+  to the settlement, **grief** is real (a widowed settler drains its
+  Social seeking company — `arcs: settler X grieves for Y`), and
+  **children** are born: a spouse household's sim-only child, fed and
+  bonded, living in the co-save like any mind (`sim.birth.enabled`).
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
-the 0.5.0 milestone is published (first beta release: `0.5.0-beta`, notes
-in [RELEASE_NOTES.md](RELEASE_NOTES.md)). Nexus comes later.
+releases published: `0.5.0-beta` and **`0.6.0`** (2026-08-11, notes in
+[RELEASE_NOTES.md](RELEASE_NOTES.md)). Nexus comes later.
 
 ## What this is
 

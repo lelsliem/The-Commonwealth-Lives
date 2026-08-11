@@ -193,7 +193,7 @@ order; each one leaves the world strictly more alive.
   first marriage formed, survived save/load, and the family bench fed
   the spouse (Stone 3's verify line).
 
-### Stone 3.75 — The meal-cadence wander (Rest/Explore executes in-game) — BUILT + TESTED (2026-08-11)
+### Stone 3.75 — The meal-cadence wander (Rest/Explore executes in-game) — VERIFIED IN-GAME (2026-08-11)
 
 - The marriage test's honest gap: a fed mind that decides Rest or Explore
   got *nothing* — both were table slots. The game's sandbox took over and
@@ -217,11 +217,12 @@ order; each one leaves the world strictly more alive.
 - Walk, rest, explore — the sim's three movement intents are all real
   game commands now. Socialize/Work/Flee remain table slots (their
   stones are future work).
-- **Verify (pending):** settlers mill around the settlement between
-  meals instead of freezing at the bench, and the same pair's meals
-  stay on the cooldown cadence.
+- **Verify (2026-08-11):** settlers mill around the settlement between
+  meals instead of freezing at the bench (approved in-game), and the
+  same pair's meals stay on the cooldown cadence — the first
+  friendship and later a marriage landed within minutes at demo pace.
 
-### Stone 4 — Gossip — BUILT + TESTED (2026-08-11)
+### Stone 4 — Gossip — VERIFIED IN-GAME (2026-08-11)
 
 - Word spreads: a bond crossing (friend, sweetheart, spouse, rival,
   enemy), a death, a feud writes a fact to every mind of the settlement
@@ -234,12 +235,13 @@ order; each one leaves the world strictly more alive.
 - The observable half: a death logs `gossip: N minds remember settler
   X is gone.` (one line per death — the count `Gossip::Spread`
   returned), so the stone is verifiable in the log instead of silent.
-- **Verify (pending):** kill a settler — the gossip line shows the
-  settlement remembers the death; the survivor's grief line follows
+- **Verify (2026-08-11):** a kill logged `gossip: 643 minds remember
+  settler 0x2f2a7 is gone.` (641 on the follow-up kill) — the
+  settlement remembers the death; the survivor's grief line followed
   (Stone 5); a newly arrived settler never hears it (written once,
   never replayed).
 
-### Stone 5 — Emergent arcs (the quests) — BUILT + TESTED (2026-08-11)
+### Stone 5 — Emergent arcs (the quests) — VERIFIED IN-GAME (2026-08-11)
 
 Arcs read the world's own state — bonds, gossip, deaths — and steer the
 sim's numbers, so a story is never a script. Two arcs ship built; the
@@ -270,11 +272,14 @@ other three stay sketched below.
    dispositions fray, some settlers consider leaving, and the market
    stays open late while the famine lasts. Not built — sketched.
 
-- **Verify (pending):** the logs show each arc's lifecycle — start, play,
-  resolve — with no scripts: every arc is needs, bonds, and memory
-  driving intents.
+- **Verify (2026-08-11):** the grief arc's lifecycle is in the logs —
+  death → gossip → `arcs: settler 0x50976 grieves for 0x2f2a7 — they
+  seek company.` → the bereaved's Social draining as it seeks company.
+  The feud's *organic* appearance waits for 0.7.0's conflict source
+  (nothing in 0.6.0 makes dispositions negative — enemy pairs cannot
+  form yet; the arc is harness-verified).
 
-### Stone 6 — Birth (experimental, INI-gated) — BUILT + TESTED (2026-08-11)
+### Stone 6 — Birth (experimental, INI-gated) — VERIFIED IN-GAME (2026-08-11)
 
 - A spouse household has a child: **a sim-only mind** — there is no game
   actor, no form, no translator entry (`Birth::Create`). Seeded like any
@@ -287,12 +292,14 @@ other three stay sketched below.
   `sim.birth.enabled` (default 0) — off in the beta; on is a stress test.
 - The census cannot evict it: `Lifecycle::Diff` classifies the *census*,
   never the registry, so a mind with no form is simply never scanned.
-- **Verify (pending):** the log records `birth: a child is born to …`;
-  the child mind exists, fed, and bonded — and returns from the co-save.
-  The wake line makes the sim-only population visible: `The Commonwealth
-  wakes up: N sim-only children born to their households.` (or
-  `restored too` after a save/load) — the census counts actors, the
-  log counts minds.
+- **Verify (2026-08-11):** `birth: a child is born to 0x50976 and
+  0x2f2a7 — a new mind, fed by the household.` fired in-game, and the
+  wake line made the sim-only population visible: `The Commonwealth
+  wakes up: 3 sim-only children restored too — fed by their
+  households.` across two save/load cycles — the children ride the
+  co-save. (A reload was briefly treated as a new day and re-birthed;
+  the day gates now seed from the current day on restore — ADR-0017
+  addendum 4.)
 
 ### Co-save — no v6 bump needed
 

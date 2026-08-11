@@ -601,3 +601,39 @@ also showed the death being re-booked (the census re-observed the
 corpse alive-then-dead after it streamed into the loaded cell) — the
 lifecycle's honest per-session transition, which re-stamped the death
 fact and is what let the whole chain fire in this session.
+
+## 0018 — 0.6.0 is complete: the verification legs and the tag decision
+
+**Accepted · 2026-08-11**
+
+Every stone on the 0.6.0 board is now verified in-game, and the milestone
+is shipped as tag `0.6.0` (the first non-beta release). The board's last
+three legs were closed by direct in-game observation, and the verification
+itself surfaced four real fixes, all recorded in ADR-0017's addenda:
+
+- **The meal-cadence wander** (addendum 2): the first hold implementation
+  froze the settlement at the bench; `Movement::WanderNear` (a real nearby
+  reference in the actor's own cell, furniture preferred, one command per
+  mind per 30 s) replaced it. Approved in-game — settlers mill around
+  their settlement between meals, and the meal cadence holds.
+- **The truth items** (addendum 3): children counted at wake, the gossip
+  death line, `sim.wander.cooldown`/`sim.wander.radius` INI keys — the
+  sim-only population and the gossip stone became observable in the log.
+- **The restore-birth** (addendum 4): a reload was treated as a new day —
+  the arcs' day gates are session state and started at "never ran", so
+  every load re-birthed and re-mediated. The gates now seed to the current
+  day on restore.
+- **The grief announce** (addenda 5–6): the line was dead code (the dead's
+  form was resolved after its entity was destroyed), and the family meal
+  never warmed the couple, so marriages quietly died of drift and grief
+  had no love to find. Both fixed; the announce is once per bereavement
+  (was 34 lines per frame-window).
+
+The one honest deferral: the feud arc's *organic* appearance. Nothing in
+0.6.0 makes dispositions negative, so enemy pairs cannot form in-game —
+the arc is harness-verified, and its conflict source is 0.7.0's
+"relationships good *and bad*".
+
+The changelog-worthy summary for the release page is: settlers are born,
+live, and die; they remember who is gone; they make friends, sweethearts,
+and spouses from shared meals — and grieve for the ones they lose.
