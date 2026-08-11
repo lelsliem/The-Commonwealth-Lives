@@ -3039,6 +3039,49 @@ namespace TLC::Tests
             }
         }
 
+        //-------------------------------------------------------------------------
+        // 4. Gossip makes mediation reachable (the feud-start fix,
+        //    2026-08-11): a third mind that only knows the pair through
+        //    Gossip::SpreadBond — the feud-start spread — is found as
+        //    the mediator. Without the spread, no mediator exists and
+        //    Mediate returns nothing (the in-game bug: gossip from the
+        //    rival stage had faded by the next day's pass, so the daily
+        //    mediation could never find anyone).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto enemyA = registry.CreateEntity();
+            const auto enemyB = registry.CreateEntity();
+            const auto neighbour = registry.CreateEntity();
+
+            // The pair exists as relationships; the neighbour is a mind
+            // with an empty memory — it knows nothing yet.
+            registry.AddComponent<Relationships>(
+                enemyA, Relationships{});
+            registry.AddComponent<Relationships>(
+                enemyB, Relationships{});
+            registry.AddComponent<Memory>(neighbour, Memory{});
+
+            // The feud-start spread (what OnBondChange now does on the
+            // Enemy crossing): every other mind hears of both sides.
+            Gossip::SpreadBond(
+                registry, enemyA, enemyB,
+                InteractionKind::Social, 1);
+
+            // The neighbour now knows both — Mediate finds it, and with
+            // nobody liking anyone (pull 0) it is told off, not cool.
+            const auto attempts = Mediate(
+                registry, { { enemyA, enemyB } });
+
+            if (attempts.size() != 1
+                || attempts[0].Mediator != neighbour
+                || attempts[0].Cooled)
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 

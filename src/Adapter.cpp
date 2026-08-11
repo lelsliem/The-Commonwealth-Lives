@@ -761,6 +761,11 @@ namespace TLC
 
     void Adapter::RunMediation()
     {
+        AttemptMediation();
+    }
+
+    void Adapter::AttemptMediation()
+    {
         // The feud pairs the settlement knows: every pair in the bond
         // book at the enemy line. A feud is a story the world heard —
         // strangers do not step in, but the settlement can try.
@@ -1083,6 +1088,23 @@ namespace TLC
             && a_old != Bonds::BondKind::Enemy)
         {
             PushNews(nameA + " is feuding with " + nameB + ".");
+
+            // The settlement hears the feud (Gossip.h's intent: gossip
+            // covers "a feud starts") — the formation gossip from the
+            // rival stage has long faded by now (memory fade 0.2/s),
+            // and without a fresh spread no third mind could ever know
+            // the pair well enough to step in.
+            Gossip::SpreadBond(
+                m_Registry, a_entityA, a_entityB,
+                LCE::Simulation::InteractionKind::Social,
+                CurrentDay());
+
+            // And the settlement tries, now — while the news is still
+            // alive. The once-per-day pass alone can never reach a feud:
+            // by the next day turn the gossip has faded to nothing and
+            // no mediator can be found. A feud is mediated the moment it
+            // breaks, while everyone still knows.
+            AttemptMediation();
         }
     }
 

@@ -464,8 +464,18 @@ namespace TLC
         // enemy pair the settlement knows, once per day — the settlement
         // pulls its own feuds apart (Arcs::Mediate). Pure logic in
         // Arcs.h; this is the edge: collect the enemy pairs from the
-        // bond book, run the mediation, log the attempts.
+        // bond book, run the mediation, log the attempts. The day gate
+        // lives here; the work itself is AttemptMediation, shared with
+        // the feud-start attempt (0.7.0 Stone 2 — a feud is mediated
+        // while the settlement still knows it).
         void RunMediation();
+
+        // One mediation pass over the enemy pairs in the bond book — the
+        // body RunMediation gates on the day. Called directly at feud
+        // formation too (OnBondChange): gossip fades in seconds at
+        // sim.memory.fade 0.2/s, so the day pass alone can never find a
+        // mediator — the feud must be mediated while the news is fresh.
+        void AttemptMediation();
 
         // The birth stone's day work (0.6.0 Stone 6, experimental): at
         // most once per day, a spouse household has a child — a sim-only
