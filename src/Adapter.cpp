@@ -269,12 +269,10 @@ namespace TLC
         // the bench outside a 6 cm circle).
         constexpr float kArrivalRadius = 200.0f;
 
-        // How many settlers may walk at once. The command-mode travel
-        // package flags each walker as commanded; hundreds at once (the
-        // revival world after an aborted load can seed 600+ settler-faction
-        // actors near the market) risks a flood — cap the issued walks.
-        // The rest are refused this tick and re-decide next.
-        constexpr std::size_t kMaxWalks = 16;
+        // (The walk cap itself is tuning, not a constant: sim.walk.cap
+        // in the INI — see AdapterSettings::WalkCap. Arrival ends a
+        // session and frees its slot immediately, so the default 16 is
+        // generous; big saves can raise it without a rebuild.)
 
         // The entity's form, or null when the form is unknown.
         RE::TESForm* FormFor(const Translator& a_translator, LCE::Simulation::EntityId a_entity)
@@ -434,6 +432,17 @@ namespace TLC
         const auto restInjected =
             config.Get("sim.rest.recovery").empty();
 
+        // The seeded need rhythm — the five sim.*.decay rates. Printed
+        // so the log always says which rhythm actually runs (the
+        // 2026-08-11 hunt: a 0.1/s hunger INI that read as if it were
+        // 0.002/s — the banner only showed market hours, drift, and rest).
+        const auto needsDefaultsInjected =
+            config.Get("sim.hunger.decay").empty()
+            && config.Get("sim.fatigue.decay").empty()
+            && config.Get("sim.safety.decay").empty()
+            && config.Get("sim.social.decay").empty()
+            && config.Get("sim.comfort.decay").empty();
+
         m_BondThresholds =
             Bonds::ParseBondThresholds(m_CoreTuning.BondThresholds);
 
@@ -455,6 +464,17 @@ namespace TLC
             m_BondThresholds.Rival,
             m_BondThresholds.Enemy,
             bondDefaultsInjected ? " (defaults)" : "");
+        REX::INFO(
+            "tuning: needs — hunger {:.3f}/s, fatigue {:.3f}/s, "
+            "safety {:.3f}/s, social {:.3f}/s, comfort {:.3f}/s, "
+            "walk cap {}{}.",
+            m_Settings.Rates.Hunger,
+            m_Settings.Rates.Fatigue,
+            m_Settings.Rates.Safety,
+            m_Settings.Rates.Social,
+            m_Settings.Rates.Comfort,
+            m_Settings.WalkCap,
+            needsDefaultsInjected ? " (defaults)" : "");
     }
 
     void Adapter::GameLoaded()
@@ -1786,7 +1806,7 @@ namespace TLC
                         }
                         else
                         {
-                            REX::INFO("The market is open: every nearby mind remembers where to trade (000250FE — the Sanctuary workshop).");
+                            REX::INFO("The market is open: every mind remembers where to trade (the Sanctuary workshop — 000250FE).");
                         }
                     }
                 }
@@ -1878,7 +1898,7 @@ namespace TLC
             else
             {
                 REX::INFO(
-                    "The market is open: every mind remembers where its own settlement trades ({} workshops).",
+                    "The market is open: every mind remembers where to trade ({} workshops).",
                     m_Workshops.size());
             }
         }
@@ -2144,32 +2164,51 @@ namespace TLC
             PushWorldFacts();
         }
 
-        // The sleep cycle (0.6.0): a mind whose last intent was Rest is
-        // resting — its Fatigue recovers at sim.rest.recovery per second
-        // (default 0.2/s, a full nap in ~5 s). The engine's need loop
-        // only decays; without this, a fed mind with drained Fatigue
-        // parks in Rest forever (the sleep-cycle discovery: only Hunger
-        // is ever restored, and only on the meal). Restored before
-        // Update so this tick's decisions see the rested mind.
-        m_Registry.ForEachWithComponent<LCE::Simulation::Intent>(
-            [&](EntityId a_entity, const LCE::Simulation::Intent& a_intent)
+        // The sleep cycle (0.6.0): a mind rests while its last decision
+        // was Rest — or while the engine silenced it because the need it
+        // most urgently feels is one rest fixes. The recovery restores
+        // Fatigue, Safety, and Comfort at sim.rest.recovery per second
+        // (default 0.2/s, a full nap in ~5 s); the engine's need loop
+        // only decays. Keyed on the needs, not just the intent, because
+        // a Safety-drained mind with no remembered threat makes the
+        // engine's Decide return nullopt (nothing to flee) — the intent
+        // is removed and no intent-keyed pass could ever see the mind
+        // again (the parked-world discovery, 2026-08-11). Restored
+        // before Update so this tick's decisions see the rested mind.
+        m_Registry.ForEachWithComponent<Needs>(
+            [&](EntityId a_entity, Needs& a_needs)
             {
-                if (a_intent.Action == LCE::Simulation::ActionType::Rest)
-                {
-                    auto needs =
-                        m_Registry.GetComponent<Needs>(a_entity);
+                const auto intent =
+                    m_Registry.GetComponent<LCE::Simulation::Intent>(a_entity);
 
-                    if (needs)
-                    {
-                        // The recovery value is a defensive marker (-1
-                        // when a mind somehow lacks Fatigue); a resting
-                        // mind with one is recovered, nothing to branch.
-                        (void)RestRecovery(
-                            *needs,
-                            m_Settings.RestRecovery,
-                            static_cast<float>(a_deltaSeconds));
-                    }
+                bool resting = intent != nullptr
+                    && intent->Action == LCE::Simulation::ActionType::Rest;
+
+                if (!resting && intent == nullptr)
+                {
+                    // No intent: the engine parked the mind (nullopt).
+                    // The only need that silences Decide is Safety with
+                    // no threat; Fatigue and Safety are the rest-fixable
+                    // urgencies — either way, it is time to rest.
+                    const auto urgent = MostUrgentNeed(a_needs);
+
+                    resting = urgent.has_value()
+                        && (*urgent == LCE::Simulation::NeedType::Fatigue
+                            || *urgent == LCE::Simulation::NeedType::Safety);
                 }
+
+                if (!resting)
+                {
+                    return;
+                }
+
+                // The recovery value is a defensive marker (-1 when a
+                // mind somehow lacks Fatigue); a resting mind with one
+                // is recovered, nothing to branch.
+                (void)RestRecovery(
+                    a_needs,
+                    m_Settings.RestRecovery,
+                    static_cast<float>(a_deltaSeconds));
             });
 
         // The core's stateless tick: needs decay, memory fade, goal
@@ -2290,13 +2329,20 @@ namespace TLC
                 {
                     walked = true;   // already walking that way
                 }
-                else if (m_Walks.size() >= kMaxWalks)
+                else if (m_Walks.size() >= m_Settings.WalkCap)
                 {
                     // Walk cap: erase the session so a refused walk never
                     // lingers (a zombie session — Issued at the epoch —
                     // made ProbeWalks log an instant "ended" line every
                     // frame for every refused walk; that flood preceded
-                    // the crash). The mind re-decides next tick.
+                    // the crash). The mind re-decides next tick. Logged
+                    // (debug) so a starved world is visible in the log
+                    // instead of a silent erase (the 2026-08-11
+                    // starvation hunt: the cap branch dropped re-walks
+                    // without a single log line).
+                    REX::DEBUG(
+                        "LCE: walk cap ({}) reached — settler {} deferred (re-decides next tick).",
+                        m_Settings.WalkCap, FormatHex8(actorFormId));
                     m_Walks.erase(entry.Entity);
                 }
                 else

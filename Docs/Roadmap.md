@@ -12,21 +12,25 @@ Project Roadmap
 
 Status
 
-Current Version : 0.5.0 — complete
+Current Version : 0.6.0 — in progress (0.5.0 complete and shipped,
+                   tag `0.5.0-beta`, release page live)
 
-Current Stage   : Living world — every 0.5.0 stone implemented, verified
-                   in-game, and shipped: species split, world facts,
-                   tuning, need-decay tuning, weather memory events,
-                   per-settlement markets (persistent-cell census), the
-                   trade stone, the economy stone, per-tick decay jitter
-                   wired, stall-keepers persisted in the co-save (v3),
-                   memory world-days (v4), the lifecycle + walk-probe
-                   hardenings, and the GitHub publish (repo live,
-                   tag 0.5.0, INI template shipped)
+Current Stage   : Life & Emergent Quests — 0.6.0 Stones 1–3.5 built,
+                   tested, and verified in-game (2026-08-10/11): the
+                   world keeps its books (arrivals, deaths,
+                   departures), bonds (named relationships + co-save
+                   v5), households (one pouch, one bench), and the
+                   sleep cycle (rest restores fatigue/safety/comfort,
+                   so the same pair finally shares repeated meals).
+                   Review pass 2026-08-11 closed the remaining
+                   structural gaps: rest now rescues parked minds, the
+                   walk cap is INI-tunable, and the log tells the truth
+                   about the live rhythm (ADR-0015).
 
-Next Milestone  : 0.6.0 — scoped from the engine's next hand-over
-                   (seeds: the Robot species — Behaviour.md — and
-                   deeper social simulation on the outcome channel)
+Next Milestone  : 0.6.0 complete — gossip, emergent arcs, birth —
+                   then the engine's next hand-over (seeds: the Robot
+                   species — Behaviour.md — and deeper social
+                   simulation on the outcome channel)
 
 ═══════════════════════════════════════════════
 
@@ -109,7 +113,7 @@ STATUS: IMPLEMENTED — tick and walking verified in-game (2026-08-10)
     workshop (REFR 000250FE, verified from the ESM) becomes the market
     entity when loaded,
     and the Trade seed makes hungry settlers decide MoveTo
-    (MarketTest among the 9/9 suites)
+    (MarketTest among the 13/13 suites)
 [✓] Walking in-game — a MoveTo executes and a settler walks to market;
     verified 2026-08-10: the command-mode travel package (0xC6BE90)
     issued for every MoveTo and live probe distances closed steadily
@@ -259,13 +263,15 @@ Goal: the real test from the contract.
     return). Implemented 2026-08-10; in-game verification pending (the
     arrival log lines + the feeder readout prove it)
 [✓] The real test: a settler goes to market because they are hungry —
-    no script. VERIFIED in-game 2026-08-10: the hunger write-through
+    no script.    VERIFIED in-game 2026-08-10: the hunger write-through
     on arrival (fed: Hunger X -> 1.00) closes the loop — needs decay →
     MoveTo → walk → arrive → fed → not hungry → no walk (the fed dog
-    decided Rest, not MoveTo, 6 ms after feeding; 19 feeds, both
-    animals cycling). Goals seeded per species (Human: AcquireFood;
-    Child/Animal: none). Engine ask remains: a Feed kind (or Aid
-    serving AcquireFood) so animal goals can be served when wired.
+    deciding Rest was the first sight of the sleep cycle — Rest now
+    recovers fatigue, so that is the correct, productive behavior, not
+    a stall; 19 feeds, both animals cycling). Goals seeded per species
+    (Human: AcquireFood; Child/Animal: none). Engine ask remains: a
+    Feed kind (or Aid serving AcquireFood) so animal goals can be
+    served when wired.
 [✓] The trade stone — a human arrival at the market is a real
     exchange: the first human at each market sets up its stall, every
     later bench-arrival trades with them (Trade, Success — the core
@@ -297,8 +303,9 @@ Goal: the real test from the contract.
     Docs/Design/CoSave.md
 [x] GitHub publish — repo live at
     github.com/lelsliem/The-Commonwealth-Lives (author `lelsliem` in
-    xmake.lua, hygiene done), pushed 2026-08-10, tag `0.5.0`; the
-    release page (DLL + INI from `config/`) and Nexus come later
+    xmake.lua, hygiene done), pushed 2026-08-10, tag `0.5.0-beta`; the
+    release page (DLL + INI from `config/`, 2026-08-11) is live; Nexus
+    comes later
 
 ═══════════════════════════════════════════════
 
@@ -310,12 +317,19 @@ Goal: settlers are born, live, and die; they make friends and enemies;
 and quests happen because life happens — no scripts. The quest is the
 behaviour, visible in the world and the log.
 
-STATUS: IN PROGRESS — Stone 1 and Stone 2 verified in-game (2026-08-10 /
-2026-08-11); Stone 3 built + harness-green (12/12, 2026-08-11), in-game
-verification pending. The engine hand-over (Requests A–C) is in the
-engine's AdapterProject.md — the engine has since shipped stone 08
-(RelationshipChangedEvent + sim.bond.threshold.*) and stone 09 (Society
-— Groups & Traits), and gained InteractionKind::Death for this stone.
+STATUS: IN PROGRESS — Stones 1, 2, and the walk-layer fix verified
+in-game (2026-08-10/11); Stones 3 and 3.5 built + harness-green
+(13/13, 2026-08-11), in-game verification pending. Review pass
+2026-08-11: rest now restores Fatigue + Safety + Comfort and rescues
+parked (intent-less) minds, the walk cap is INI-tunable
+(`sim.walk.cap`), the log prints every live need rate at launch, and
+arrival ends a walk session so a fed mind can re-walk immediately —
+without that last fix the sleep cycle's payoff was swallowed by the
+walk layer (7 trades, 7 buyers, zero repeats; ADR-0015). The engine
+hand-over (Requests A–C) is in the engine's AdapterProject.md — the
+engine has since shipped stone 08 (RelationshipChangedEvent +
+sim.bond.threshold.*) and stone 09 (Society — Groups & Traits), and
+gained InteractionKind::Death for this stone.
 
 [x] Stone 1 — The world keeps its books: the per-second census
     (Lifecycle::Diff, pure + tested) — arrivals become minds mid-session
@@ -344,25 +358,30 @@ engine's AdapterProject.md — the engine has since shipped stone 08
     between meals). ADR-0012.
 [x] Stone 3 — Households: couples share a pouch, a stall, a bench, a
     bed; the shared wallet round-trips. **Built + tested 2026-08-11
-    (12/12 suites)** — the Spouse bond forms a household (`Households.h`,
-    pure): the pouches merge into one shared wallet (split on dissolve),
-    the family bench feeds the keeper's spouse without exchange, PouchOf
-    resolves the wallet on both sides of the bench, and the one-pouch
-    invariant is enforced silently on restore (derived state — no record
-    bump, ADR-0013). The bed and walking-together are deferred (no rest /
-    companionship intents yet). In-game verification pending: a married
-    pair trades as one wallet; save, reload, still one.
-[x] Stone 3.5 — The sleep cycle: a resting mind recovers Fatigue
-    (sim.rest.recovery, default 0.2/s), so a fed mind wakes and walks
-    again. **Built + tested 2026-08-11 (13/13 suites)** — the 24h-market
-    test exposed the park-forever bug: the need loop only decays, only
-    Hunger was ever restored (on the meal), so a fed mind with drained
-    Fatigue decided Rest — a table slot that did nothing — forever. The
-    fix restores Fatigue for Rest-intent minds before Update; the loop
-    closes (eat → rest → recover → walk → eat) and the same pair can
-    finally share repeated meals and bond. ADR-0014. In-game
-    verification pending: customers return to the same bench for second
-    meals; the first friendship lands within minutes at demo pace.
+    (12/12 at build; 13/13 current)** — the Spouse bond forms a
+    household (`Households.h`, pure): the pouches merge into one shared
+    wallet (split on dissolve), the family bench feeds the keeper's
+    spouse without exchange, PouchOf resolves the wallet on both sides
+    of the bench, and the one-pouch invariant is enforced silently on
+    restore (derived state — no record bump, ADR-0013). The bed and
+    walking-together are deferred (no rest / companionship intents
+    yet). In-game verification pending: a married pair trades as one
+    wallet; save, reload, still one.
+[x] Stone 3.5 — The sleep cycle: a resting mind recovers the needs a
+    nap fixes — Fatigue, Safety, Comfort (sim.rest.recovery, default
+    0.2/s) — so a fed mind wakes and walks again. **Built + tested
+    2026-08-11 (13/13 suites)** — the 24h-market test exposed the
+    park-forever bug: the need loop only decays, only Hunger was ever
+    restored (on the meal), so a fed mind with drained Fatigue decided
+    Rest — a table slot that did nothing — forever. The fix restores
+    the rested needs before Update, keyed on the needs (not just the
+    Rest intent), so a Safety-drained mind the engine would otherwise
+    silence (nullopt — nothing to flee) is rescued too (ADR-0014,
+    extended by ADR-0015). The loop closes (eat → rest → recover →
+    walk → eat) and the same pair can finally share repeated meals and
+    bond. In-game verification pending: customers return to the same
+    bench for second meals; the first friendship lands within minutes
+    at demo pace.
 [ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind
     in the gossip radius — the settlement knows its own news
 [ ] Stone 5 — Emergent arcs: the feud, the grief (vengeance or

@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <optional>
 
 namespace TLC
 {
@@ -193,20 +194,33 @@ namespace TLC
     float RestoreHunger(LCE::Simulation::Needs& a_needs);
 
     //-------------------------------------------------------------------------
-    // The sleep cycle (0.6.0): a resting mind recovers Fatigue at
-    // a_rate per second of simulation time, capped at 1.0 (fully
-    // rested). Returns the new value, or -1 when the mind has no
-    // Fatigue need (a defensive marker, all seeded minds have one).
-    // The engine's need loop only decays; the adapter's Rest action is
-    // the recovery side — without it, a fed mind with drained Fatigue
-    // parks in Rest forever (the sleep-cycle discovery: only Hunger is
-    // ever restored, and only on the meal).
+    // The sleep cycle (0.6.0): a resting mind recovers the needs a nap
+    // fixes — Fatigue, Safety, and Comfort — each at a_rate per second
+    // of simulation time, capped at 1.0 (fully rested). Safety is in
+    // there because a drained Safety need with no remembered threat
+    // makes the engine's Decide return nullopt (you can't flee from
+    // nothing) — the mind parks, invisible to any intent-keyed pass;
+    // rest is the recovery side for that silence too. Social stays
+    // decay-only: it is the future Socialize stone's job, not a nap's.
+    // Returns the Fatigue value (or -1 when the mind has no Fatigue
+    // need — a defensive marker, all seeded minds have one).
     //-------------------------------------------------------------------------
     [[nodiscard]]
     float RestRecovery(
         LCE::Simulation::Needs& a_needs,
         float a_rate,
         float a_delta);
+
+    //-------------------------------------------------------------------------
+    // The most urgent need — the one with the lowest value, first in
+    // the list wins ties, exactly the rule the engine's internal
+    // MostUrgent answers (the engine keeps it private; the adapter
+    // needs the same question to find rest-silenced minds). nullopt
+    // when the mind has no needs at all.
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    std::optional<LCE::Simulation::NeedType> MostUrgentNeed(
+        const LCE::Simulation::Needs& a_needs);
 
     //-------------------------------------------------------------------------
     // The ambition a fresh mind of a species is born with. Humans carry

@@ -2432,30 +2432,43 @@ namespace TLC::Tests
         using namespace TLC;
 
         //-------------------------------------------------------------------------
-        // 1. RestRecovery — a drained Fatigue need refills at
-        //    rate × delta, capped at 1.0 (fully rested). The sleep
-        //    cycle's raw material: the need loop only decays, Rest is
-        //    the recovery side.
+        // 1. RestRecovery — a nap restores the needs it fixes: Fatigue,
+        //    Safety, and Comfort, each at rate × delta, capped at 1.0
+        //    (fully rested). The sleep cycle's raw material: the need
+        //    loop only decays, Rest is the recovery side. Social is
+        //    deliberately untouched — that is the future Socialize
+        //    stone's recovery, not a nap's.
         //-------------------------------------------------------------------------
         {
             auto needs = SeededNeeds(Species::Human);
 
-            // Drain fatigue: 0.2/s over 5 s.
+            // Drain every need a nap restores: 0.2/s over 5 s.
             RestRecovery(needs, 0.2f, -5.0f);
 
-            const auto fatigue = std::find_if(
-                needs.List.begin(), needs.List.end(),
-                [](const LCE::Simulation::Need& a_need)
-                {
-                    return a_need.Type == LCE::Simulation::NeedType::Fatigue;
-                });
-
-            if (fatigue == needs.List.end())
+            const auto find = [&needs](LCE::Simulation::NeedType a_type)
             {
-                return false;   // all seeds have a Fatigue need
+                return std::find_if(
+                    needs.List.begin(), needs.List.end(),
+                    [a_type](const LCE::Simulation::Need& a_need)
+                    {
+                        return a_need.Type == a_type;
+                    });
+            };
+
+            const auto fatigue = find(LCE::Simulation::NeedType::Fatigue);
+            const auto safety = find(LCE::Simulation::NeedType::Safety);
+            const auto comfort = find(LCE::Simulation::NeedType::Comfort);
+
+            if (fatigue == needs.List.end()
+                || safety == needs.List.end()
+                || comfort == needs.List.end())
+            {
+                return false;   // all seeds have these needs
             }
 
-            if (fatigue->Value > 0.001f)
+            if (fatigue->Value > 0.001f
+                || safety->Value > 0.001f
+                || comfort->Value > 0.001f)
             {
                 return false;   // drained
             }
@@ -2464,7 +2477,13 @@ namespace TLC::Tests
 
             if (recovered < 0.79f || recovered > 0.81f)
             {
-                return false;   // 0.8 after 4 s at 0.2/s
+                return false;   // fatigue: 0.8 after 4 s at 0.2/s
+            }
+
+            if (safety->Value < 0.79f || safety->Value > 0.81f
+                || comfort->Value < 0.79f || comfort->Value > 0.81f)
+            {
+                return false;   // safety and comfort recover too
             }
 
             const auto napped = RestRecovery(needs, 0.2f, 4.0f);
@@ -2472,6 +2491,13 @@ namespace TLC::Tests
             if (napped != 1.0f)
             {
                 return false;   // capped at full
+            }
+
+            const auto social = find(LCE::Simulation::NeedType::Social);
+
+            if (social != needs.List.end() && social->Value < 0.99f)
+            {
+                return false;   // a nap neither restores nor drains social
             }
         }
 
@@ -2545,6 +2571,77 @@ namespace TLC::Tests
             if (again->Target != market)
             {
                 return false;   // to the remembered market
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. The parked-mind rescue (the review-pass discovery): a mind
+        //    whose Safety is most urgent with no remembered threat gets
+        //    nullopt from the engine's Decide — you can't flee from
+        //    nothing — so its intent is removed and it parks forever,
+        //    invisible to any intent-keyed recovery pass. The recovery
+        //    therefore reads the needs: a mind with no intent whose most
+        //    urgent need is Safety (or Fatigue) is resting, recovers,
+        //    and rejoins the decide loop.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto settler = registry.CreateEntity();
+
+            registry.AddComponent<Needs>(settler, SeededNeeds(Species::Human));
+
+            auto needs = registry.GetComponent<Needs>(settler);
+
+            if (!needs)
+            {
+                return false;
+            }
+
+            for (auto& need : needs->List)
+            {
+                if (need.Type == LCE::Simulation::NeedType::Hunger)
+                {
+                    need.Value = 1.0f;
+                }
+
+                if (need.Type == LCE::Simulation::NeedType::Fatigue)
+                {
+                    need.Value = 0.2f;
+                }
+
+                if (need.Type == LCE::Simulation::NeedType::Safety)
+                {
+                    need.Value = 0.0f;   // most urgent — and no threat
+                }
+            }
+
+            const auto urgent = MostUrgentNeed(*needs);
+
+            if (!urgent.has_value()
+                || *urgent != LCE::Simulation::NeedType::Safety)
+            {
+                return false;   // the setup: Safety is the urgent need
+            }
+
+            // The engine parks the mind: nullopt, no intent.
+            Update(registry, 1.0);
+
+            if (registry.GetComponent<Intent>(settler))
+            {
+                return false;   // parked — no decision, no intent
+            }
+
+            // The recovery pass (reads needs, not intents) sees the
+            // most-urgent Safety as rest and recovers it — a nap.
+            RestRecovery(*needs, 0.2f, 6.0f);
+
+            // The next Update decides again — the mind is un-parked.
+            Update(registry, 1.0);
+
+            if (!registry.GetComponent<Intent>(settler))
+            {
+                return false;   // un-parked — a decision exists again
             }
         }
 

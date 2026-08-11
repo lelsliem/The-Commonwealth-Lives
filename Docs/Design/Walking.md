@@ -12,7 +12,7 @@ in-game and disassembly confirmed the error). The crashes blamed on the
 call were proven to be a **corrupt save** (identical signature across
 builds where the call never executed and a run with the DLL removed);
 DisableExitSave prevents the exit-save cycle that produced it. The
-decision half is unit-tested (MarketTest among the 9/9 suites).
+decision half is unit-tested (MarketTest, in the suite harness).
 **Related:** core ADR-0024 (adapters translate, don't simulate), ADR-0026.
 The contract's guarantee this stone honors: **an intent is a hint, not a
 command — the adapter decides how to walk the settler, and may refuse.**
@@ -218,7 +218,7 @@ src/Movement.h/.cpp  — WalkTo: the pinned InitiateCommandModeTravelPackage
                        call (0xC6BE90, kMove) with the runtime byte guard
 src/Market.h         — kMarketFormId + pure SeedMarketMemory
 src/Adapter.h/.cpp   — EnsureMarket + seed at StartWorld; the walk session
-tests/               — MarketTest (among the 9/9 suites): seeded mind
+tests/               — MarketTest (in the suite harness): seeded mind
                        decides MoveTo; bare mind explores
 ```
 

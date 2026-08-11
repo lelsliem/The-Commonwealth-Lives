@@ -107,7 +107,7 @@ order; each one leaves the world strictly more alive.
   names none). Four shared meals cross the friend line; meals every
   ~10 s (the fast demo rhythm) bond in under a minute.
 
-### Stone 3 — Households — BUILT + TESTED (2026-08-11, 12/12 suites), in-game verification pending
+### Stone 3 — Households — BUILT + TESTED (2026-08-11; 13/13 suites current), in-game verification pending
 
 - A household is the deepest bond made concrete (`Households.h`, pure +
   tested): the moment a pair's bond becomes **Spouse** (the +0.8 mutual
@@ -147,15 +147,30 @@ order; each one leaves the world strictly more alive.
   zero repeats — no pair ever shared a second meal, so no bond could
   form (the household test's dead end).
 - The fix (`Behaviour.h` `RestRecovery`, wired in `Adapter::Tick` before
-  `Update`): a mind whose last intent was Rest recovers Fatigue at
-  `sim.rest.recovery` per second (default 0.2/s — a full nap in ~5 s).
-  The next `Update` decides from the rested mind: hunger is most urgent
-  again → `MoveTo` → walk to market → trade → meal → Rest → recover →
-  repeat. The same pair finally meets repeatedly, and bonds can form.
+  `Update`): a mind whose last intent was Rest recovers the needs a nap
+  fixes — Fatigue, Safety, and Comfort — at `sim.rest.recovery` per
+  second (default 0.2/s — a full nap in ~5 s). The next `Update` decides
+  from the rested mind: hunger is most urgent again → `MoveTo` → walk to
+  market → trade → meal → Rest → recover → repeat. The same pair finally
+  meets repeatedly, and bonds can form.
+- **The parked-mind rescue (review pass, ADR-0015):** the recovery is
+  keyed on the *needs*, not just the Rest intent. A mind whose Safety is
+  most urgent with no remembered threat gets `nullopt` from the engine's
+  Decide (nothing to flee) — the intent is removed and no intent-keyed
+  pass could ever see it again. Reading the needs, a mind with no intent
+  whose most urgent need is Fatigue or Safety counts as resting,
+  recovers, and rejoins the loop.
 - **The loop closes** (SleepCycleTest): a fed mind with drained Fatigue
-  decides Rest; after a nap it decides MoveTo to the remembered market.
-  Without the recovery it parks forever — the test pins the exact bug
-  the 24h-market run exposed.
+  decides Rest; after a nap it decides MoveTo to the remembered market;
+  and a Safety-parked mind (no intent, no threat) recovers and decides
+  again. Without the recovery it parks forever — the tests pin the exact
+  bugs the 24h-market run and the review pass exposed.
+- **The walk layer, fixed too (ADR-0015):** arrival now ends the walk
+  session (the slot frees instantly) and a Reached session no longer
+  counts as "already walking" — a fed mind standing at the bench re-walks
+  the moment it is hungry again. Before the fix the finished trip held
+  one of the 16 walk slots for the full 120 s timeout and swallowed the
+  re-walk: 7 trades, 7 buyers, zero repeats.
 - **Verify:** relaunch the fast demo (24h market + `sim.hunger.decay =
   0.1`) — customers return to the same bench for second meals; the first
   `bonds: settler X and settler Y became friends.` lands within minutes;

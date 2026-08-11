@@ -4,8 +4,8 @@
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — a human arrival at the market
 now resolves a trader and the exchange is real: `Trade, Success` (the
 core serves AcquireFood and earns trust), instead of the placeholder
-`Trade, Partial`. 9/9 adapter suites green (BehaviourTest pins the
-outcomes + RecordSale; TuningTest pins `sim.sale.warmth`). In-game
+`Trade, Partial`. The suite harness pins it (BehaviourTest — the
+outcomes + RecordSale; TuningTest — `sim.sale.warmth`). In-game
 verification pending — the log lines to watch are below.
 **Related:** the species split (`Behaviour.h`), per-settlement markets
 (`SettlementMarkets.md`), the outcome channel (`Outcome.h`), ADR-0024

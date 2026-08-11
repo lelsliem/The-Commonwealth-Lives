@@ -2,7 +2,7 @@
 
 **Stone:** adapter 0.5.0 (per-settlement markets)
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — the settlement census +
-per-mind nearest-workshop resolver live; 9/9 adapter suites green
+per-mind nearest-workshop resolver live; the suite harness pins it
 (MarketTest covers NearestWorkshop, SeedMarketMemory, and the species
 resolver). In-game verification pending: the `settlement census:` log
 line, and each settler walking to its own settlement's bench.

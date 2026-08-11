@@ -4,7 +4,7 @@
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — market-hours gate live (no
 pins), radstorm gate live (CommonwealthGSRadstorm `001C3D5E` pinned from
 the xEdit dump — see `Docs/WeatherForms.md` for the full catalog and the
-exclusion decisions); 9/9 adapter suites green (WorldFactsTest among
+exclusion decisions); the suite harness pins it (WorldFactsTest among
 them). In-game verification pending: the transition lines, and settlers
 stopping their market walks at night.
 **Related:** the core's `Remember` world-fact channel (`Simulation.h`:

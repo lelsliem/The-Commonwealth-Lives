@@ -15,6 +15,7 @@
 #include "LCE/Config/Configuration.h"
 
 #include <cctype>
+#include <cstddef>
 #include <exception>
 #include <string>
 #include <string_view>
@@ -153,12 +154,24 @@ namespace TLC::Tuning
         // warms like good company.
         float SaleWarmth = 0.1f;
 
-        // The sleep cycle (0.6.0): how fast a resting mind recovers
-        // Fatigue, per second of simulation time. 0.2/s fills a drained
-        // need in ~5 s of rest — a nap, a night. Without it, a fed mind
-        // with drained Fatigue parks in Rest forever: the need loop only
-        // ever decays, and only Hunger is restored (on the meal).
+        // The sleep cycle (0.6.0): how fast a resting mind recovers the
+        // needs a nap fixes — Fatigue, Safety, and Comfort — per second
+        // of simulation time. 0.2/s fills a drained need in ~5 s of rest
+        // — a nap, a night. Without it, a fed mind with drained needs
+        // parks: the need loop only ever decays, and only Hunger is
+        // restored (on the meal). Safety is recovered here too — a
+        // drained Safety with no threat parks the mind outright (the
+        // engine returns nullopt, the intent is removed; 2026-08-11).
         float RestRecovery = 0.2f;
+
+        // How many settlers may walk at once (sim.walk.cap). The
+        // command-mode travel package flags each walker as commanded;
+        // hundreds at once risks a flood, so the issued walks are
+        // capped. Arrival ends a session and frees its slot immediately,
+        // so the default 16 is generous — but big saves can raise it
+        // without a rebuild. Was a constant (16) until the review pass;
+        // the starved-world hunt proved a silent hard cap is a trap.
+        std::size_t WalkCap = 16;
 
         // The physical exchange (the economy stone): a meal's price in
         // caps. A buyer pays what they can afford up to this; the rest
@@ -207,6 +220,22 @@ namespace TLC::Tuning
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
         settings.RestRecovery =
             read("sim.rest.recovery", settings.RestRecovery);
+
+        // The walk cap is a size, not a rate — parse it separately.
+        const auto rawCap = a_config.Get("sim.walk.cap");
+
+        if (!rawCap.empty())
+        {
+            try
+            {
+                settings.WalkCap =
+                    static_cast<std::size_t>(std::stoul(std::string(rawCap)));
+            }
+            catch (const std::exception&)
+            {
+                // keep the default — a broken line never breaks the world
+            }
+        }
 
         return settings;
     }

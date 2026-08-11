@@ -4,8 +4,8 @@
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — the trade exchange is now
 physical: a buyer pays caps for the meal and the seller's pouch grows.
 `CapPouch` is a co-save component (serializer + stable name `cappouch`),
-so a saved purse restores exactly. 9/9 adapter suites green
-(BehaviourTest pins SeedPouch + PayForMeal; SerializationTest and
+so a saved purse restores exactly. The suite harness pins it
+(BehaviourTest — SeedPouch + PayForMeal; SerializationTest and
 CoSaveTest round-trip the pouch; TuningTest pins `sim.meal.price`).
 In-game verification pending — the trade log lines now name the caps.
 **Related:** the trade stone (`Trade.md` — this stone makes its exchange

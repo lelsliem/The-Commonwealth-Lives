@@ -158,11 +158,19 @@ sim.fatigue.decay = 0.002
 sim.safety.decay = 0.002
 sim.social.decay = 0.002
 sim.comfort.decay = 0.002
+sim.rest.recovery = 0.2      ; rest restores fatigue, safety, comfort (/s)
+sim.walk.cap = 16            ; how many settlers may walk at once
 sim.sale.warmth = 0.1        ; how much a stall-keeper warms to a customer
 sim.meal.price = 5           ; caps per meal (a broke buyer is still fed)
 market.open.hour = 8         ; the market's hours — closed at night
 market.close.hour = 20
 ```
+
+The code's own built-in defaults are the *fast demo* (e.g. `sim.hunger.decay =
+0.1/s` — a meal every few seconds); the shipped template above is the
+living-Commonwealth rhythm — a few meals a day. The log prints every live
+value at launch (`tuning: loaded …` / `tuning: needs — hunger …`), so the
+banner always says which rhythm actually ran.
 
 ## Test
 
@@ -173,8 +181,8 @@ xmake run TheLivingCommonwealth.Tests
 Runs the adapter's harness (translator tables, seeding, snapshot and
 co-save round-trips — including the v3 stall-keepers section and the
 migration paths, plan builder, market decision, species rules, pouch
-economy, tuning) — links LCE.Core only, no game required. **9/9 suites
-green.**
+economy, tuning, lifecycle, bonds, households, sleep cycle) — links
+LCE.Core only, no game required. **13/13 suites green.**
 
 ## License
 

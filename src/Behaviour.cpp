@@ -142,16 +142,53 @@ namespace TLC
     {
         using namespace LCE::Simulation;
 
+        auto fatigue = -1.0f;   // marker: no Fatigue need (defensive)
+
         for (auto& need : a_needs.List)
         {
             if (need.Type == NeedType::Fatigue)
             {
                 need.Value = std::min(1.0f, need.Value + a_rate * a_delta);
-                return need.Value;
+                fatigue = need.Value;
+            }
+            else if (need.Type == NeedType::Safety
+                || need.Type == NeedType::Comfort)
+            {
+                // A nap restores the needs it fixes. Safety especially:
+                // a drained Safety with no threat parks the mind (the
+                // engine returns nullopt — nothing to flee) and no
+                // intent-keyed pass can ever see it again. Comfort is a
+                // Work decision, never a park, but a rest restores it
+                // all the same. Social is deliberately excluded — that
+                // is the future Socialize stone's recovery, not a nap's.
+                need.Value = std::min(1.0f, need.Value + a_rate * a_delta);
             }
         }
 
-        return -1.0f;   // no Fatigue need — defensive, all seeds have one
+        return fatigue;
+    }
+
+    std::optional<LCE::Simulation::NeedType> MostUrgentNeed(
+        const LCE::Simulation::Needs& a_needs)
+    {
+        using namespace LCE::Simulation;
+
+        const Need* best = nullptr;
+
+        for (const auto& need : a_needs.List)
+        {
+            if (best == nullptr || need.Value < best->Value)
+            {
+                best = &need;
+            }
+        }
+
+        if (best == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        return best->Type;
     }
 
     LCE::Simulation::Goals SeededGoals(Species a_species)

@@ -2,7 +2,7 @@
 
 **Stone:** adapter 0.5.0 (weather memory events)
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — classification + day-stamped
-world facts live; 9/9 adapter suites green (WorldFactsTest covers
+world facts live; the suite harness pins it (WorldFactsTest covers
 classification, the kind mapping, and the day stamp). In-game
 verification pending: the sky-turn and world-turns lines.
 **Engine prerequisite:** `InteractionKind` grew the weather kinds

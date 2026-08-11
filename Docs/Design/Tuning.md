@@ -2,7 +2,7 @@
 
 **Stone:** adapter 0.5.0 (tuning from the Configuration service)
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — the config file is live;
-9/9 adapter suites green (TuningTest pins the parser and the settings
+The suite harness pins it (TuningTest — the parser and the settings
 fallbacks). In-game verification pending: the `tuning: loaded ...` line
 at startup, and a market-hours override actually changing when settlers
 stop walking.

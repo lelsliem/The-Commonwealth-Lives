@@ -364,3 +364,49 @@ nothing in-world) and walking to market *together*. Both stay deferred
 (companionship/social stones); the sim-level recovery is the observable
 half, and SleepCycleTest pins the exact bug: fed + drained-fatigue →
 Rest; after a nap → MoveTo to the remembered market.
+
+## 0015 — The review pass: rest rescues parked minds; the walk layer is fixed; the log tells the truth
+
+**Date.** 2026-08-11. The review of everything through the sleep cycle
+(26b7805) surfaced one structural gap, two tunability gaps, and several
+log/doc contradictions; this decision records the fixes.
+
+**The structural gap.** The sleep cycle keyed its recovery on the stored
+Rest *intent* — but the engine's Decide returns `nullopt` when the most
+urgent need is Safety with no remembered threat (you can't flee from
+nothing), and `Update` then *removes* the intent. A Safety-drained mind
+is therefore invisible to any intent-keyed pass forever. The recovery
+now reads the *needs*: a mind with no intent whose most urgent need is
+Fatigue or Safety is resting, recovers, and rejoins the loop.
+`RestRecovery` restores Fatigue, Safety, and Comfort (a nap fixes all
+three; Social stays decay-only — that is the future Socialize stone's
+job). `MostUrgentNeed` mirrors the engine's internal MostUrgent (lowest
+value, first-in-list wins ties) so the adapter asks the same question
+the engine answers. SleepCycleTest gains the parked-mind rescue.
+
+**The walk-layer discovery (26b7805, folded into this decision).** The
+sleep cycle worked but its payoff was swallowed by the walk session: on
+arrival the session stayed in the walk table for the full 120 s timeout,
+holding one of the 16 walk slots, and the "already walking" check then
+swallowed the fed mind's re-walk to the bench it was standing at —
+7 trades, 7 buyers, zero repeats, no bond could form. Arrival now ends
+the session (slot freed immediately) and a Reached session is a new
+trip.
+
+**Tunability.** The walk cap is no longer a constant: `sim.walk.cap`
+(default 16) in the INI, parsed separately from the float rates because
+it is a size. The launch banner now prints all five need rates plus the
+cap, so the log always says which rhythm actually ran (the hunt was
+started by a hunger INI that read as if it were 0.002/s — the banner
+never showed the rates).
+
+**Decision.** Rest is the recovery side for every need it plausibly
+fixes, and the recovery pass answers to the needs, not the intents,
+because the engine can silence a mind entirely. The walk cap is tuning.
+The banner and the docs tell the truth about both.
+
+**Costs and deferrals.** Restoring Safety/Comfort on rest is a
+simplification (one rate for three needs); the Social need and the
+game-side bed remain deferred as before. The `(defaults)` markers on the
+tuning lines are a nicety, not a guarantee — the printed values are the
+truth.
