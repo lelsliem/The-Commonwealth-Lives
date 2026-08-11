@@ -295,6 +295,12 @@ namespace TLC
         // still learn where to trade.
         std::chrono::steady_clock::time_point m_LastMarketSeed{};
 
+        // When the walk-cap deferral line last printed — the aggregate
+        // line is rate-limited so a starved world is visible without
+        // flooding the log (the 2026-08-11 lesson: 5.1M per-entity
+        // deferral lines in five minutes).
+        std::chrono::steady_clock::time_point m_LastCapLog{};
+
         // World facts (0.5.0): the doors the world shuts. The market
         // closes outside its trading hours — a remembered { invalid,
         // Trade } fact blocks the hungry walk until it fades — and a

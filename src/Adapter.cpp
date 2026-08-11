@@ -2246,6 +2246,13 @@ namespace TLC
     {
         using namespace LCE::Simulation;
 
+        // How many MoveTo intents the walk cap refused this pass. Logged
+        // once per pass (rate-limited below) so a starved world is
+        // visible without the per-frame flood the first attempt caused
+        // (5.1M lines in five minutes — every deferred mind logged every
+        // frame of the 600-mind revival flood).
+        std::size_t deferred = 0;
+
         for (const auto& entry : a_plan)
         {
             const auto actorFormId = m_Translator.FormFor(entry.Entity);
@@ -2329,37 +2336,49 @@ namespace TLC
                 {
                     walked = true;   // already walking that way
                 }
-                else if (m_Walks.size() >= m_Settings.WalkCap)
-                {
-                    // Walk cap: erase the session so a refused walk never
-                    // lingers (a zombie session — Issued at the epoch —
-                    // made ProbeWalks log an instant "ended" line every
-                    // frame for every refused walk; that flood preceded
-                    // the crash). The mind re-decides next tick. Logged
-                    // (debug) so a starved world is visible in the log
-                    // instead of a silent erase (the 2026-08-11
-                    // starvation hunt: the cap branch dropped re-walks
-                    // without a single log line).
-                    REX::DEBUG(
-                        "LCE: walk cap ({}) reached — settler {} deferred (re-decides next tick).",
-                        m_Settings.WalkCap, FormatHex8(actorFormId));
-                    m_Walks.erase(entry.Entity);
-                }
                 else
                 {
-                    walked = Movement::WalkTo(actor, target);
+                    // Per-market budget: each market's walkers share its
+                    // own slice of the cap, so one settlement's hunger
+                    // cannot be starved by the Commonwealth-wide flood
+                    // (the revival census — 600+ minds all deciding
+                    // MoveTo at once — saturates a single global cap and
+                    // no market ever trades; the 2026-08-11 test).
+                    const auto atThisMarket = std::count_if(
+                        m_Walks.begin(), m_Walks.end(),
+                        [targetFormId](const auto& a_walk)
+                        {
+                            return a_walk.second.Target == targetFormId;
+                        });
 
-                    if (walked)
+                    if (atThisMarket >= m_Settings.WalkCap)
                     {
-                        session.Target = targetFormId;
-                        session.Issued = now;
+                        // Walk cap: erase the session so a refused walk
+                        // never lingers (a zombie session — Issued at
+                        // the epoch — made ProbeWalks log an instant
+                        // "ended" line every frame for every refused
+                        // walk; that flood preceded the crash). The mind
+                        // re-decides next tick.
+                        ++deferred;
+                        m_Walks.erase(entry.Entity);
                     }
                     else
                     {
-                        // A refused walk ends the session — erase, don't
-                        // reset (see the cap branch: a reset leaves a
-                        // zombie that ProbeWalks logs as instantly ended).
-                        m_Walks.erase(entry.Entity);
+                        walked = Movement::WalkTo(actor, target);
+
+                        if (walked)
+                        {
+                            session.Target = targetFormId;
+                            session.Issued = now;
+                        }
+                        else
+                        {
+                            // A refused walk ends the session — erase,
+                            // don't reset (see the cap branch: a reset
+                            // leaves a zombie that ProbeWalks logs as
+                            // instantly ended).
+                            m_Walks.erase(entry.Entity);
+                        }
                     }
                 }
 
@@ -2398,6 +2417,22 @@ namespace TLC
             }
             break;
             }
+        }
+
+        // One line per pass, rate-limited to every few seconds: a starved
+        // world stays visible without the per-frame flood (the first
+        // attempt — a per-entity DEBUG line — wrote 5.1M lines in five
+        // minutes of the 600-mind revival flood).
+        const auto now = std::chrono::steady_clock::now();
+
+        if (deferred > 0
+            && (m_LastCapLog.time_since_epoch().count() == 0
+                || now - m_LastCapLog >= std::chrono::seconds(5)))
+        {
+            m_LastCapLog = now;
+            REX::DEBUG(
+                "LCE: walk cap — {} MoveTo(s) deferred this pass ({} active walks, per-market cap {}).",
+                deferred, m_Walks.size(), m_Settings.WalkCap);
         }
     }
 
