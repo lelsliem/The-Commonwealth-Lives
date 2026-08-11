@@ -122,11 +122,17 @@ is superseded — the slight now rides the decided channels.
 - **Tuning:** `sim.slight.temper` (the blame line),
   `sim.group.inheritance` (engine), the existing
   `sim.bond.threshold.rival/enemy` lines.
-- **Verify (pending in-game, the test-plan sentence):** a settler is
-  slighted at a closed bench, remembers it, the settlement's echo
-  agrees, and a feud begins — no script. In the log: dispositions
-  cross negative, `X is feuding with Y.` lands, the mediator's line
-  follows the next day.
+- **Verify (engine-blocked — hand-over `81cfe48` in the core repo):**
+  a settler is slighted at a closed bench, remembers it, the
+  settlement's echo agrees, and a feud begins — no script. In-game
+  proof (2026-08-11) showed the conflict source is unreachable: the
+  market-closed fact (refreshed full-weight every second) makes the
+  core's Decide refuse MoveTo, and Explore's game command replaces a
+  walk in flight — no arrival ever lands on a closed bench (555 walk
+  sessions ended mid-path, zero arrivals after the close). One engine
+  change is requested — critically hungry minds ignore the closed
+  sign (`sim.hunger.desperate` gate) — so the slight fires and the
+  feud becomes real and testable.
 
 ## Stone 3 — The player window: the radio — ✅ built (MCM deferred)
 
