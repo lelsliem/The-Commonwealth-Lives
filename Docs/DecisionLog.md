@@ -693,7 +693,80 @@ v6 section); births `InheritMemory` from both parents (person-facts
 only — the feud travels on the memory channel, the inherited cold
 shoulder on the group echo).
 
-**Verify sentence (pending in-game):** the log greets the world by
-name; names survive save/load and fast travel; a settler is slighted
-at a closed bench, the settlement's echo agrees, and a feud begins —
-no script.
+**Verify sentence (verified in-game 2026-08-11 — addendum 1 below):**
+the log greets the world by name; names survive save/load and fast
+travel; a settler is slighted at a closed bench, the settlement's echo
+agrees, and a feud begins — no script.
+
+### Addendum 1 — The 0.7.0 verification hunt (2026-08-11)
+
+0.7.0 is complete and verified in-game. The hunt surfaced eight real
+finds — six fixes and two structural discoveries — all committed
+locally (push pending):
+
+1. **Names were a no-show on the actors** (`7458cb2` → `09194c0`). The
+   sim spoke names in the log, but the workshop view still read
+   "Settler". Fix: write the generated name onto the actor via
+   `ExtraDataList::SetOverrideName` (the same mechanism as the
+   console's `SetDisplayName`, persisted with the save) at seed,
+   restore, and a per-second sweep that names streaming actors the
+   first time they appear.
+2. **The reference full-name read was empty for most actors**
+   (`09194c0`) — `TESFullName::GetFullName(ref)` reads the sparse-map
+   entry, which is empty for nearly everyone, so *everyone* looked
+   generic and Mama Murphy, Marcy and Jun were renamed. The name now
+   comes from the **base form** (`Actor::GetNPC()`), the species-aware
+   generic check treats plain species words as nameless for animals
+   ("Dog", "Cat", "Junkyard Dog" — Dogmeat stays Dogmeat), and the
+   per-second sweep self-heals: the base form is the eternal truth,
+   stale generated stamps are removed. The existing save healed on
+   load.
+3. **The INI overrode the curated pools silently** — the shipped INI's
+   16-per-pool lists shadowed `Names.h`'s curated 82/78/54/75 (family
+   tails included), so the curated names never ran. Synced: the INI is
+   now the single source of truth carrying the full curated pools.
+4. **The junkyard dog lost its name when the base-form fix landed**
+   (`65b6686`) — "Junkyard Dog" isn't a species word, so it read as a
+   real name and the stamp was reconciled away. It's now a namable
+   species label: owned → named from the pool again, stray → nameless.
+   Provisioners were briefly "Provisioner <first>" and are reverted to
+   the bare role (no cascade to raiders/guards; `b72938d`).
+5. **Pets dedup per world** (`b72938d`) — five Bandits restored from
+   the co-save; a restore-time pass re-draws unique names. Cross-
+   session dedup stays a noted gap (each session only sees its own
+   world).
+6. **The feud was structurally unreachable — twice.** First the engine
+   blocker (hand-over `81cfe48` → core `509a54d`): the market-closed
+   fact made Decide refuse MoveTo, so no arrival ever landed on a
+   closed bench; the engine shipped `sim.hunger.desperate` (adapter
+   ships 0.2) and desperate minds now walk to the shut market anyway.
+   Then the adapter's own blocker (`95784aa`, `3a5b2b8`): the feud
+   headline only fired on a direct None→Enemy jump (the normal
+   rival→enemy path logged "are now enemies"), and mediation ran once
+   per day while gossip dies in ~4.5 s (`sim.memory.fade` 0.2) — by
+   the next day turn nobody remembered the feud, so no mediator could
+   ever be found and the arc silently did nothing (day 271's pass ran
+   with a feud in the book and produced zero attempts). Fixes: any
+   crossing into Enemy is the feud line + news; the Enemy crossing
+   spreads the feud gossip (the "a feud starts" channel Gossip.h
+   documented but never wired) and attempts mediation immediately,
+   while the settlement still knows.
+7. **The banner stamped the pre-fix hash** — the build stamp is `git
+   rev-parse HEAD` at build time, and a build before the commit prints
+   the *previous* hash (the 19:58 DLL contained the feud fix but
+   announced `160d395`). Rebuild-after-commit is now the ritual so
+   the banner tells the truth.
+8. **The feud arc verified in-game, end to end:** `the stall at
+   00054BAE is shut — Paladin Danse went hungry and blames the
+   keeper` → rival bonds (direct −0.1 + settlement echo) → `X is
+   feuding with Y` → feud gossip → `arcs: Titus Pratt cooled the
+   feud between …` (23 feuds, 127 mediation attempts in the stressed
+   always-closed session; a clean build restored 673 minds, 78 bonds,
+   10 stall-keepers, 4 children with zero errors). HUD notifications
+   and radio captions verified on-screen; radio audio honestly
+   scheduled after 0.9.0.
+
+**Known cosmetic:** when several feuds form in the same second, each
+crossing runs a full mediation pass, so a pair can be mediated twice
+back-to-back (a duplicated `arcs:` line). Harmless — the second pass
+just cools +0.05 more and self-corrects.

@@ -3,9 +3,11 @@
 **Stone:** adapter 0.5.0 (tuning from the Configuration service)
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — the config file is live;
 The suite harness pins it (TuningTest — the parser and the settings
-fallbacks). In-game verification pending: the `tuning: loaded ...` line
-at startup, and a market-hours override actually changing when settlers
-stop walking.
+fallbacks). **Verified in-game 2026-08-10/11** — the `tuning: loaded
+...` line names the file and the live values at startup, the market-
+hours override moved when settlers stop walking, and the 0.7.0
+feud test ran entirely from INI knobs (market hours, hunger decay,
+bond thresholds, slight temper) with no rebuild.
 **Related:** core 0.5.0 stone 01 (`SimulationTuning::FromConfiguration`),
 the world-facts stone (`WorldFacts.h`'s hours constants became the first
 tuning keys), ADR-0014 (tuning is an input, never global state).

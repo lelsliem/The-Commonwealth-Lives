@@ -7,7 +7,9 @@ physical: a buyer pays caps for the meal and the seller's pouch grows.
 so a saved purse restores exactly. The suite harness pins it
 (BehaviourTest — SeedPouch + PayForMeal; SerializationTest and
 CoSaveTest round-trip the pouch; TuningTest pins `sim.meal.price`).
-In-game verification pending — the trade log lines now name the caps.
+**Verified in-game 2026-08-10/11** — the trade log lines name the caps
+and the pouches round-trip the co-save (restored stall-keepers with
+their wallets intact across loads).
 **Related:** the trade stone (`Trade.md` — this stone makes its exchange
 physical), the species split (only humans carry pouches), the co-save
 (`CoSave.md`), the desync stone's `IdJitter` (the pouch is seeded the

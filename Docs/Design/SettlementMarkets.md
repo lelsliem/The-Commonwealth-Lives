@@ -4,8 +4,10 @@
 **Status:** ✅ **IMPLEMENTED 2026-08-10** — the settlement census +
 per-mind nearest-workshop resolver live; the suite harness pins it
 (MarketTest covers NearestWorkshop, SeedMarketMemory, and the species
-resolver). In-game verification pending: the `settlement census:` log
-line, and each settler walking to its own settlement's bench.
+resolver). **Verified in-game 2026-08-10/11**: the `settlement census:`
+log line, the persistent-cell scan finding the vanilla settlements,
+and each settler walking to its own settlement's bench (Sanctuary at
+Sanctuary; the market opens per settlement).
 **No new pins:** the workshop base form (`000C1AEB`) was already
 verified as part of the Sanctuary market pin's comment in Market.h.
 

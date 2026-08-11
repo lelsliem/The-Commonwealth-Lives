@@ -12,45 +12,40 @@ Project Roadmap
 
 Status
 
-Current Version : 0.6.0 — complete, verified in-game, and shipped
-                   (tag `0.6.0`, release page live 2026-08-11; 0.5.0
-                   previously tagged `0.5.0-beta`)
+Current Version : 0.7.0 — complete, verified in-game, and ready to
+                   ship (tag + release pending; 0.6.0 shipped as tag
+                   `0.6.0` 2026-08-11, 0.5.0 as `0.5.0-beta`)
 
-Current Stage   : Life & Emergent Quests — every stone on the 0.6.0
-                   board is built, 16/16 harness suites green, and
-                   verified in-game (2026-08-10/11). The world keeps
-                   its books (arrivals, deaths, departures — a real
-                   kill books confirming, the dead never restore and
-                   never ghost-walk); bonds are real (friend →
-                   sweetheart → spouse emerged from shared meals across
-                   sessions, restored from the co-save v5 map, with
-                   the living drift clock and the trade-as-trust rule
-                   behind them); households share one pouch, one
-                   stall, one bench (the family stall verified in-game,
-                   marriages survive save/load); the sleep cycle closes
-                   the loop (eat → rest → recover → walk → eat); the
-                   meal-cadence wander executes in-game (Rest/Explore
-                   command a bounded walk to a real nearby reference,
-                   furniture preferred — settlers mill around instead
-                   of freezing at the bench); gossip spreads deaths to
-                   every mind (`643 minds remember settler X is gone`
-                   verified in-game); grief fires and drains the
-                   bereaved's Social (`arcs: settler 0x50976 grieves
-                   for 0x2f2a7 — they seek company.` — exactly once per
-                   bereavement after the flood fix); and sim-only
-                   children are born, fed by their households, and
-                   restored from the co-save (`3 sim-only children
-                   restored too` across two save/load cycles). The
-                   only honest deferral: the feud arc's organic
-                   appearance — nothing in 0.6.0 makes dispositions
-                   negative, so enemy pairs cannot form yet (the
-                   conflict source is 0.7.0's good-and-bad
-                   relationships; the feud is harness-verified).
+Current Stage   : Identity & the Player Window — every 0.7.0 stone
+                   built, 19/19 harness suites green, and verified
+                   in-game (2026-08-11). Settlers are **named on the
+                   actors themselves** (Mara Price, not "Settler" —
+                   written via SetOverrideName, the same mechanism as
+                   the console's SetDisplayName; game actors keep
+                   their real names after the base-form fix, pets get
+                   unique names, provisioners keep the role); the
+                   world has a **conflict source** — a hungry arrival
+                   at a closed market is a slight, and the feud arc
+                   was proven end-to-end in-game: `the stall … is
+                   shut — X went hungry and blames the keeper` → rival
+                   bonds → `X is feuding with Y` → gossip → mediation
+                   (`arcs: Titus Pratt cooled the feud between …`)
+                   with the engine's desperate-hunger gate and two
+                   adapter fixes (the feud headline on any enemy
+                   crossing; feud-start gossip + immediate mediation —
+                   gossip fades in ~4.5 s at sim.memory.fade 0.2, so
+                   the once-per-day pass could never find a mediator);
+                   the player window works — throttled HUD
+                   notifications for bonds/feuds/births/deaths and
+                   settlement-radio captions on screen (audio after
+                   0.9.0); the co-save round-trips the whole world
+                   (673 minds, 78+ bonds, 10 stall-keepers, 4
+                   children restored across every load). MCM's UI
+                   page stays honestly deferred (the INI already
+                   delivers the tuning; the page needs MCM + the CK).
 
-Next Milestone  : 0.7.0 — Identity & the Player Window: names for
-                   settlers, negative relationships (the feud's
-                   conflict source), and the radio so the player
-                   hears the world
+Next Milestone  : 0.8.0 — Settler Agency ("Hands in the World"):
+                   settlers build, move items, and destroy
 
 ═══════════════════════════════════════════════
 
@@ -206,8 +201,9 @@ Goal: the real test from the contract.
     The
     refresh pattern keeps a shut door shut (fact topped to full weight
     each second — no flicker, no memory growth) and lets it fade (~4.5 s)
-    when it reopens. Implemented 2026-08-10; in-game verification
-    pending (the transition lines + settlers stopping at night) — see
+    when it reopens. Implemented 2026-08-10; verified in-game
+    2026-08-11 (the transition lines — `world fact: the market is
+    closed (10:00)` — and settlers stopping at night) — see
     Docs/Design/WorldFacts.md
 [✓] Weather memory events — the day's sky, remembered (not gated): the
     live weather forms (verified xEdit dump) classify into six
@@ -216,8 +212,9 @@ Goal: the real test from the contract.
     appended save-safe). Today's categories refresh all day ("it rained
     this morning" survives until the world turns); yesterday's fade;
     the day-turn logs. Re-derived at the edge — never co-save state.
-    Implemented 2026-08-10; in-game verification pending (the sky-turn
-    + world-turns lines; `fw 1ca7e4` forces rain) — see
+    Implemented 2026-08-10; verified in-game 2026-08-11 (the sky-turn
+    + world-turns lines: `world fact: the sky turns rainy (day 269)`;
+    `fw 1ca7e4` forces rain) — see
     Docs/Design/WeatherFacts.md
 [✓] Per-settlement markets — every settlement's workshop is its own
     market. A census over the worldspaces' **persistent cells** (base
@@ -232,7 +229,7 @@ Goal: the real test from the contract.
     single-bench fallback (000250FE) covers an empty census, and the
     census now RETRIES when it finds nothing (a false 0 was locking the
     session into fallback) with a one-time base-form probe diagnostic.
-    Implemented 2026-08-10; in-game verification pending (the
+    Implemented 2026-08-10; verified in-game 2026-08-11 (the
     `settlement census:` line shows the worldspace count and the probe
     shows what bases the persistent cells hold; a settler at Tenpines
     should walk to Tenpines' bench, not Sanctuary's) — see
@@ -244,7 +241,7 @@ Goal: the real test from the contract.
     jitter is a metabolism, so the stagger persists after every feed and
     grows as the session runs. The co-save already serializes the rate,
     so a mind's rhythm survives restore. Implemented 2026-08-10;
-    in-game verification pending (the fed line + MoveTo confidences now
+    verified in-game 2026-08-11 (the fed line + MoveTo confidences now
     spread instead of matching; walks trickle instead of wave)
 [✓] Per-tick decay jitter (engine core 0.5.0 stone 07, `90a9d33` —
     SHIPPED and WIRED 2026-08-10) — the engine jitters each tick's
@@ -262,25 +259,26 @@ Goal: the real test from the contract.
     ...); the adapter's own keys (market.open.hour / market.close.hour)
     ride in the same file, replacing the WorldFacts.h constants as the
     hours gate's source. Missing/broken lines keep defaults — a broken
-    line never breaks the world. Implemented 2026-08-10; in-game
-    verification pending (the `tuning: loaded` line + an hours override
-    actually moving when settlers stop) — see Docs/Design/Tuning.md
+    line never breaks the world. Implemented 2026-08-10; verified
+    in-game 2026-08-11 (the `tuning: loaded` line names the file and
+    live values; hours overrides moved when settlers stopped; the
+    0.7.0 feud test ran entirely from INI knobs) — see
+    Docs/Design/Tuning.md
 [✓] Seeded need decay rates in the INI — sim.hunger.decay / .fatigue /
     .safety / .social / .comfort (the adapter's keys, sharing the sim.*
     prefix with the core's): the seeded rhythm becomes tunable to "a few
     meals a day" (~0.001–0.005/s; the default 0.1/s is an empty stomach
     in ~10 s). Rates thread StartWorld → SeededNeeds, still jittered per
     mind by VaryNeeds, serialized by the co-save. Missing/broken values
-    keep the defaults. Implemented 2026-08-10; in-game verification
-    pending (create the INI with sim.hunger.decay = 0.002 and settlers
-    should visit the market a handful of times a game day instead of a
-    steady stream) — see Docs/Design/Tuning.md
+    keep the defaults. Implemented 2026-08-10; verified in-game
+    2026-08-11 (sim.hunger.decay = 0.002 paces the market visits; the
+    feud tests ran at 0.3–1.0/s) — see Docs/Design/Tuning.md
 [✓] Food sources + arrival outcomes — per-species food sources (a dog
     is fed by its owner when the game assigns one, else the settlement;
     humans trade at the market) resolved at seed time; on arrival,
     ReportOutcome per species (Human → Trade — the trade stone makes it
     Success; Child/Animal → Aid, Success — fed, gives nothing in
-    return). Implemented 2026-08-10; in-game verification pending (the
+    return). Implemented 2026-08-10; verified in-game 2026-08-11 (the
     arrival log lines + the feeder readout prove it)
 [✓] The real test: a settler goes to market because they are hungry —
     no script.    VERIFIED in-game 2026-08-10: the hunger write-through
@@ -299,25 +297,26 @@ Goal: the real test from the contract.
     too (RecordSale: the stall-keeper remembers the customer and warms
     toward them, sim.sale.warmth). The emergent second visit: the buyer
     remembers the merchant, so the next hungry walk resolves to the
-    person, not the bench. Implemented 2026-08-10; in-game verification
-    pending (the `trades with settler` / `sets up the stall` lines) —
-    see Docs/Design/Trade.md
+    person, not the bench. Implemented 2026-08-10; verified in-game
+    2026-08-11 (the `trades with settler` / `sets up the stall` /
+    fed-from-the-household lines; stall-keepers restored under the same
+    keeper across loads) — see Docs/Design/Trade.md
 [✓] The economy stone — the exchange is physical: every human mind
     carries a CapPouch (40 ± 20 caps, deterministic per id), a buyer
     pays what they can afford up to sim.meal.price (default 5) and the
     seller's pouch grows; a broke buyer is fed on the settlement's
     credit, never starved. The pouch is a co-save component (stable
     name cappouch), so a saved purse restores exactly; pre-economy
-    saves are back-filled on restore. Implemented 2026-08-10; in-game
-    verification pending (the trade lines name the caps; sellers' pouches
-    grow while buyers' shrink) — see Docs/Design/Economy.md
+    saves are back-filled on restore. Implemented 2026-08-10; verified
+    in-game 2026-08-11 (the trade lines name the caps; pouches
+    round-trip the co-save) — see Docs/Design/Economy.md
 [✓] Stall-keepers survive save/load (co-save record v3) — who runs
     each market's stall rides the co-save as (market FormID, keeper
     FormID) pairs — form ids, stable across sessions — and ApplyRestore
     rebuilds the map from the restored FormRefs. A saved market reopens
     under the same keeper instead of whoever arrives first; a pre-v3
     save restores with no keepers and each stall re-derives on the
-    first arrival. Implemented 2026-08-10; in-game verification pending
+    first arrival. Implemented 2026-08-10; verified in-game 2026-08-11
     (save with a known stall-keeper, reload — the same settler should
     still be behind the bench, with the pouch intact) — see
     Docs/Design/CoSave.md
@@ -470,10 +469,27 @@ happening and tunes the world in-game. Drafted 2026-08-11
 (Docs/Design/Identity.md); earlier sketches 2026-08-10
 (Docs/Design/Life.md, "Beyond 0.6.0").
 
-STATUS: BUILT (2026-08-11) — all three stones implemented, 19/19
-harness suites green (NamesTest, SocietyTest, CoSaveV6Test), engine
-0.7.0 (Legacy) wired into the death/birth paths. In-game verification
-pending. Design: Docs/Design/Identity.md.
+STATUS: COMPLETE ✅ — every stone built, 19/19 harness suites green,
+verified in-game 2026-08-11, and ready to ship as tag `0.7.0`.
+Design: Docs/Design/Identity.md. The verification legs: names live
+on the actors (the base-form read fix — the reference full-name
+lookup is empty for most actors, so Mama Murphy was being renamed
+until the name came from the base form; the per-second sweep names
+streaming actors and heals stale stamps; the INI synced to the
+curated pools so the player-facing lists are the ones that run;
+provisioners keep the bare role; pet names deduped per world); the
+feud arc proven end-to-end in the wild — the engine's desperate-
+hunger gate (`sim.hunger.desperate`, engine commit `509a54d`,
+handed over as `81cfe48`/`1b82478`) made the slight reachable, then
+23 `is feuding with` crossings, feud gossip, and 127 mediation
+attempts (`arcs: Titus Pratt cooled the feud between …`) in a
+stressed session; two adapter fixes landed during the hunt (the feud
+headline fires on any crossing into Enemy, not just a jump from
+nothing; the feud is mediated at formation because gossip dies in
+~4.5 s — the once-per-day pass could never find a mediator); HUD
+notifications verified on-screen ("such and such became friends"),
+radio captions verified on-screen, audio honestly deferred after
+0.9.0.
 
 [x] Stone 1 — Names: `Name` component (additive — the record's v6 bump
     is the legacy section, not the component), game names first
@@ -481,7 +497,20 @@ pending. Design: Docs/Design/Identity.md.
     pool, all curated in the INI (`names.first.male/.female/.animal`,
     `names.last`), owned animals named / strays nameless, back-filled
     on restore; decisions, bonds, gossip, arcs, births, deaths, and
-    the radio all speak names with the console hex beside them
+    the radio all speak names with the console hex beside them.
+    **Verified in-game 2026-08-11** — with the four fixes the hunt
+    surfaced: names now read from the **base form** (the reference
+    read is empty for most actors — it was renaming Mama Murphy,
+    Marcy and Jun); names are **written onto the actors** via
+    SetOverrideName (the workshop view, pip-boy and hover read
+    "Mara Price", not "Settler"); a **per-second sweep** names
+    restored minds' actors as they stream in (fast-travel to a
+    settlement names its settlers on arrival) and heals stale
+    stamps; the shipped INI's pools were **synced to the curated
+    lists** (the INI overrode Names.h silently — one source of
+    truth). Pets deduped per world (the five Bandits), provisioners
+    keep the bare role, and the junkyard dog is a species label, so
+    owned dogs draw names again.
 [x] Stone 2 — The conflict source (the feud's organic fuel): the
     engine's decided channels (kind and result, never a sign) — a
     hungry arrival at a closed market reports
@@ -490,14 +519,31 @@ pending. Design: Docs/Design/Identity.md.
     decides who blames, settlement `Groups` (derived from the market
     memory, never persisted) spread the echo through the settlement,
     and rival/enemy bonds form on their own — the built feud arc
-    finally begins in the wild
+    finally begins in the wild. **Verified in-game 2026-08-11** —
+    the engine shipped the desperate-hunger gate (commit `509a54d`)
+    that makes the slight reachable, and the whole chain fired:
+    `the stall at 00054BAE is shut — Paladin Danse went hungry and
+    blames the keeper` → rival bonds (Deacon, Dot Hawke, and the
+    settlement echoed) → `bonds: X is feuding with Y` → feud gossip
+    → `arcs: Titus Pratt cooled the feud between …` (127 mediation
+    attempts in the stressed run). Two adapter fixes landed during
+    verification (both committed): the feud headline fires on any
+    crossing into Enemy (the rival → enemy path is how shut-stall
+    feuds actually arrive), and the feud is mediated **at
+    formation** — memory fade (0.2/s) erases a gossip fact in
+    ~4.5 s, so the once-per-day mediation could never find a
+    mediator; the feud-start spread + immediate attempt close it.
 [x] The radio, step 1: world events (bonds, births, deaths, feuds,
     market openings) become one-line news — HUD notifications
-    (throttled) + the news feed the radio reads
+    (throttled) + the news feed the radio reads. **Verified in-game
+    2026-08-11** — the pop-ups appear top-left ("X and Y became
+    friends", feud headlines).
 [x] The radio, step 2: a settlement radio object plays the news as
     on-screen captions while the player is near (`radio.base.formid`
-    — flagged for xEdit verification, configurable)
+    — flagged for xEdit verification, configurable). **Verified
+    in-game 2026-08-11** — captions rotate on screen.
 [x] The radio, step 3 (deferred): real audio — only when assets exist
+    (scheduled after 0.9.0)
 [ ] MCM + Settings Manager — deferred, honestly: the INI already
     delivers the tuning behavior (loaded at boot, survives reload);
     the UI page needs the MCM mod + the Creation Kit (an author-side

@@ -1,11 +1,13 @@
 # Identity & the Player Window — 0.7.0 "The Player Listens"
 
 **Stone:** adapter 0.7.0
-**Status:** ✅ BUILT (2026-08-11) — all three stones implemented,
+**Status:** ✅ COMPLETE (2026-08-11) — all three stones implemented,
 **19/19 harness suites green** (NamesTest, SocietyTest, CoSaveV6Test
-added); in-game verification pending. The engine's 0.7.0 side (Legacy
-— stones 10–12, 28/28 suites) is wired into the adapter's death and
-birth paths, so the two halves are proven together.
+added) and **verified in-game**: names on the actors, the feud arc
+proven end-to-end in the wild, HUD news + radio captions on screen.
+The engine's 0.7.0 side (Legacy — stones 10–12, 28/28 suites) is
+wired into the adapter's death and birth paths, so the two halves are
+proven together.
 **Related:** the feud and grief arcs (`Life.md` — 0.7.0 supplies the
 feud's *organic* fuel), the species split (animals are named only when
 owned; children carry no barter), the co-save (`CoSave.md` — record
@@ -69,12 +71,27 @@ gets **ears** (the radio) — with MCM honestly deferred (below).
   beside each: `Vera Hart [00048B77] decides MoveTo -> Sanctuary
   workshop [000250FE]`. An unnamed mind keeps the species label:
   `animal [FF0197BF]`.
-- **Verify (pending in-game):** the log greets the world by name; save,
-  reload, fast-travel away and back — same names; a name collision
-  never happens; the news feed (Stone 3) names the people it talks
-  about.
+- **Verify (verified in-game 2026-08-11):** the log greets the world
+  by name, and the names now live **on the actors themselves** —
+  `SetOverrideName`, the same mechanism as the console's
+  `SetDisplayName` — so the workshop view, pip-boy and hover read
+  "Mara Price", not "Settler". Three fixes the verification hunt
+  surfaced: (1) the game name is read from the **base form**, never
+  the reference — the reference's full-name lookup is empty for most
+  actors, so *everyone* looked generic and Mama Murphy, Marcy and Jun
+  were being renamed; (2) a **per-second sweep** names a restored
+  mind's actor the first time it streams in (fast-travel to a
+  settlement names its settlers on arrival) and self-heals stale
+  stamps against the base form; (3) the shipped INI's pools were
+  **synced to the curated lists** — the INI overrode `Names.h`
+  silently, so the curated pools (family tails included) never ran.
+  Pets dedupe per world (a restore-time pass — the five Bandits
+  became five unique names), owned dogs draw from the animal pool
+  again ("Junkyard Dog" is a species label), and provisioners keep
+  the bare role. Names survive save/load and fast travel; the news
+  feed (Stone 3) names the people it talks about.
 
-## Stone 2 — The conflict source: relationships good *and bad* — ✅ built
+## Stone 2 — The conflict source: relationships good *and bad* — ✅ verified in-game
 
 **The ask.** Nothing in 0.6.0 made dispositions go negative, so rival
 and enemy bonds — and therefore the feud arc — could never begin on
@@ -122,36 +139,55 @@ is superseded — the slight now rides the decided channels.
 - **Tuning:** `sim.slight.temper` (the blame line),
   `sim.group.inheritance` (engine), the existing
   `sim.bond.threshold.rival/enemy` lines.
-- **Verify (engine-blocked — hand-over `81cfe48` in the core repo):**
-  a settler is slighted at a closed bench, remembers it, the
-  settlement's echo agrees, and a feud begins — no script. In-game
-  proof (2026-08-11) showed the conflict source is unreachable: the
-  market-closed fact (refreshed full-weight every second) makes the
-  core's Decide refuse MoveTo, and Explore's game command replaces a
-  walk in flight — no arrival ever lands on a closed bench (555 walk
-  sessions ended mid-path, zero arrivals after the close). One engine
-  change is requested — critically hungry minds ignore the closed
-  sign (`sim.hunger.desperate` gate) — so the slight fires and the
-  feud becomes real and testable.
+- **Verify (verified in-game 2026-08-11).** The engine answered the
+  hand-over (`81cfe48` → fixed in core commit `509a54d`):
+  `sim.hunger.desperate` (default 0.0 = never desperate, unchanged;
+  the adapter ships 0.2) — below the threshold a mind ignores the
+  closed sign and walks to the shut market anyway, so the arrival
+  lands and the slight fires. With the market forced shut (test
+  recipe), the whole chain ran in the wild: `the stall at 00054BAE
+  is shut — Paladin Danse went hungry and blames the keeper` →
+  rival bonds (the direct slight −0.1 plus the settlement echo) →
+  `bonds: X is feuding with Y` → feud gossip → `arcs: Titus Pratt
+  cooled the feud between …` (127 mediation attempts in the stressed
+  session). Two adapter fixes landed during the hunt:
+  - **The feud headline fires on any crossing into Enemy** — the
+    old code only said "X is feuding with Y" for a direct jump from
+    nothing; the normal rival → enemy path (how shut-stall feuds
+    actually arrive) logged only "are now enemies". Now any crossing
+    into Enemy is the feud line, and it pushes the news.
+  - **The feud is mediated at formation.** `sim.memory.fade` is
+    0.2/s — a gossip fact (weight 1.0) dies in ~4.5 s, and gossip is
+    written once, never refreshed, so by the next day's mediation
+    pass nobody remembered the feud and no mediator could ever be
+    found (the arc silently did nothing — day 271's pass ran with a
+    feud in the book and produced zero attempts). The fix: the Enemy
+    crossing now spreads the feud gossip (the "a feud starts"
+    channel Gossip.h always documented but never wired) *and*
+    attempts mediation immediately, while the settlement still
+    knows. The once-per-day pass stays as a backstop.
 
-## Stone 3 — The player window: the radio — ✅ built (MCM deferred)
+## Stone 3 — The player window: the radio — ✅ verified in-game (MCM deferred)
 
-**The news feed (built).** World events — bonds, feuds, births,
-deaths, market openings — become one-line news with names: "Marcy and
-Jun became friends", "a feud has begun between Vera Hart and Cole
-Wells", "a child was born to the Vances". Each lands as an on-screen
-HUD notification, throttled by `sim.news.cooldown` (default 5 s — a
-flood of lines is noise, not news), and appends to the in-memory news
-feed (`News.h`) — the settlement's story. The log's own line stays the
-verify channel; the feed is the player's window.
+**The news feed (verified in-game 2026-08-11).** World events — bonds,
+feuds, births, deaths, market openings — become one-line news with
+names: "Marcy and Jun became friends", "a feud has begun between Vera
+Hart and Cole Wells", "a child was born to the Vances". Each lands as
+an on-screen HUD notification, throttled by `sim.news.cooldown`
+(default 5 s — a flood of lines is noise, not news), and appends to
+the in-memory news feed (`News.h`) — the settlement's story. The log's
+own line stays the verify channel; the feed is the player's window.
+The pop-ups verified on-screen: bond formations ("X and Y became
+friends") and the feud headlines.
 
-**The settlement radio (built).** A radio the player has built (base
-form `radio.base.formid`, default 0x1A17D — the workshop "Radio",
-**flagged for xEdit verification**; the key exists so a wrong pin is a
-config line, never a rebuild) speaks the news as on-screen captions
-while within `sim.radio.radius` (3000 units): one caption per
-`sim.radio.caption.every` (45 s), rotating through the feed — the
-settlement tells its own story.
+**The settlement radio (verified in-game 2026-08-11).** A radio the
+player has built (base form `radio.base.formid`, default 0x1A17D —
+the workshop "Radio", **flagged for xEdit verification**; the key
+exists so a wrong pin is a config line, never a rebuild) speaks the
+news as on-screen captions while within `sim.radio.radius` (3000
+units): one caption per `sim.radio.caption.every` (45 s), rotating
+through the feed — the settlement tells its own story. Captions
+verified rotating on screen.
 
 **MCM + Settings Manager — deferred, honestly.** The behavior MCM
 would expose is already real — the INI is the source of truth, loaded
@@ -179,14 +215,20 @@ group echo).
 - [x] Stone 1 — Names: `Name` component (additive; record v6 for the
       legacy section), game names first, gender-split + animal pools in
       the INI, owned animals named / strays nameless, back-filled on
-      restore; every channel speaks names
+      restore; every channel speaks names — **verified in-game**: the
+      names are written onto the actors (SetOverrideName), the base-
+      form read fix, the per-second sweep, the INI synced to the
+      curated pools, pets unique, provisioners bare
 - [x] Stone 2 — The conflict source: closed-market arrivals report
       `ReportOutcome({keeper, Social, Failure})`, the temper line
       (`sim.slight.temper`) decides who blames, settlement `Groups`
       spread the echo, rival and enemy bonds form and the feud arc
-      begins on its own
+      begins on its own — **verified in-game**: engine gate
+      `sim.hunger.desperate` (`509a54d`), headline on any enemy
+      crossing, feud mediated at formation (gossip dies in ~4.5 s)
 - [x] Stone 3 — The radio: the news feed (HUD notifications + feed),
-      then settlement-radio captions; audio radio scheduled after 0.9.0
+      then settlement-radio captions — **verified in-game**; audio
+      radio scheduled after 0.9.0
 - [ ] MCM + Settings Manager — **deferred**: the INI already delivers
       the tuning behavior; the UI page needs MCM + the CK (author-side
       asset task)

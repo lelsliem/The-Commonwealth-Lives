@@ -1,12 +1,15 @@
 # World Facts — "Markets Close; Memories Fade; Hunger Doesn't"
 
 **Stone:** adapter 0.5.0 (world facts)
-**Status:** ✅ **IMPLEMENTED 2026-08-10** — market-hours gate live (no
-pins), radstorm gate live (CommonwealthGSRadstorm `001C3D5E` pinned from
-the xEdit dump — see `Docs/WeatherForms.md` for the full catalog and the
-exclusion decisions); the suite harness pins it (WorldFactsTest among
-them). In-game verification pending: the transition lines, and settlers
-stopping their market walks at night.
+**Status:** ✅ **VERIFIED in-game 2026-08-11** — market-hours gate live
+(no pins), radstorm gate live (CommonwealthGSRadstorm `001C3D5E` pinned
+from the xEdit dump — see `Docs/WeatherForms.md` for the full catalog
+and the exclusion decisions); the suite harness pins it (WorldFactsTest
+among them). The transition lines fire (`world fact: the market is
+closed (10:00) — trade unavailable until 24:00`), settlers stop their
+market walks at night, and 0.7.0 proved the gate's flip side: the
+closed-market fact gating the hungry walk is exactly why the feud
+needed the engine's desperate-hunger gate.
 **Related:** the core's `Remember` world-fact channel (`Simulation.h`:
 a memory event with an *invalid* Other is a fact — "the market is closed
 today" is `{ invalid, Trade, weight }`; while remembered, the core's

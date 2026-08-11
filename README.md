@@ -22,8 +22,8 @@ survives save/load.
 ## Roadmap
 
 Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
-through **0.6.0** is in and verified in-game; **0.7.0** (identity & the
-player window) is built and waiting its in-game verification:
+through **0.7.0** is in and verified in-game (2026-08-11); **0.8.0**
+(settler agency — hands in the world) is the next milestone:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.

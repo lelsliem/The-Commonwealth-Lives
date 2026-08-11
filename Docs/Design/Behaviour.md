@@ -1,9 +1,11 @@
 # Behaviour — "Different Minds, Different Manners"
 
 **Stone:** adapter 0.5.0 groundwork (species/behaviour split)
-**Status:** ✅ **IMPLEMENTED 2026-08-10** — species tag, profile table,
-and per-species seeding live; 7/7 adapter suites green (BehaviourTest
-among them). In-game verification pending a full 0.5.0 pass.
+**Status:** ✅ **VERIFIED in-game 2026-08-10/11** — species tag, profile
+table, and per-species seeding live; 7/7 adapter suites green
+(BehaviourTest among them); the split proven in-game across 0.5.0–0.7.0
+(humans trade, animals are fed by owner or settlement, children are
+sim-only minds).
 **Related:** core stays species-agnostic by design (`Behaviour.h`'s
 `Decide` reasons over needs and memory, never game facts); ADR-0024
 (game knowledge at the edge).

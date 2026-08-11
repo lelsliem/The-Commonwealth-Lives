@@ -5,8 +5,11 @@
 now resolves a trader and the exchange is real: `Trade, Success` (the
 core serves AcquireFood and earns trust), instead of the placeholder
 `Trade, Partial`. The suite harness pins it (BehaviourTest — the
-outcomes + RecordSale; TuningTest — `sim.sale.warmth`). In-game
-verification pending — the log lines to watch are below.
+outcomes + RecordSale; TuningTest — `sim.sale.warmth`). **Verified
+in-game 2026-08-10/11** — the trade lines (`trades with settler` /
+`sets up the stall` / fed-from-the-household) fire in the live log,
+stall-keepers survive save/load, and the sale's warmth grows the
+keeper–customer bond.
 **Related:** the species split (`Behaviour.h`), per-settlement markets
 (`SettlementMarkets.md`), the outcome channel (`Outcome.h`), ADR-0024
 (game knowledge at the edge).

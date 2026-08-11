@@ -1,10 +1,12 @@
 # Weather Memory — "Every Mind Knows the Day's Sky"
 
 **Stone:** adapter 0.5.0 (weather memory events)
-**Status:** ✅ **IMPLEMENTED 2026-08-10** — classification + day-stamped
-world facts live; the suite harness pins it (WorldFactsTest covers
-classification, the kind mapping, and the day stamp). In-game
-verification pending: the sky-turn and world-turns lines.
+**Status:** ✅ **VERIFIED in-game 2026-08-11** — classification +
+day-stamped world facts live; the suite harness pins it
+(WorldFactsTest covers classification, the kind mapping, and the day
+stamp). The sky-turn and world-turns lines fire in the live log
+(`world fact: the sky turns rainy (day 269)`, `the world turns — day
+270 begins`).
 **Engine prerequisite:** `InteractionKind` grew the weather kinds
 (`WeatherClear` … `WeatherRadstorm`, appended at the end — save-safe
 for the ordinal-based co-save). Engine commit `3909049`.

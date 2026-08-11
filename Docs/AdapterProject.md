@@ -14,13 +14,14 @@ of the conversation that built it.
 
 **Design docs in this repo** (`Docs/Design/`): `Translation.md` (form ↔
 entity), `Executor.md` (the tick + intent executor), `Walking.md` (the
-walk), `CoSave.md` (the co-save record — v4; v3's stall section
-still rides), `Behaviour.md` (the
+walk), `CoSave.md` (the co-save record — v6; v5's bond map and v3's
+stall section still ride), `Behaviour.md` (the
 species split), `Market.h`'s sibling `SettlementMarkets.md` (the census
 + per-settlement markets), `Trade.md` (the stall-keeper trade),
 `Economy.md` (cap pouches), `Tuning.md` (the INI), `WorldFacts.md`
 (the gates: market hours + weather), `WeatherFacts.md` (weather memory
-events), `RealTest.md` (the live log evidence). Each is flipped to
+events), `Identity.md` (0.7.0 — names, conflict source, the radio),
+`RealTest.md` (the live log evidence). Each is flipped to
 **verified in-game** as its stone lands; the ones that aren't verified
 yet say so.
 
@@ -55,12 +56,12 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
 | 0.5.0 | Living world ("The Settler Goes to Market") | ✅ complete (2026-08-10) — **everything implemented and verified in-game: species split, arrival outcomes, real test, world facts (settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets (persistent-cell census), desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4), lifecycle + walk-probe hardenings, the tuning INI template (`config/TheLivingCommonwealth.ini`), and the GitHub publish (repo live, tag `0.5.0-beta`, 2026-08-10)** |
 | 0.6.0 | Life & Emergent Quests ("The Commonwealth Remembers") | ✅ complete (2026-08-11) — **every stone built (16/16 harness suites), verified in-game, and shipped as tag `0.6.0`. The world keeps its books (a real kill books confirming → died one second apart; the dead never restore, never ghost-walk; fresh games book zero false deaths — ADR-0011). Bonds: the adapter owns an EventBus (Request A, stone 08) subscribed to `RelationshipChangedEvent`; `sim.bond.threshold.*` from the INI; mutual + sticky derivation in `Bonds.h`; co-save v5; the buyer's half of a trade is `Remember({keeper, Social})`; the living drift clock (`sim.drift.rate = 0.0002`) — a real marriage emerged from shared meals and survived save/load (ADR-0012). Households: the Spouse bond forms one (two pouches → one shared wallet, family bench feeds the spouse free, one-pouch enforced on restore, ADR-0013) — the family stall verified in-game. The sleep cycle closed the loop (eat → rest → recover → walk → eat, ADR-0014/0015). Stone 3.75 — Rest/Explore execute in-game as a bounded wander (`Movement::WanderNear`, ADR-0017 addendum 2): settlers mill around instead of freezing at the bench. Stone 4 gossip verified: `643 minds remember settler X is gone`. Stone 5 arcs verified: grief fired exactly once (`arcs: settler 0x50976 grieves for 0x2f2a7 — they seek company.`) — two bugs found and fixed in test (the announce's dead-code form lookup, the family meal not warming couples; ADR-0017 addenda 5–6); the feud's organic appearance waits on 0.7.0's conflict source (nothing makes dispositions negative yet). Stone 6 birth verified: sim-only children born, fed, and `3 sim-only children restored too` across two save/load cycles (restore-birth fix, ADR-0017 addendum 4). Engine hand-over Requests A–C delivered; the engine shipped stone 08 (RelationshipChangedEvent + sim.bond.threshold.*) and stone 09 (Society — Groups & Traits)** |
-| 0.7.0 | Identity & the Player Window ("The Player Listens") | ✅ built (2026-08-11) — **all three stones implemented, 19/19 harness suites green (NamesTest, SocietyTest, CoSaveV6Test); in-game verification pending. Stone 1 names: a `Name` component (additive — record v6 is the legacy section), game names first, gender-split pools + a separate animal pool curated in the INI (`names.first.male/.female/.animal`, `names.last`), owned animals named / strays nameless, back-filled on restore; every channel speaks names with the console hex beside them. Stone 2 conflict source: the engine's decided channels — a hungry arrival at a closed market reports `ReportOutcome({keeper, Social, Failure})` (−0.1), the temper line (`sim.slight.temper`, the engine's JitteredTraits substrate) decides who blames, settlement `Groups` (derived from market memories, never persisted) spread the echo, rival/enemy bonds form and the feud arc begins in the wild. Stone 3 the player window: world events become one-line news — throttled HUD notifications + the news feed — and a settlement radio (configurable `radio.base.formid`) speaks it as captions. Engine 0.7.0 (Legacy — Bequeath, InheritMemory, the legacy store) wired into the death/birth paths: deaths bequeath to the household's heir and leave the dead's name as a registry-level legacy (record v6); births inherit the parents' memories of the people. MCM's UI page honestly deferred (the INI already delivers the tuning; the page needs MCM + the CK)** |
+| 0.7.0 | Identity & the Player Window ("The Player Listens") | ✅ complete (2026-08-11) — **all three stones built, 19/19 harness suites green (NamesTest, SocietyTest, CoSaveV6Test) and verified in-game, ready to ship as tag `0.7.0`. Stone 1 names: a `Name` component (additive — record v6 is the legacy section), game names first, gender-split pools + a separate animal pool curated in the INI (`names.first.male/.female/.animal`, `names.last`), owned animals named / strays nameless, back-filled on restore — verified live with the fixes the hunt surfaced: the game name reads from the **base form** (the reference read is empty for most actors and was renaming Mama Murphy/Marcy/Jun), names are **written onto the actors** (SetOverrideName — the workshop view reads "Mara Price"), a per-second sweep names streaming actors and heals stale stamps, the shipped INI synced to the curated pools, pets deduped per world, provisioners keep the bare role. Stone 2 conflict source: the engine's decided channels — a hungry arrival at a closed market reports `ReportOutcome({keeper, Social, Failure})` (−0.1), the temper line (`sim.slight.temper`) decides who blames, settlement `Groups` spread the echo, rival/enemy bonds form and the feud arc begins — **verified end-to-end in-game** after the engine shipped the desperate-hunger gate (`sim.hunger.desperate`, core commit `509a54d`): `is shut … and blames the keeper` → rivals → `is feuding with` → gossip → `arcs: X cooled the feud between …` (127 mediation attempts in the stressed run); two adapter fixes landed during the hunt (the feud headline fires on any crossing into Enemy; the feud is mediated at formation because gossip dies in ~4.5 s at `sim.memory.fade` 0.2 — the once-per-day pass could never find a mediator). Stone 3 the player window: one-line news as throttled HUD notifications (verified on-screen) + the news feed, and a settlement radio (configurable `radio.base.formid`) speaking captions (verified on-screen); audio after 0.9.0. Engine 0.7.0 (Legacy — Bequeath, InheritMemory, the legacy store) wired into the death/birth paths. MCM's UI page honestly deferred (the INI already delivers the tuning; the page needs MCM + the CK)** |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **16/16 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **19/19 suites green.**
 
 ---
 
@@ -111,7 +112,9 @@ issue; sessions capped at 16) → `ProbeWalks` (live distance probes).
 **The co-save record:** the core's snapshot is process-local (component
 keys are `std::type_index`) — the adapter's record translates it to stable
 names (`needs`, `memory`, `relationships`, `goals`, `intent`, `formref`,
-`species`) with its own version (`kRecordVersion = 1`). Refusals are the
+`species`, `name`, `cappouch`) with its own version (`kRecordVersion =
+6` — v2 the Rng header, v3 the stall section, v4 memory world-days,
+v5 the bond map, v6 the registry-level legacy section). Refusals are the
 contract: truncated records, unsupported versions, and unknown component
 names never half-apply. Save-compatibility is the adapter's job.
 
@@ -180,8 +183,8 @@ all live). Adapter progress:
    weather forms pinned from the xEdit dump — only CommonwealthGSRadstorm
    `001C3D5E` matches, see Docs/WeatherForms.md). See
    Docs/Design/WorldFacts.md.
-2. ✅ **Tuning from Configuration** (implemented 2026-08-10, in-game
-   verification pending) — one text file next to the DLL
+2. ✅ **Tuning from Configuration** (implemented 2026-08-10, verified
+   in-game 2026-08-11) — one text file next to the DLL
    (`Data\F4SE\Plugins\TheLivingCommonwealth.ini`): the `sim.*` keys
    feed `SimulationTuning::FromConfiguration`; the adapter's own keys
    (`market.open.hour` / `market.close.hour`) ride in the same file and
@@ -202,15 +205,15 @@ all live). Adapter progress:
    no tag → Human) and skips unknown component names (a removed type is
    dropped, never fatal); a newer version is refused. Pinned by
    CoSaveTest's crafted fixtures.
-5. ✅ **Weather memory events** (implemented 2026-08-10, in-game
-   verification pending) — the live sky classifies into six categories
+5. ✅ **Weather memory events** (implemented 2026-08-10, verified
+   in-game 2026-08-11) — the live sky classifies into six categories
    (verified forms) pushed as day-stamped world facts (`{ invalid,
    WeatherRain, 1.0, day }`); today's categories refresh all day,
    yesterday's fade, the day-turn logs. The engine grew the `Weather*`
    kinds (append-only, save-safe). Re-derived at the edge — never
    co-save state. See Docs/Design/WeatherFacts.md.
-6. ✅ **Per-settlement markets** (implemented 2026-08-10, in-game
-   verification pending) — a census of the worldspaces' **persistent
+6. ✅ **Per-settlement markets** (implemented 2026-08-10, verified
+   in-game 2026-08-11) — a census of the worldspaces' **persistent
    cells** (base `000C1AEB`) finds every settlement market; each mind
    remembers the nearest within ~140 m instead of one global Sanctuary
    bench. FO4 never fills `formArrays[REFR]` — the original flat-array
@@ -222,14 +225,14 @@ all live). Adapter progress:
    census RETRIES when it finds nothing — with a one-time base-form
    probe so the next log says what the filter actually saw. No new
    pins. See Docs/Design/SettlementMarkets.md.
-7. ✅ **Desync the herd** (implemented 2026-08-10, in-game verification
-   pending) — `VaryNeeds` jitters each mind's seeded needs
+7. ✅ **Desync the herd** (implemented 2026-08-10, verified in-game
+   2026-08-11) — `VaryNeeds` jitters each mind's seeded needs
    (deterministic per entity id): hunger arrives at different times, and
    the decay-rate jitter is a metabolism that persists after every feed.
    The co-save already serializes the rate — no engine change, no new
    pins. See the Behaviour.md desync section.
 7b. ✅ **Per-tick decay jitter** (engine core 0.5.0 stone 07 SHIPPED
-   `90a9d33`, WIRED 2026-08-10, in-game verification pending) — the
+   `90a9d33`, WIRED 2026-08-10, verified in-game 2026-08-11) — the
    engine jitters each tick's decay per entity (`DecayRate *
    Derive(id).NextFloat(1 ± sim.jitter)`), and the adapter now owns a
    seeded `Rng`, passes it to every `Update`, and persists `rng.State()`
@@ -237,14 +240,14 @@ all live). Adapter progress:
    format bump; a v1 record reseeds fresh). See Docs/Design/Tuning.md
    (sim.jitter) and Docs/Design/CoSave.md (the v2 header).
 8. ✅ **Seeded need decay rates in the INI** (implemented 2026-08-10,
-   in-game verification pending) — sim.hunger.decay / .fatigue /.safety
+   verified in-game 2026-08-11) — sim.hunger.decay / .fatigue /.safety
    /.social /.comfort ride in the same file, so the whole rhythm tunes
    to "a few meals a day" without a recompile. Rates thread StartWorld
    → SeededNeeds, still jittered per mind by VaryNeeds, serialized by
    the co-save. Missing/broken values keep the defaults. See
    Docs/Design/Tuning.md.
-9. ✅ **The trade stone** (implemented 2026-08-10, in-game verification
-   pending) — a human arrival at the market is a real exchange: the
+9. ✅ **The trade stone** (implemented 2026-08-10, verified in-game
+   2026-08-11) — a human arrival at the market is a real exchange: the
    first human at each market sets up its stall, every later
    bench-arrival trades with them (Trade, Success — the core serves
    AcquireFood and earns trust), and the trader's half lands too
@@ -252,8 +255,8 @@ all live). Adapter progress:
    toward them; sim.sale.warmth). The buyer's memory of the merchant
    then beats the bench, so the next hungry walk resolves to the
    person. No engine change, no new pins. See Docs/Design/Trade.md.
-10. ✅ **The economy stone** (implemented 2026-08-10, in-game
-    verification pending) — the exchange is physical: every human mind
+10. ✅ **The economy stone** (implemented 2026-08-10, verified
+    in-game 2026-08-11) — the exchange is physical: every human mind
     carries a CapPouch (40 ± 20 caps, deterministic per id); a buyer
     pays what they can afford up to sim.meal.price (default 5) and the
     seller's pouch grows; a broke buyer is fed on the settlement's
@@ -261,7 +264,7 @@ all live). Adapter progress:
     a saved purse restores exactly, pre-economy saves are back-filled
     on restore. No engine change, no new pins. See Docs/Design/Economy.md.
 11. ✅ **Stall-keepers survive save/load** (implemented 2026-08-10,
-    in-game verification pending) — who runs each market's stall rides
+    verified in-game 2026-08-11) — who runs each market's stall rides
     the co-save record's v3 section as (market FormID, keeper FormID)
     pairs — form ids, stable across sessions, unlike the session-local
     entity ids — and ApplyRestore rebuilds the map from the restored
