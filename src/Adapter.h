@@ -490,15 +490,17 @@ namespace TLC
             std::pair<std::uint32_t, std::chrono::steady_clock::time_point>>
             m_ArrivedAt;
 
-        // When each mind was last held in place (the meal-cadence stone:
-        // Rest/Explore execute as a commanded hold so the sandbox cannot
-        // wander a resting settler away from its market). Rate-limited
-        // to one hold per mind per cooldown — a command package every
-        // frame would be a flood of its own.
+        // When each mind was last commanded to wander (the meal-cadence
+        // stone: Rest/Explore execute as a bounded wander near home — a
+        // real nearby reference — so a fed mind mills around its
+        // settlement instead of freezing at the bench or being drifted
+        // away by the sandbox). Rate-limited to one wander per mind per
+        // cooldown — a command package every frame would be a flood of
+        // its own, and re-issuing mid-walk would yank the actor.
         std::unordered_map<
             LCE::Simulation::EntityId,
             std::chrono::steady_clock::time_point>
-            m_LastHold;
+            m_LastWander;
 
         // The world the co-save held for this save. Set by QueueRestore
         // during the load, consumed by GameLoaded; absent or empty means

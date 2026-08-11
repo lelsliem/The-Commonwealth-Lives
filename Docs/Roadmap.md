@@ -33,20 +33,22 @@ Current Stage   : Life & Emergent Quests — 0.6.0 built, 16/16 harness
                    company), and birth (experimental, INI-gated — a
                    spouse household's sim-only child, fed by the
                    household). The meal-cadence stone landed too: Rest
-                   and Explore now execute in-game as a commanded hold
-                   (Movement::HoldPlace), so a fed mind stays at its
-                   bench instead of drifting across cells between
-                   meals. Review + walk-layer pass 2026-08-11 closed
-                   the structural gaps: rest rescues parked minds, the
-                   walk cap is per-market and INI-tunable, the log
-                   tells the truth about the live rhythm, and the
-                   arrival cooldown stops the per-frame feed loop
-                   (ADRs 0015–0016).
+                   and Explore now execute in-game as a bounded wander
+                   (Movement::WanderNear — a real nearby reference,
+                   furniture preferred), so a fed mind mills around its
+                   settlement instead of freezing at the bench (the
+                   first hold implementation's look) or drifting across
+                   cells between meals. Review + walk-layer pass
+                   2026-08-11 closed the structural gaps: rest rescues
+                   parked minds, the walk cap is per-market and
+                   INI-tunable, the log tells the truth about the live
+                   rhythm, and the arrival cooldown stops the per-frame
+                   feed loop (ADRs 0015–0016).
 
 Next Milestone  : 0.6.0 in-game verification (Stones 4–6 + the
-                   meal-cadence hold), then the engine's next hand-over
-                   (seeds: the Robot species — Behaviour.md — and
-                   deeper social simulation on the outcome channel)
+                   meal-cadence wander), then the engine's next
+                   hand-over (seeds: the Robot species — Behaviour.md —
+                   and deeper social simulation on the outcome channel)
 
 ═══════════════════════════════════════════════
 

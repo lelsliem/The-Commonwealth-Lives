@@ -37,12 +37,24 @@ namespace TLC
 
         // Parks the actor in place: the same command-mode travel package,
         // targeted at the actor itself, so the sandbox package cannot
-        // wander it away (the meal-cadence stone — a resting or exploring
-        // settler stays where it is, and a fed mind at the market stays
-        // at the bench between meals instead of drifting across cells).
-        // Same refusals as WalkTo; the caller rate-limits (once per mind
-        // per cooldown), because a command package every frame would be
-        // a flood of its own.
+        // wander it away. Now the fallback when a cell offers nothing
+        // to walk to (an empty loading cell). Same refusals as WalkTo.
         bool HoldPlace(RE::Actor* a_actor);
+
+        // One bounded wander: walks the actor to a real, nearby
+        // reference in its own cell — furniture preferred, then any
+        // non-actor object within a_radius — so a resting or exploring
+        // settler mills around its settlement instead of standing frozen
+        // at the bench (the meal-cadence hold's look, 2026-08-11) or
+        // being wandered away by the sandbox (the original gap). The
+        // command-mode travel package carries the walk; on arrival the
+        // sandbox resumes until the caller re-commands — so between
+        // commands the game plays its own idle (and may sit the settler
+        // at the furniture). The caller rate-limits (once per mind per
+        // cooldown — re-issuing mid-walk would yank the actor). Falls
+        // back to HoldPlace when the cell offers nothing. Silent: the
+        // plan-entry decision line is the narrative; a wander every
+        // cooldown across hundreds of minds must not flood the log.
+        bool WanderNear(RE::Actor* a_actor, float a_radius = 4000.0f);
     }
 }

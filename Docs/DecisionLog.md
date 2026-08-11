@@ -523,3 +523,25 @@ bench still feeds both spouses — but the wallets stay personal), and
 `Enforce` (the silent per-pass repair) skips the same pairs, so the
 invariant can never be re-merged behind the events' back. No co-save
 bump — the guard reads components the v5 world already persists.
+
+**Addendum 2 — the hold froze the settlement; the wander replaced it
+(same day, first in-game run of 27141de).** The 10 s commanded hold
+worked — meals collapsed to the cooldown cadence — but it looked dead:
+every resting or exploring settler stood frozen at the bench (the
+birth test's session). The movement intents were narrowed from the
+start: Rest and Explore are *wanders*, not *stands*, and the game's
+own sandbox is the best idle animation engine there is. `WanderNear`
+(1.11.221, the same byte-verified travel pin) commands the actor to a
+real, nearby reference in its own cell — furniture preferred, then any
+non-actor object within the radius — via `TESObjectCELL::
+ForEachReferenceInRange`. On arrival the sandbox resumes until the
+next command (rate-limited to one wander per mind per 30 s, so a
+re-issue never yanks a mid-walk actor), playing the game's idles — a
+settler may even sit at the bench it walked to. The meal cadence
+holds: the sandbox cannot drift the actor away before the next
+command, and the market fact re-seeds every second regardless. Empty
+cells fall back to `HoldPlace` — parked, never teleported. The travel
+issue was refactored into a silent `IssueTravel` helper so the wander
+(a command every cooldown across hundreds of minds) never floods the
+log; the plan-entry decision line is the narrative. `HoldPlace` stays
+as the empty-cell fallback only.

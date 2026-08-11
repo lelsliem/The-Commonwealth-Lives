@@ -1311,7 +1311,7 @@ namespace TLC
         // arrival.
         m_Walks.erase(entity);
         m_ArrivedAt.erase(entity);
-        m_LastHold.erase(entity);
+        m_LastWander.erase(entity);
         m_LastLogged.erase(entity);
         m_FeederLogged.erase(entity);
 
@@ -1434,7 +1434,7 @@ namespace TLC
         m_Bonds.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
-        m_LastHold.clear();
+        m_LastWander.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
         m_TickCalled = false;
@@ -2614,13 +2614,20 @@ namespace TLC
             case ActionType::Rest:
             case ActionType::Explore:
             {
-                // The meal-cadence stone: Rest and Explore now execute
-                // in-game as a commanded hold — the actor is parked in
-                // place and the sandbox cannot wander it away. Without
-                // this, a fed mind resting at its market drifts off, its
-                // market memory fades, and the next meal is minutes away
-                // (the observed 7–10 min gaps) instead of the cooldown's
-                // ~10 s. Rate-limited to one hold per mind per 10 s.
+                // The meal-cadence stone: Rest and Explore execute as a
+                // bounded wander — a real nearby reference in the
+                // actor's own cell (Movement::WanderNear), furniture
+                // preferred. The first hold implementation parked the
+                // actor in place and worked (meals collapsed from
+                // minutes to ~10 s), but it froze the settlement:
+                // everyone stood still at the bench. The wander keeps
+                // the cadence — the sandbox cannot drift the actor away
+                // before the next command — while the world looks
+                // alive, and the game plays its own idles between
+                // commands (it may even sit a settler at the bench it
+                // walked to). Rate-limited to one wander per mind per
+                // 30 s — re-issuing mid-walk would yank the actor to a
+                // new target.
                 char confidence[16];
                 std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
 
@@ -2630,13 +2637,13 @@ namespace TLC
                         + " (" + confidence + ")",
                     { static_cast<std::uint32_t>(entry.Intent.Action), 0, 0 });
 
-                const auto holdIt = m_LastHold.find(entry.Entity);
+                const auto wanderIt = m_LastWander.find(entry.Entity);
 
-                if (holdIt == m_LastHold.end()
-                    || now - holdIt->second >= std::chrono::seconds(10))
+                if (wanderIt == m_LastWander.end()
+                    || now - wanderIt->second >= std::chrono::seconds(30))
                 {
-                    m_LastHold[entry.Entity] = now;
-                    Movement::HoldPlace(actor);
+                    m_LastWander[entry.Entity] = now;
+                    Movement::WanderNear(actor);
                 }
             }
             break;

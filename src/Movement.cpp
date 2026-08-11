@@ -15,6 +15,9 @@
 
 #include <RE/A/Actor.h>
 #include <RE/C/COMMAND_TYPE.h>
+#include <RE/N/NiPoint3.h>
+#include <RE/T/TESBoundObject.h>
+#include <RE/T/TESObjectCELL.h>
 #include <RE/T/TESObjectREFR.h>
 
 #include <REL/Offset.h>
@@ -79,6 +82,30 @@ namespace
     }
 }
 
+namespace
+{
+    // The game's own "move here": command this actor to travel to the
+    // target reference. A command package outranks the sandbox package
+    // that ate the bare planner call — this is the vanilla command-mode
+    // call the game itself uses. Pin is byte-verified; silent (the
+    // callers own their logging — a wander every cooldown across
+    // hundreds of minds must not flood the log).
+    bool IssueTravel(RE::Actor* a_actor, RE::TESObjectREFR* a_target)
+    {
+        if (!Matches(kTravelPackageRva, kTravelPrologue))
+        {
+            return false;   // never teleport on a wrong pin
+        }
+
+        using TravelFn = void (*)(RE::Actor*, RE::TESObjectREFR*, RE::COMMAND_TYPE);
+        const auto travel =
+            reinterpret_cast<TravelFn>(REL::Offset{ kTravelPackageRva }.address());
+
+        travel(a_actor, a_target, RE::COMMAND_TYPE::kMove);
+        return true;
+    }
+}
+
 namespace TLC::Movement
 {
     bool WalkTo(RE::Actor* a_actor, RE::TESObjectREFR* a_target)
@@ -95,9 +122,7 @@ namespace TLC::Movement
             return false;
         }
 
-        // Byte-verify the pin so this refusal is grounded in the real
-        // exe — a wrong pin would mean the whole analysis is off.
-        if (!Matches(kTravelPackageRva, kTravelPrologue))
+        if (!IssueTravel(a_actor, a_target))
         {
             REX::ERROR(
                 "LCE: WalkTo refused — InitiateCommandModeTravelPackage pin "
@@ -105,16 +130,6 @@ namespace TLC::Movement
                 REL::Offset{ kTravelPackageRva }.address());
             return false;
         }
-
-        // The game's own "move here": command this actor to travel to the
-        // target reference. A command package outranks the sandbox package
-        // that ate the bare planner call — this is the vanilla command-
-        // mode call the game itself uses. Pin is byte-verified above.
-        using TravelFn = void (*)(RE::Actor*, RE::TESObjectREFR*, RE::COMMAND_TYPE);
-        const auto travel =
-            reinterpret_cast<TravelFn>(REL::Offset{ kTravelPackageRva }.address());
-
-        travel(a_actor, a_target, RE::COMMAND_TYPE::kMove);
 
         REX::INFO(
             "LCE: WalkTo — command-mode travel package issued for target {:#x}.",
@@ -129,24 +144,86 @@ namespace TLC::Movement
             return false;
         }
 
-        if (!Matches(kTravelPackageRva, kTravelPrologue))
+        return IssueTravel(a_actor, a_actor);
+    }
+
+    bool WanderNear(RE::Actor* a_actor, float a_radius)
+    {
+        if (a_actor == nullptr || a_actor->currentProcess == nullptr)
         {
-            return false;   // same pin, same refusal — never teleport
+            return false;
         }
 
-        // Command the actor to "travel" to itself: the destination is
-        // its own position, so the package parks it and suspends the
-        // sandbox. The caller rate-limits the issue; this logs once per
-        // hold (debug — a held world is visible, not deafening).
-        using TravelFn = void (*)(RE::Actor*, RE::TESObjectREFR*, RE::COMMAND_TYPE);
-        const auto travel =
-            reinterpret_cast<TravelFn>(REL::Offset{ kTravelPackageRva }.address());
+        const auto cell = a_actor->GetParentCell();
 
-        travel(a_actor, a_actor, RE::COMMAND_TYPE::kMove);
+        if (cell == nullptr)
+        {
+            return HoldPlace(a_actor);
+        }
 
-        REX::DEBUG(
-            "LCE: hold — settler {:#x} commanded in place (Rest/Explore).",
-            a_actor->GetFormID());
-        return true;
+        const auto position = a_actor->GetPosition();
+
+        RE::TESObjectREFR* furniture = nullptr;
+        float furnitureDistance = a_radius;
+        RE::TESObjectREFR* anyObject = nullptr;
+        float objectDistance = a_radius;
+
+        // The bounded wander: every real reference in this cell within
+        // the radius — furniture preferred (a bench to rest by), any
+        // non-actor object as the fallback (a wall, a crate, a tree —
+        // the actor walks there and the sandbox idles). Actor refrs are
+        // skipped: commanding a walk to another settler would chase a
+        // moving target.
+        cell->ForEachReferenceInRange(
+            position, a_radius,
+            [&](RE::TESObjectREFR* a_ref) -> RE::BSContainer::ForEachResult
+            {
+                if (a_ref == nullptr || a_ref == a_actor)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                const auto base = a_ref->GetObjectReference();
+
+                if (base == nullptr
+                    || base->GetFormType() == RE::ENUM_FORM_ID::kACHR)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                const auto delta = a_ref->GetPosition() - position;
+                const auto distance = delta.Length();
+
+                if (distance > a_radius)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                if (base->GetFormType() == RE::ENUM_FORM_ID::kFURN)
+                {
+                    if (distance < furnitureDistance)
+                    {
+                        furnitureDistance = distance;
+                        furniture = a_ref;
+                    }
+                }
+                else if (distance < objectDistance)
+                {
+                    objectDistance = distance;
+                    anyObject = a_ref;
+                }
+
+                return RE::BSContainer::ForEachResult::kContinue;
+            });
+
+        // Furniture first (a bench to rest by — the sandbox may even
+        // sit them between commands), then any object; nothing at all
+        // in the cell — park in place rather than send them walking
+        // across the world.
+        const auto target = furniture != nullptr ? furniture : anyObject;
+
+        return target != nullptr
+            ? IssueTravel(a_actor, target)
+            : HoldPlace(a_actor);
     }
 }

@@ -193,26 +193,33 @@ order; each one leaves the world strictly more alive.
   first marriage formed, survived save/load, and the family bench fed
   the spouse (Stone 3's verify line).
 
-### Stone 3.75 — The meal-cadence hold (Rest/Explore executes in-game) — BUILT + TESTED (2026-08-11)
+### Stone 3.75 — The meal-cadence wander (Rest/Explore executes in-game) — BUILT + TESTED (2026-08-11)
 
 - The marriage test's honest gap: a fed mind that decides Rest or Explore
   got *nothing* — both were table slots. The game's sandbox took over and
   wandered the settler away from its bench; its market memory faded; the
   next shared meal was 7–10 minutes away instead of the ~10 s the
   cooldown allows (the observed stall in the first marriage hunt).
-- **The fix (`Movement::HoldPlace`):** Rest and Explore now execute
-  in-game as a commanded hold — the same verified command-mode travel
-  package, targeted at the actor itself, so the sandbox cannot wander it
-  away. Rate-limited to one hold per mind per 10 s (a command package
-  every frame would be a flood of its own). A fed mind rests at its
-  bench; the memory lives; the next meal is a cooldown away.
+- **The first fix (`Movement::HoldPlace`)** parked the actor in place —
+  the verified command-mode travel package targeted at itself. It worked
+  (meals collapsed to the cooldown cadence, verified in-game), but it
+  froze the settlement: everyone stood still at the bench.
+- **The fix now (`Movement::WanderNear`):** Rest and Explore execute as
+  a bounded wander — a real, nearby reference in the actor's own cell
+  (furniture preferred, then any non-actor object), commanded through
+  the same travel package. On arrival the sandbox resumes until the
+  next command (rate-limited to one wander per mind per 30 s), so the
+  game plays its own idles between commands — it may even sit a settler
+  at the bench it walked to. The cadence holds (the sandbox cannot
+  drift the actor away before the next command), and the settlement
+  looks alive: settlers mill around home between meals. Empty cells
+  fall back to HoldPlace — parked, never teleported.
 - Walk, rest, explore — the sim's three movement intents are all real
   game commands now. Socialize/Work/Flee remain table slots (their
-  stones are future work), and a resting mind stands in place rather
-  than sitting — furniture/animation is game-side polish for later.
-- **Verify (pending):** watch a fed mind at the bench — it holds its
-  ground through Rest instead of drifting, and meals to the same pair
-  collapse from minutes to the ~10 s cooldown cadence.
+  stones are future work).
+- **Verify (pending):** settlers mill around the settlement between
+  meals instead of freezing at the bench, and the same pair's meals
+  stay on the cooldown cadence.
 
 ### Stone 4 — Gossip — BUILT + TESTED (2026-08-11)
 
@@ -353,9 +360,9 @@ required for 0.6.0** — the adapter chains the existing four.
    dispositions fray, someone leaves. *(Not built — sketched.)*
 5. A birth (with `sim.birth.enabled = 1`): a child mind is born,
    protected, fed, bonded to its parents — and returns from the co-save.
-6. The meal-cadence hold: a fed mind rests at its bench instead of
-   drifting, and the same pair's meals collapse from minutes to the
-   ~10 s cooldown cadence.
+6. The meal-cadence wander: a fed mind mills around its settlement
+   between meals (no more standing frozen at the bench), and the same
+   pair's meals stay on the cooldown cadence.
 
 Everything observable in the log; every behaviour driven by needs, bonds,
 memory, and the seeded RNG — never by a script.
