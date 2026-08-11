@@ -967,9 +967,11 @@ namespace TLC
                     nameA, nameB, Bonds::BondPlural(a_old));
             }
         }
-        else if (a_old == Bonds::BondKind::None
-            && a_new == Bonds::BondKind::Enemy)
+        else if (a_new == Bonds::BondKind::Enemy)
         {
+            // Any crossing into Enemy is a feud — whether it jumped the
+            // whole book in one blow (None -> Enemy) or cooled down the
+            // rivalry (Rival -> Enemy, the normal shut-stall path).
             REX::INFO(
                 "bonds: {} is feuding with {}.",
                 nameA, nameB);
@@ -1055,11 +1057,7 @@ namespace TLC
                 LCE::Simulation::InteractionKind::Social,
                 CurrentDay());
 
-            if (a_new == Bonds::BondKind::Enemy)
-            {
-                PushNews(nameA + " is feuding with " + nameB + ".");
-            }
-            else if (a_new == Bonds::BondKind::Rival)
+            if (a_new == Bonds::BondKind::Rival)
             {
                 PushNews(nameA + " and " + nameB + " became rivals.");
             }
@@ -1075,6 +1073,16 @@ namespace TLC
             {
                 PushNews(nameA + " and " + nameB + " are married.");
             }
+        }
+
+        // The feud headline (0.7.0 Stone 2): any crossing into Enemy
+        // makes the papers, not just a direct jump from nothing. The
+        // slow rival -> enemy path is how shut-stall feuds actually
+        // arrive, and the world should hear them too.
+        if (a_new == Bonds::BondKind::Enemy
+            && a_old != Bonds::BondKind::Enemy)
+        {
+            PushNews(nameA + " is feuding with " + nameB + ".");
         }
     }
 
