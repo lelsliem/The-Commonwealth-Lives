@@ -76,6 +76,10 @@ slighted at a shut stall says a line.
 - `2d34030` Life/death visibility: the body is buried (0.8.2, after
   the mourning window), the child is a mind by design (visible
   children are a CK asset stone, post-1.0) — ADR-0023
+- `180546d` Visible children get a reachable path (Baby Sim, Nexus
+  100934 — permission + integration, not build-from-scratch); named
+  traders (We Have Names, Nexus 74287) are a census input; Crime and
+  Punishment assessed and skipped
 
 ---
 
