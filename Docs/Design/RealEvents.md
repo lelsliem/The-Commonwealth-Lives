@@ -80,16 +80,24 @@ The sim already *feels* social — `Socialize` ambitions, Social
 interactions, warmth between minds. Pillar 2 makes talking **visible**:
 when two minds interact socially, they say something.
 
-- **Mostly dialect** — words, not codex entries. In-game, the actors
-  Say lines; in the log, the exchange reads as dialogue:
+- **Simple one-liners, not codex entries.** Short, punchy, wasteland
+  dialect — lines people actually say. The author's rule of thumb:
+  if it takes more than ten words, cut it. Example exchange:
   ```
-  LCE: settler 0001A4D7 to 0001CA7D: "Heard the market's open again."
-  LCE: settler 0001CA7D to 0001A4D7: "Aye — and the rads are free."
+  LCE: settler 0001A4D7 to 0001CA7D: "Market's open again."
+  LCE: settler 0001CA7D to 0001A4D7: "Aye. Rads are free."
   ```
 - **Line pools in the INI** — the same pattern as the name pools:
-  `dialogue.greet.*`, `dialogue.gossip.*`, `dialogue.row.*`, per
-  species and per bond state (friends talk warmly, rivals talk cold).
-  The author curates the words, like the names.
+  `dialogue.greet.*`, `dialogue.gossip.*`, `dialogue.row.*` (and
+  `dialogue.fight.*` for the escalation). The author curates the
+  words, like the names. A seeded picker (like names) per mind, so
+  everyone doesn't say the same line.
+- **Altercation lines escalate in order.** The author's starter set is
+  the verbal→physical ramp in five lines: the complaint ("you ripped
+  me off"), the dare ("you do that again, i dare you"), the taunt
+  ("go on, one more time"), the break point ("i've had it with you"),
+  and the escalation ("want some? let's go"). A row uses the early
+  lines; a fight is earned when the escalation line lands.
 - **Who talks:** two loaded minds near each other with a Social need;
   the walker and the trader after a trade; a couple at the bench; a
   family at dinner. The sim's existing Social interactions are the
@@ -117,8 +125,9 @@ The feud machinery (Identity.md) already produces **slights → rival →
 enemy**. Pillar 3 gives a feud *scenes*:
 
 - **Mostly verbal.** A row is a conversation gone bad — a `dialogue.row`
-  exchange, a Wronged outcome, disposition damage, gossip spread. Feuds
-  are fought with words first: the settlement *hears* the shouting.
+  exchange (the author's five-line ramp), a Wronged outcome,
+  disposition damage, gossip spread. Feuds are fought with words
+  first: the settlement *hears* the shouting.
 - **Sometimes physical.** When dispositions are deep enough (enemy) and
   tempers flare, an altercation escalates — a shove, a punch. The
   engine already has `Combat` as an InteractionKind; the adapter maps
