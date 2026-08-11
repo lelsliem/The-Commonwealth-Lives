@@ -399,6 +399,20 @@ namespace TLC
             LCE::Simulation::SimulationTuning::FromConfiguration(config);
         m_Settings = Tuning::AdapterSettingsFrom(config);
 
+        // The feeling rhythm (0.6.0 Stone 2): the core's drift default
+        // (0.05/s — half-life ~14 s) was tuned for a fast demo and
+        // erases a shared meal's warmth between meals (minutes apart),
+        // so no relationship can ever accumulate. The adapter's world
+        // runs the same slow clock the shipped INI sets (sim.drift.rate)
+        // when the config names none — the adapter's defaults ARE the
+        // living-world defaults, exactly like the bond lines below.
+        const auto driftInjected = config.Get("sim.drift.rate").empty();
+
+        if (driftInjected)
+        {
+            m_CoreTuning.DriftRate = Tuning::kLivingDriftRate;
+        }
+
         // Bonds (0.6.0 Stone 2): the core's watch-list is empty unless
         // the world names its lines — the adapter names them here, so a
         // world without a config file still bonds (friend +0.3 through
@@ -417,10 +431,12 @@ namespace TLC
             Bonds::ParseBondThresholds(m_CoreTuning.BondThresholds);
 
         REX::INFO(
-            "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00.",
+            "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00, drift {}{}.",
             ini.string(),
             m_Settings.MarketOpenHour,
-            m_Settings.MarketCloseHour);
+            m_Settings.MarketCloseHour,
+            m_CoreTuning.DriftRate,
+            driftInjected ? " (defaults)" : "");
         REX::INFO(
             "bonds: friend {:+.2f}, sweetheart {:+.2f}, spouse {:+.2f}, "
             "rival {:+.2f}, enemy {:+.2f}{}.",
@@ -1471,6 +1487,24 @@ namespace TLC
         {
             if (traded)
             {
+                // The buyer's half of the exchange: a meal at the bench
+                // is company. ReportOutcome above built trust (Trade is
+                // the core's reliability channel); Remember(Social)
+                // warms the disposition — the same +0.1 the keeper's
+                // RecordSale warms them — and publishes the crossing on
+                // the bus, so a warm enough buyer crosses the friend
+                // line the instant the meal lands. This is the
+                // courtship's raw material (Life.md): repeated trading
+                // at the same bench is how two settlers become friends.
+                Remember(
+                    m_Registry, a_entity,
+                    MemoryEvent{
+                        counterparty, InteractionKind::Social,
+                        WorldFacts::kFactWeight },
+                    m_CoreTuning,
+                    WorldTime{ CurrentDay() },
+                    &m_Bus);
+
                 // The trader's half of the exchange: they remember the
                 // sale and warm toward the customer. The buyer's side —
                 // trust earned, the goal served — is the core's work via

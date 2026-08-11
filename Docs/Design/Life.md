@@ -94,6 +94,18 @@ order; each one leaves the world strictly more alive.
 - **Verify:** watch two settlers socialize into a bond; reload; the bond
   stands (the `bonds: N bonds restored from the co-save.` line at
   restore, and the bond lines on formation).
+- **Two in-game discoveries shaped the wiring (2026-08-11):** (1) the
+  core's `Trade` outcome builds *trust*, never disposition — only Aid /
+  Social warm feelings — so a buyer's disposition toward the keeper
+  never grew from trading at all. The buyer's half is now a
+  `Remember({keeper, Social})` alongside the trade: a meal at the bench
+  is company, the courtship's raw material, and it publishes the
+  crossing on the bus (instant bond log). (2) The core's drift default
+  (0.05/s, half-life ~14 s) erased any warmth between meals — the
+  adapter's world runs the same slow clock the INI sets
+  (`sim.drift.rate = 0.0002`, half-life ~1 h, injected when the config
+  names none). Four shared meals cross the friend line; meals every
+  ~10 s (the fast demo rhythm) bond in under a minute.
 
 ### Stone 3 — Households
 

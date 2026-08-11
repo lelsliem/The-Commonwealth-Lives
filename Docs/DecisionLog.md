@@ -248,3 +248,36 @@ line — every "became friends" instantly followed by "no longer friends".
 Same-family downgrades wait for the sticky dissolve; only a family flip
 (friends turned rivals) changes the bond outright. This is hysteresis,
 chosen deliberately and documented in `Bonds.h`.
+
+## 0012 addendum — bonds need the buyer's warmth and a slower clock (two in-game discoveries)
+
+**Accepted · 2026-08-11 (the first in-game bond test)**
+
+The first test of Stone 2 ran clean — v0.6.0 banner, tuning loaded, 663
+minds restored, the market trading — but no bond formed. Reading the
+log against the core's source showed why, two independent gaps:
+
+1. **Trade warms trust, never disposition.** The core's `Trade` outcome
+   only touches Trust (+TrustGain); only Aid/Social (+DispositionGain)
+   and Wronged/Combat (−DispositionLoss) move disposition. So a buyer
+   trading with the keeper grew *trust* but their disposition toward the
+   keeper stayed 0 forever — and the bond derivation takes the pair's
+   minimum, so min(0, keeper's warmth) = 0, no bond, ever. The fix is
+   the buyer's half: on a successful trade the buyer also
+   `Remember({keeper, Social})` — a meal at the bench is company, the
+   courtship's raw material (Life.md), and Remember publishes the
+   crossing on the bus so the instant bond log fires. The keeper's half
+   was already there (RecordSale).
+
+2. **The core's drift default erases feelings between meals.** Drift is
+   exponential toward neutral at DriftRate — 0.05/s is a ~14 s half-life,
+   tuned for the 0.3.0 fast demo. With the living rhythm (a meal every
+   ~8 real minutes), any warmth was gone within a minute of the meal.
+   The adapter's world now runs the same slow clock the shipped INI sets
+   (`sim.drift.rate = 0.0002`, ~1 h half-life), injected when the config
+   names none — the adapter's defaults ARE the living-world defaults,
+   like the bond lines. Four shared meals cross the friend line.
+
+Both are tuning/wiring decisions, not core changes: the core's
+`sim.drift.rate` key was already the designed knob, and the social half
+of a trade was always the plan — the adapter had simply never wired it.

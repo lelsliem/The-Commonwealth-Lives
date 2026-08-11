@@ -113,6 +113,19 @@ namespace TLC::Tuning
         return config;
     }
 
+    // The feeling rhythm (0.6.0 Stone 2): how fast dispositions and
+    // trusts decay toward neutral when no experience refreshes them.
+    // The core's default (0.05/s, half-life ~14 s) was tuned for a fast
+    // demo — a shared meal's warmth is erased within a minute, so no
+    // relationship can ever accumulate into a bond. The adapter's world
+    // runs the same slow clock the shipped INI sets (sim.drift.rate):
+    // half-life ~58 real minutes, so a bench-meal keeps its glow and
+    // repeated meetings actually add up. A meal every ~8 min (0.002
+    // hunger) retains ~90% of its warmth; four shared meals cross the
+    // friend line. Lower = feelings last longer (bonds form faster);
+    // higher = closer to the old demo.
+    inline constexpr float kLivingDriftRate = 0.0002f;
+
     //-------------------------------------------------------------------------
     // AdapterSettings
     //
