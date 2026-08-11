@@ -275,9 +275,12 @@ other three stay sketched below.
 - **Verify (2026-08-11):** the grief arc's lifecycle is in the logs —
   death → gossip → `arcs: settler 0x50976 grieves for 0x2f2a7 — they
   seek company.` → the bereaved's Social draining as it seeks company.
-  The feud's *organic* appearance waits for 0.7.0's conflict source
-  (nothing in 0.6.0 makes dispositions negative — enemy pairs cannot
-  form yet; the arc is harness-verified).
+  The feud's *organic* fuel is now 0.7.0's conflict source (built
+  2026-08-11): a hungry arrival at a closed market reports
+  `ReportOutcome({keeper, Social, Failure})` — −0.1 toward the
+  stall-keeper, the settlement echo spreading the chill — and the
+  temper line (`sim.slight.temper`) decides who blames; two or three
+  let-downs cross the rival line and the feud begins in the wild.
 
 ### Stone 6 — Birth (experimental, INI-gated) — VERIFIED IN-GAME (2026-08-11)
 
@@ -365,7 +368,8 @@ required for 0.6.0** — the adapter chains the existing four.
 
 ## The 0.6.0 test plan
 
-1. Two settlers become friends; one slights the other; the feud arc
+1. Two settlers become friends; one slights the other (0.7.0's
+   conflict source — a shut stall, a churlish mind); the feud arc
    starts; gossip spreads it; a neutral settler mediates.
 2. A couple courtships at the bench, marries, and their pouch is shared —
    save, reload, the bond and pouch survive. *(Verified in-game

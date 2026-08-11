@@ -202,6 +202,30 @@ namespace TLC::Tuning
         // (no game actor), fed by the household, bonded to both parents,
         // living in the co-save.
         bool BirthEnabled = false;
+
+        // The conflict source (0.7.0 Stone 2): the temper line. A mind
+        // whose temperament (Behaviour.h TemperOf, ~0.8–1.2 around 1.0)
+        // is at or above this blames the stall-keeper when a hungry
+        // arrival finds the market shut — the slight that can cross the
+        // rival and enemy lines and begin a feud. Below the line, a warm
+        // mind forgives (the stall was just shut — no one to blame).
+        float SlightTemper = 1.0f;
+
+        // The player window (0.7.0 Stone 3): the news feed. Events go
+        // on-screen as HUD notifications, throttled by NewsCooldown
+        // seconds — a flood of lines is noise, not news. The feed is the
+        // settlement radio's story (RadioCaptionEvery seconds between
+        // captions while a radio is near, within RadioRadius units).
+        bool NewsEnabled = true;
+        float NewsCooldown = 5.0f;
+        float RadioCaptionEvery = 45.0f;
+        float RadioRadius = 3000.0f;
+
+        // The settlement radio's base form. The default is the workshop
+        // "Radio" — a hardcoded FormID, so it is flagged for xEdit
+        // verification before it is trusted (the verify ritual); the key
+        // exists so a wrong pin is a config line, never a rebuild.
+        std::uint32_t RadioBaseFormId = 0x0001A17D;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -253,8 +277,17 @@ namespace TLC::Tuning
 
         settings.GriefDecay =
             read("sim.arc.grief.decay", settings.GriefDecay);
+        settings.SlightTemper =
+            read("sim.slight.temper", settings.SlightTemper);
 
-        // The arc/birth toggles are bools, not rates — parse them
+        settings.NewsCooldown =
+            read("sim.news.cooldown", settings.NewsCooldown);
+        settings.RadioCaptionEvery =
+            read("sim.radio.caption.every", settings.RadioCaptionEvery);
+        settings.RadioRadius =
+            read("sim.radio.radius", settings.RadioRadius);
+
+        // The arc/birth/news toggles are bools, not rates — parse them
         // separately: "1", "true", "yes", "on" mean on; anything else
         // off (a broken line never breaks the world).
         const auto readBool = [&a_config](std::string_view key, bool fallback)
@@ -274,6 +307,34 @@ namespace TLC::Tuning
             readBool("sim.arc.mediation", settings.MediationEnabled);
         settings.BirthEnabled =
             readBool("sim.birth.enabled", settings.BirthEnabled);
+        settings.NewsEnabled =
+            readBool("sim.news.enabled", settings.NewsEnabled);
+
+        // The radio's base form is a hex form id, not a rate — parse it
+        // separately ("0x1A17D" or "1A17D" or decimal; a broken line
+        // keeps the default).
+        const auto rawRadio = a_config.Get("radio.base.formid");
+
+        if (!rawRadio.empty())
+        {
+            try
+            {
+                std::string value(rawRadio);
+
+                if (value.rfind("0x", 0) == 0
+                    || value.rfind("0X", 0) == 0)
+                {
+                    value = value.substr(2);
+                }
+
+                settings.RadioBaseFormId = static_cast<std::uint32_t>(
+                    std::stoul(value, nullptr, 16));
+            }
+            catch (const std::exception&)
+            {
+                // keep the default — a broken line never breaks the world
+            }
+        }
 
         // The walk cap is a size, not a rate — parse it separately.
         const auto rawCap = a_config.Get("sim.walk.cap");

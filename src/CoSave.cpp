@@ -45,9 +45,9 @@ namespace TLC::CoSave
             std::type_index Type;
         };
 
-        const std::array<TypeName, 8>& TypeNames()
+        const std::array<TypeName, 9>& TypeNames()
         {
-            static const std::array<TypeName, 8> kTable{
+            static const std::array<TypeName, 9> kTable{
                 TypeName{ "needs", typeid(Needs) },
                 TypeName{ "memory", typeid(Memory) },
                 TypeName{ "relationships", typeid(Relationships) },
@@ -56,6 +56,7 @@ namespace TLC::CoSave
                 TypeName{ "formref", typeid(FormRef) },
                 TypeName{ "species", typeid(SpeciesTag) },
                 TypeName{ "cappouch", typeid(CapPouch) },
+                TypeName{ "name", typeid(Name) },
             };
 
             return kTable;
@@ -162,6 +163,25 @@ namespace TLC::CoSave
             writer.U32(bond.FormB);
             writer.U32(bond.Kind);
             writer.U64(bond.SinceDay);
+        }
+
+        // v6 (the identity stone): the registry-level legacy section —
+        // the serialized legacy store (via the registered legacy
+        // serializer), present only in v6+ records. Older records end
+        // after the bonds; a restored world simply starts with no
+        // legacies, which is honest for a save made before the dead
+        // could leave one.
+        if (a_snapshot.Legacy.has_value())
+        {
+            writer.U8(1);
+            writer.U32(static_cast<std::uint32_t>(
+                a_snapshot.Legacy->size()));
+            writer.Raw(
+                a_snapshot.Legacy->data(), a_snapshot.Legacy->size());
+        }
+        else
+        {
+            writer.U8(0);
         }
 
         return writer.Bytes;
@@ -385,6 +405,37 @@ namespace TLC::CoSave
                 }
 
                 a_bonds.push_back(bond);
+            }
+        }
+
+        // v6 (the identity stone): the registry-level legacy section
+        // follows the bonds. Older records have no section — the
+        // snapshot's legacy stays empty (no facts, a safe default, like
+        // a missing component). Truncation is still a refusal.
+        if (recordVersion >= 6)
+        {
+            if (reader.Remaining() < 1)
+            {
+                return false;
+            }
+
+            const auto hasLegacy = reader.U8() != 0;
+
+            if (hasLegacy)
+            {
+                if (reader.Remaining() < 4)
+                {
+                    return false;
+                }
+
+                const auto legacyLength = reader.U32();
+
+                if (reader.Remaining() < legacyLength)
+                {
+                    return false;
+                }
+
+                a_out.Legacy = reader.Raw(legacyLength);
             }
         }
 

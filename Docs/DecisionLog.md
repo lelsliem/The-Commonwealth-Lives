@@ -637,3 +637,63 @@ the arc is harness-verified, and its conflict source is 0.7.0's
 The changelog-worthy summary for the release page is: settlers are born,
 live, and die; they remember who is gone; they make friends, sweethearts,
 and spouses from shared meals — and grieve for the ones they lose.
+
+## 0019 — 0.7.0: identity, conflict, and the player window (2026-08-11)
+
+The engine answered the open question first (2026-08-11, its own
+decision record): negative social travels by **kind and result, never
+a sign** — `ReportOutcome(Other, Social, Failure)` is −0.1, `Remember
+(Other, Wronged)` is −0.25, and `event.Weight` is salience only. The
+draft's `Remember({keeper, −Social})` is superseded by the decided
+channels; no hand-over was needed.
+
+**The three stones, built together (19/19 harness suites):**
+
+1. **Names.** A `Name` component, additive to the co-save (the record's
+   v6 bump is the legacy section, not the component — the format is
+   self-describing; old records back-fill on restore, exactly like the
+   economy's pouches). The game's own names win; a generic "Settler"
+   draws from **gender-split pools** (the actor's sex; an unset sex
+   draws from the id) with a shared family list, and **animals draw
+   from their own pool, named only when owned** — the ownership rule
+   the author asked for (a stray stays "animal [FF0197BF]" until
+   someone claims it). The author curates all four lists in the INI
+   (`names.first.male/.female/.animal`, `names.last`); a missing or
+   broken list keeps the built-in default. Every channel speaks names
+   with the console hex beside them.
+2. **The conflict source.** A hungry human whose walk lands at a
+   **closed market** reports `ReportOutcome({keeper, Social, Failure})`
+   — the executed interaction that went badly, the engine's designed
+   channel. The **temper line** (`sim.slight.temper`; the engine's
+   `JitteredTraits` substrate, deterministic per id) decides who
+   blames — a churlish mind cools −0.1 toward the keeper, a warm one
+   shrugs it off (a world outcome, memory only). Settlement `Groups`
+   (derived from the market memory, never persisted — a restored world
+   re-derives) let the echo spread the chill at
+   `sim.group.inheritance`, and two or three let-downs cross the rival
+   line: the 0.6.0 feud arc — gossip, mediation — finally begins in
+   the wild. The echo also warms settlements toward their feeder (a
+   sale's +0.1 echoes +0.05); the mutual bond rule keeps that from
+   manufacturing bonds (settlement → keeper warms, keeper → settlement
+   does not — min wins).
+3. **The player window.** World events become one-line news — bonds,
+   feuds, births, deaths, market openings — shown as throttled HUD
+   notifications and appended to the news feed; a settlement radio
+   (base form `radio.base.formid`, default 0x1A17D — **flagged for
+   xEdit verification**, configurable so a wrong pin is a config line)
+   speaks the feed as captions while near. **MCM is deferred,
+   honestly**: the INI already delivers the tuning behavior; the UI
+   page needs the MCM mod and the Creation Kit — an author-side asset
+   task, not a sim task. Real audio likewise waits for assets.
+
+**The engine's 0.7.0 proved through the adapter:** deaths `Bequeath`
+their memories to the household's heir (facts at or above the floor,
+scaled) and leave their name as a registry-level legacy (the co-save's
+v6 section); births `InheritMemory` from both parents (person-facts
+only — the feud travels on the memory channel, the inherited cold
+shoulder on the group echo).
+
+**Verify sentence (pending in-game):** the log greets the world by
+name; names survive save/load and fast travel; a settler is slighted
+at a closed bench, the settlement's echo agrees, and a feud begins —
+no script.

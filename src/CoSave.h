@@ -46,9 +46,14 @@ namespace TLC::CoSave
     // added the per-world stall section after the entities; v4 (the
     // world-calendar stone) added the world day to every memory event;
     // v5 (the bonds stone) added the per-world bond section after the
-    // stalls — all real format changes, so all bumped. Older versions
-    // are migrated forward on load, never dropped.
-    inline constexpr std::uint32_t kRecordVersion = 5;
+    // stalls; v6 (the identity stone) added the registry-level legacy
+    // section after the bonds — the dead's stories, which the names
+    // stone keys by name — all real format changes, so all bumped. The
+    // `name` component itself never bumps (a new component is additive;
+    // an old record simply decodes without it and names are back-filled
+    // on restore). Older versions are migrated forward on load, never
+    // dropped.
+    inline constexpr std::uint32_t kRecordVersion = 6;
 
     // A market's stall-keeper, in the durable form: the market's
     // workbench FormID and the keeper's actor FormID — form ids, not

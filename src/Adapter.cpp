@@ -29,9 +29,12 @@
 #include <RE/B/BSContainer.h>
 #include <RE/C/Calendar.h>
 #include <RE/N/NiAVObject.h>
+#include <RE/P/PlayerCharacter.h>
 #include <RE/P/ProcessLists.h>
+#include <RE/S/SendHUDMessage.h>
 #include <RE/S/Sky.h>
 #include <RE/T/TESDataHandler.h>
+#include <RE/T/TESFullName.h>
 #include <RE/T/TESForm.h>
 #include <RE/T/TESObjectCELL.h>
 #include <RE/T/TESWorldSpace.h>
@@ -43,6 +46,8 @@
 #include <LCE/Logging/Logger.h>
 
 #include "LCE/Simulation/Behaviour.h"
+#include "LCE/Simulation/Groups.h"
+#include "LCE/Simulation/Legacy.h"
 #include "LCE/Simulation/Memory.h"
 #include "LCE/Simulation/Relationships.h"
 #include "LCE/Simulation/Simulation.h"
@@ -399,6 +404,12 @@ namespace TLC
         m_CoreTuning =
             LCE::Simulation::SimulationTuning::FromConfiguration(config);
         m_Settings = Tuning::AdapterSettingsFrom(config);
+
+        // The identity stone's pool (0.7.0 Stone 1): the author's own
+        // name lists — names.first.male / .female / .animal, names.last
+        // — comma-separated, each overriding its default list. The
+        // defaults are the world's fallback, never a broken line.
+        m_Names = TLC::Names::PoolFrom(config);
 
         // The feeling rhythm (0.6.0 Stone 2): the core's drift default
         // (0.05/s — half-life ~14 s) was tuned for a fast demo and
@@ -789,16 +800,23 @@ namespace TLC
             if (attempt.Cooled)
             {
                 REX::INFO(
-                    "arcs: {:#x} cooled the feud between {:#x} and {:#x} "
+                    "arcs: {} cooled the feud between {} and {} "
                     "— the settlement pulls its own apart.",
-                    mediator, enemyA, enemyB);
+                    MindLabelForm(mediator),
+                    MindLabelForm(enemyA), MindLabelForm(enemyB));
+
+                PushNews(
+                    MindLabelForm(mediator) + " cooled the feud between "
+                    + MindLabelForm(enemyA) + " and "
+                    + MindLabelForm(enemyB) + ".");
             }
             else
             {
                 REX::INFO(
-                    "arcs: {:#x} tried to cool the feud between {:#x} "
-                    "and {:#x} — nobody listened.",
-                    mediator, enemyA, enemyB);
+                    "arcs: {} tried to cool the feud between {} "
+                    "and {} — nobody listened.",
+                    MindLabelForm(mediator),
+                    MindLabelForm(enemyA), MindLabelForm(enemyB));
             }
         }
     }
@@ -849,13 +867,58 @@ namespace TLC
             return;
         }
 
-        const auto formA = m_Translator.FormFor(parentA);
-        const auto formB = m_Translator.FormFor(parentB);
+        // The identity stone (0.7.0 Stone 1): the child carries the
+        // household's family name — a first name drawn deterministically
+        // from the child's id, the family name from the parents' ("the
+        // Lees" stay the Lees). A procedural parent falls back to a
+        // plain procedural name.
+        std::string family;
+
+        if (const auto parentName =
+                m_Registry.GetComponent<Name>(parentA))
+        {
+            family = std::string(TLC::Names::FamilyOf(parentName->Full));
+        }
+
+        const auto childGender = TLC::Names::GenderOf(child);
+
+        const auto childName = family.empty()
+            ? TLC::Names::GenerateUnique(
+                m_UsedNames, child, m_Names, childGender)
+            : TLC::Names::ChildName(
+                family, child, m_Names, childGender);
+
+        m_Registry.AddComponent<Name>(child, Name{ childName });
+        m_UsedNames.insert(childName);
+
+        // 0.7.0 Legacy (engine stone 11): the child inherits the
+        // parents' memories of the people — the family's knowledge and
+        // grudges, scaled and aged by the core. The world's predicate:
+        // person-facts only (a valid Other — weather facts name no one
+        // and stay behind). The feud travels on the memory channel, the
+        // inherited cold shoulder on the group echo.
+        const auto accept =
+            [](const LCE::Simulation::MemoryEvent& a_event)
+            {
+                return a_event.Other.IsValid();
+            };
+
+        LCE::Simulation::InheritMemory(
+            m_Registry, child, parentA, m_CoreTuning,
+            LCE::Simulation::WorldTime{ CurrentDay() }, accept);
+        LCE::Simulation::InheritMemory(
+            m_Registry, child, parentB, m_CoreTuning,
+            LCE::Simulation::WorldTime{ CurrentDay() }, accept);
 
         REX::INFO(
-            "birth: a child is born to {:#x} and {:#x} — a new mind, "
+            "birth: a child is born to {} and {} — {}, a new mind, "
             "fed by the household.",
-            formA, formB);
+            MindLabel(parentA), MindLabel(parentB),
+            MindLabel(child));
+
+        PushNews(
+            "a child was born to " + MindLabel(parentA) + " and "
+            + MindLabel(parentB) + " — " + childName + ".");
     }
 
     void Adapter::OnBondChange(
@@ -873,10 +936,15 @@ namespace TLC
             return;   // defensive — a translated pair names two minds
         }
 
+        // The identity stone's voice (0.7.0 Stone 1): the world speaks
+        // in people now — the name with its console hex beside it. The
+        // species label stays for the household section below.
         const auto labelA = SpeciesLabel(
             m_Registry.GetComponent<SpeciesTag>(a_entityA).get());
         const auto labelB = SpeciesLabel(
             m_Registry.GetComponent<SpeciesTag>(a_entityB).get());
+        const auto nameA = MindLabel(a_entityA);
+        const auto nameB = MindLabel(a_entityB);
 
         // The world's voice: formation, change, and dissolution each get
         // their line. The feud line is Life.md's own: "X is feuding
@@ -887,37 +955,36 @@ namespace TLC
             if (Bonds::IsNegative(a_old))
             {
                 REX::INFO(
-                    "bonds: {} {:#x} and {} {:#x} made peace.",
-                    labelA, formA, labelB, formB);
+                    "bonds: {} and {} made peace.",
+                    nameA, nameB);
+
+                PushNews(nameA + " and " + nameB + " made peace.");
             }
             else
             {
                 REX::INFO(
-                    "bonds: {} {:#x} and {} {:#x} are no longer {}.",
-                    labelA, formA, labelB, formB,
-                    Bonds::BondPlural(a_old));
+                    "bonds: {} and {} are no longer {}.",
+                    nameA, nameB, Bonds::BondPlural(a_old));
             }
         }
         else if (a_old == Bonds::BondKind::None
             && a_new == Bonds::BondKind::Enemy)
         {
             REX::INFO(
-                "bonds: {} {:#x} is feuding with {} {:#x}.",
-                labelA, formA, labelB, formB);
+                "bonds: {} is feuding with {}.",
+                nameA, nameB);
         }
         else if (a_old == Bonds::BondKind::None)
         {
             REX::INFO(
-                "bonds: {} {:#x} and {} {:#x} became {}.",
-                labelA, formA, labelB, formB,
-                Bonds::BondPlural(a_new));
+                "bonds: {} and {} became {}.",
+                nameA, nameB, Bonds::BondPlural(a_new));
         }
         else
         {
             REX::INFO(
-                "bonds: {} {:#x} and {} {:#x} are now {}.",
-                labelA, formA, labelB, formB,
-                Bonds::BondPlural(a_new));
+                "bonds: {} and {} are now {}.",
+                nameA, nameB, Bonds::BondPlural(a_new));
         }
 
         // The household follows the deepest bond (0.6.0 Stone 3): the
@@ -943,17 +1010,17 @@ namespace TLC
                     m_Registry, m_Bonds, a_entityB))
             {
                 REX::INFO(
-                    "households: {} {:#x} and {} {:#x} are spouses, but one "
+                    "households: {} and {} are spouses, but one "
                     "already shares a household — the first pouch stands; "
                     "their wallets stay personal.",
-                    labelA, formA, labelB, formB);
+                    nameA, nameB);
             }
             else if (Households::FormHousehold(
                     m_Registry, a_entityA, a_entityB))
             {
                 REX::INFO(
-                    "households: {} {:#x} and {} {:#x} are now a household — one pouch, one bench.",
-                    labelA, formA, labelB, formB);
+                    "households: {} and {} are now a household — one pouch, one bench.",
+                    nameA, nameB);
             }
         }
 
@@ -968,9 +1035,8 @@ namespace TLC
                     holderShare, otherShare))
             {
                 REX::INFO(
-                    "households: {} {:#x} and {} {:#x} are no longer a household — the pouch splits ({} / {} caps).",
-                    labelA, formA, labelB, formB,
-                    holderShare, otherShare);
+                    "households: {} and {} are no longer a household — the pouch splits ({} / {} caps).",
+                    nameA, nameB, holderShare, otherShare);
             }
         }
 
@@ -978,7 +1044,9 @@ namespace TLC
         // a bond crossing — friend, sweetheart, spouse, rival, enemy —
         // names both participants to every mind. Strangers and fresh
         // arrivals never hear it (gossip is written once, not replayed).
-        // Deaths spread through the same channel in RemoveMind.
+        // Deaths spread through the same channel in RemoveMind. The
+        // player window (0.7.0 Stone 3) reads the same crossings as
+        // news: formations are the world's headlines.
         if (a_new != Bonds::BondKind::None
             && a_old == Bonds::BondKind::None)
         {
@@ -986,6 +1054,27 @@ namespace TLC
                 m_Registry, a_entityA, a_entityB,
                 LCE::Simulation::InteractionKind::Social,
                 CurrentDay());
+
+            if (a_new == Bonds::BondKind::Enemy)
+            {
+                PushNews(nameA + " is feuding with " + nameB + ".");
+            }
+            else if (a_new == Bonds::BondKind::Rival)
+            {
+                PushNews(nameA + " and " + nameB + " became rivals.");
+            }
+            else if (a_new == Bonds::BondKind::Friend)
+            {
+                PushNews(nameA + " and " + nameB + " became friends.");
+            }
+            else if (a_new == Bonds::BondKind::Sweetheart)
+            {
+                PushNews(nameA + " and " + nameB + " are sweethearts.");
+            }
+            else if (a_new == Bonds::BondKind::Spouse)
+            {
+                PushNews(nameA + " and " + nameB + " are married.");
+            }
         }
     }
 
@@ -1039,6 +1128,90 @@ namespace TLC
                 }
             });
 
+        // The identity stone (0.7.0 Stone 1): a restored mind without a
+        // name predates the stone — the record had no name to carry.
+        // Back-fill a procedural name (the same deterministic draw the
+        // seed uses, deduped against the world's live names) so a
+        // pre-0.7 save wakes into a named world instead of a log of hex.
+        // Children restored without a name get a plain procedural name;
+        // children born after the stone carry their household's family
+        // name (the RunBirth path).
+        m_UsedNames.clear();
+
+        m_Registry.ForEachWithComponent<Name>(
+            [this](LCE::Simulation::EntityId, const Name& a_name)
+            {
+                m_UsedNames.insert(a_name.Full);
+            });
+
+        m_Registry.ForEachWithComponent<SpeciesTag>(
+            [this](LCE::Simulation::EntityId a_entity, SpeciesTag& a_tag)
+            {
+                if (m_Registry.GetComponent<Name>(a_entity) != nullptr)
+                {
+                    return;
+                }
+
+                std::string backfilled;
+
+                if (a_tag.Value == Species::Animal)
+                {
+                    // The naming rule (the owner stone): only an owned
+                    // animal gets a name — a restored stray stays
+                    // nameless, its label the species and hex. An owner
+                    // is whoever the game assigns (the player, or a
+                    // settler); a nameless restored pet is claimed here.
+                    const auto formRef =
+                        m_Registry.GetComponent<FormRef>(a_entity);
+                    auto* actor = formRef
+                        ? RE::TESForm::GetFormByID<RE::Actor>(formRef->FormId)
+                        : nullptr;
+
+                    if (actor == nullptr || actor->GetOwner() == nullptr)
+                    {
+                        return;
+                    }
+
+                    backfilled = TLC::Names::GenerateUniqueAnimal(
+                        m_UsedNames, a_entity, m_Names);
+                }
+                else
+                {
+                    // A person's gender: the actor's sex when the form
+                    // resolves (a restored world's actors load
+                    // gradually), else the id's own draw.
+                    auto gender = TLC::Names::GenderOf(a_entity);
+
+                    if (const auto formRef =
+                            m_Registry.GetComponent<FormRef>(a_entity))
+                    {
+                        auto* actor = RE::TESForm::GetFormByID<RE::Actor>(
+                            formRef->FormId);
+
+                        if (actor != nullptr)
+                        {
+                            const auto sex = actor->GetSex();
+
+                            if (sex == RE::SEX::kMale)
+                            {
+                                gender = TLC::Names::Gender::Male;
+                            }
+                            else if (sex == RE::SEX::kFemale)
+                            {
+                                gender = TLC::Names::Gender::Female;
+                            }
+                        }
+                    }
+
+                    backfilled = TLC::Names::GenerateUnique(
+                        m_UsedNames, a_entity, m_Names, gender);
+                }
+
+                m_Registry.AddComponent<Name>(
+                    a_entity, Name{ backfilled });
+                m_UsedNames.insert(backfilled);
+            });
+
         // The market was saved with the world (it owns a FormRef); now
         // that the world is back, every mind must remember where to trade
         // again. The seed is a fading memory event (weight 1.0, forgotten
@@ -1048,6 +1221,14 @@ namespace TLC
         // tick's periodic refresh keeps catching minds whose actors load
         // after this instant.
         SeedMarket(true);
+
+        // The conflict source's settlement (0.7.0 Stone 2): every mind
+        // with a restored market memory belongs to that settlement's
+        // group — the engine's echo spreads a slight (or a warmth)
+        // through it, and newcomers inherit the settlement's cold
+        // shoulder toward a feud's villain. Derived from the restored
+        // memories, never persisted itself.
+        AssignSettlementGroups();
 
         // The stall-keepers stone (v3): a restored market reopens under
         // its saved keeper — the same face behind the bench — instead of
@@ -1158,6 +1339,63 @@ namespace TLC
         {
             m_Registry.AddComponent<CapPouch>(
                 id, CapPouch{ SeedPouch(id) });
+        }
+
+        // The identity stone (0.7.0 Stone 1): every mind is born with a
+        // name. The game's own name wins — Sturges stays Sturges — and
+        // a generic "Settler" gets a procedural Commonwealth name: the
+        // actor's sex picks the first-name list (male or female; an
+        // unset sex draws from the id), deduped against the world's live
+        // names (no two "Vance" in the same room). An owned animal draws
+        // from its own pool — a dog is "Rex", not "Rex Hart" — and a
+        // stray with no owner stays nameless: the log labels it by
+        // species and hex until someone claims it.
+        std::string fullName;
+        const auto gameName = RE::TESFullName::GetFullName(*a_actor);
+
+        if (TLC::Names::IsGenericName(gameName))
+        {
+            if (species == Species::Animal)
+            {
+                // GetOwner is non-const in the game API; the process
+                // lists hand us a live, non-const actor — the cast is
+                // contained to the read.
+                if (const_cast<RE::Actor*>(a_actor)->GetOwner() != nullptr)
+                {
+                    fullName = TLC::Names::GenerateUniqueAnimal(
+                        m_UsedNames, id, m_Names);
+                }
+            }
+            else
+            {
+                auto gender = TLC::Names::GenderOf(id);
+                const auto sex =
+                    const_cast<RE::Actor*>(a_actor)->GetSex();
+
+                if (sex == RE::SEX::kMale)
+                {
+                    gender = TLC::Names::Gender::Male;
+                }
+                else if (sex == RE::SEX::kFemale)
+                {
+                    gender = TLC::Names::Gender::Female;
+                }
+
+                fullName = TLC::Names::GenerateUnique(
+                    m_UsedNames, id, m_Names, gender);
+            }
+        }
+        else
+        {
+            fullName = std::string(gameName);
+        }
+
+        // A stray stays unnamed — no Name component, so the label falls
+        // back to species + hex until someone owns it.
+        if (!fullName.empty())
+        {
+            m_Registry.AddComponent<Name>(id, Name{ fullName });
+            m_UsedNames.insert(fullName);
         }
 
         m_Translator.Add(formId, id);
@@ -1407,21 +1645,50 @@ namespace TLC
             // the announce, cleared on EndWorld.
             m_RecentDeaths[entity.Value()] = a_formId;
 
+            // 0.7.0 Legacy (engine stones 10–12): what the dead leaves
+            // behind. The household's heir — the spouse — receives the
+            // dead's memories at or above the bequest floor, scaled
+            // (the story survives its maker, fainter). And the dead's
+            // name becomes a registry-level legacy — the world's memory
+            // of who they were, permanent until the world forgets it.
+            // Both run before the destroy below: the dead must still be
+            // alive for the core.
+            if (spouse.IsValid())
+            {
+                LCE::Simulation::Bequeath(
+                    m_Registry, entity,
+                    std::span<const LCE::Simulation::EntityId>{ &spouse, 1 },
+                    m_CoreTuning);
+            }
+
+            if (const auto name = m_Registry.GetComponent<Name>(entity))
+            {
+                m_Registry.LeaveLegacy(LCE::Simulation::LegacyFact{
+                    entity, CurrentDay(), name->Full, 1.0f });
+            }
+
             // The gossip stone's observable half: one line per death —
             // how many minds remember who is gone. The fact itself is
-            // silent (a memory is not a door); this is the verify.
+            // silent (a memory is not a door); this is the verify. The
+            // name is the identity stone's voice; the hex rides along.
             REX::INFO(
-                "gossip: {} {} remember settler {:#x} is gone.",
+                "gossip: {} {} remember {} is gone.",
                 mourning, mourning == 1 ? "mind" : "minds",
-                a_formId);
+                MindLabelForm(a_formId));
+
+            PushNews(MindLabelForm(a_formId) + " died.");
         }
+
+        // The label before the remove: the translator forgets the form
+        // below, so the farewell line keeps the name it just lost.
+        const auto goneLabel = MindLabelForm(a_formId);
 
         m_Registry.DestroyEntity(entity);
         m_Translator.Remove(a_formId);
 
         REX::INFO(
-            "lifecycle: settler {:#x} {} — the world keeps its books.",
-            a_formId, a_isDeath ? "died" : "left the settlement");
+            "lifecycle: {} {} — the world keeps its books.",
+            goneLabel, a_isDeath ? "died" : "left the settlement");
     }
 
     std::uint64_t Adapter::CurrentDay() const
@@ -1431,6 +1698,211 @@ namespace TLC
         return calendar != nullptr && calendar->gameDaysPassed != nullptr
             ? std::uint64_t(calendar->gameDaysPassed->value)
             : 0;
+    }
+
+    std::string Adapter::MindLabel(
+        LCE::Simulation::EntityId a_entity) const
+    {
+        const auto formId = m_Translator.FormFor(a_entity);
+
+        if (const auto name = m_Registry.GetComponent<Name>(a_entity))
+        {
+            return name->Full + " [" + FormatHex8(formId) + "]";
+        }
+
+        // No name — a stray animal (nobody claimed it yet), or a mind
+        // predating the identity stone mid-world. The species label
+        // keeps the log's voice: "animal [FF0197BF]", not a bare hex.
+        return std::string(SpeciesLabel(
+                   m_Registry.GetComponent<SpeciesTag>(a_entity).get()))
+            + " [" + FormatHex8(formId) + "]";
+    }
+
+    std::string Adapter::MindLabelForm(std::uint32_t a_formId) const
+    {
+        const auto entity = m_Translator.EntityFor(a_formId);
+
+        if (entity.IsValid())
+        {
+            return MindLabel(entity);
+        }
+
+        // No entity — a workshop target, or a form the sim does not
+        // know. A workshop is a market; name it from its base form.
+        return MarketLabel(a_formId);
+    }
+
+    std::string Adapter::MarketLabel(std::uint32_t a_formId) const
+    {
+        const auto* form = RE::TESForm::GetFormByID(a_formId);
+
+        if (form != nullptr)
+        {
+            const auto name = RE::TESFullName::GetFullName(*form);
+
+            if (!name.empty())
+            {
+                return std::string(name) + " [" + FormatHex8(a_formId) + "]";
+            }
+        }
+
+        return FormatHex8(a_formId);
+    }
+
+    void Adapter::AssignSettlementGroups()
+    {
+        using namespace LCE::Simulation;
+
+        // No census, no settlements — the group is the world, and there
+        // is nothing to derive membership from (the fallback market is
+        // a workshop entity, so it appears in m_Workshops once the
+        // census finds nothing and EnsureWorkshop pins it — this guard
+        // only skips a truly empty world).
+        if (m_Workshops.empty())
+        {
+            return;
+        }
+
+        m_Registry.ForEachWithComponent<Memory>(
+            [this](EntityId a_entity, Memory& a_memory)
+            {
+                if (m_Registry.GetComponent<Groups>(a_entity) != nullptr)
+                {
+                    return;   // already has a home
+                }
+
+                // The settlement is the market the mind remembers — a
+                // Trade-kind event whose Other is a workshop form (not a
+                // person; the remembered merchant is an actor, and a
+                // mind's market is the bench). The group id is the
+                // market's form id: deterministic, session-stable, and
+                // the same for every mind of the settlement.
+                for (const auto& event : a_memory.Events)
+                {
+                    if (event.Kind != InteractionKind::Trade
+                        || !event.Other.IsValid())
+                    {
+                        continue;
+                    }
+
+                    const auto formId = m_Translator.FormFor(event.Other);
+                    const auto isWorkshop = formId != 0
+                        && std::find_if(
+                               m_Workshops.begin(), m_Workshops.end(),
+                               [formId](const WorkshopPosition& a_workshop)
+                               {
+                                   return a_workshop.FormId == formId;
+                               })
+                            != m_Workshops.end();
+
+                    if (isWorkshop)
+                    {
+                        m_Registry.AddComponent<Groups>(
+                            a_entity,
+                            Groups{ { GroupId{ formId } } });
+                        return;
+                    }
+                }
+            });
+    }
+
+    void Adapter::PushNews(const std::string& a_line)
+    {
+        m_News.Add(a_line);
+
+        // The on-screen window (0.7.0 Stone 3), throttled: a world of
+        // news is still a flood if every line pops at once, so events
+        // queue into the feed and the screen shows at most one per
+        // sim.news.cooldown seconds. The feed is the radio's story; the
+        // log's own line stays the verify channel.
+        if (!m_Settings.NewsEnabled)
+        {
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now - m_LastNews >= std::chrono::duration<float>(
+                m_Settings.NewsCooldown))
+        {
+            m_LastNews = now;
+            RE::SendHUDMessage::ShowHUDMessage(
+                a_line.c_str(), "", false, false);
+        }
+    }
+
+    void Adapter::RadioCaptions()
+    {
+        if (!m_Settings.NewsEnabled)
+        {
+            return;
+        }
+
+        // A settlement radio the player built: while one is near, the
+        // settlement tells its story — the news feed as on-screen
+        // captions, one per sim.radio.caption.every seconds. The base
+        // form is radio.base.formid (default the workshop "Radio" — a
+        // hardcoded FormID, flagged for xEdit verification; the key
+        // exists so a wrong pin is a config line, never a rebuild).
+        auto* player = RE::PlayerCharacter::GetSingleton();
+
+        if (player == nullptr)
+        {
+            return;
+        }
+
+        auto* cell = player->GetParentCell();
+
+        if (cell == nullptr)
+        {
+            return;
+        }
+
+        bool radioNearby = false;
+
+        cell->ForEachReferenceInRange(
+            player->GetPosition(), m_Settings.RadioRadius,
+            [&](RE::TESObjectREFR* a_ref) -> RE::BSContainer::ForEachResult
+            {
+                if (a_ref == nullptr)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                const auto* base = a_ref->GetObjectReference();
+
+                if (base != nullptr
+                    && base->GetFormID() == m_Settings.RadioBaseFormId)
+                {
+                    radioNearby = true;
+                    return RE::BSContainer::ForEachResult::kStop;
+                }
+
+                return RE::BSContainer::ForEachResult::kContinue;
+            });
+
+        if (!radioNearby)
+        {
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now - m_LastRadioCaption < std::chrono::duration<float>(
+                m_Settings.RadioCaptionEvery))
+        {
+            return;
+        }
+
+        m_LastRadioCaption = now;
+
+        const auto line = m_News.NextLine();
+
+        if (!line.empty())
+        {
+            RE::SendHUDMessage::ShowHUDMessage(
+                line.c_str(), "", false, false);
+        }
     }
 
     void Adapter::StartWorld()
@@ -1447,6 +1919,14 @@ namespace TLC
         // reports events; the simulation gives them meaning). A mind that
         // knows the market can decide MoveTo; one that doesn't explores.
         SeedMarket(true);
+
+        // The conflict source's settlement (0.7.0 Stone 2): every mind
+        // with a market memory belongs to its settlement's group — the
+        // engine's echo then spreads a slight (or a warmth) through the
+        // group, and InheritGroupAttitudes gives a newcomer the
+        // settlement's inherited feelings. Derived from the seeded
+        // memories, never persisted.
+        AssignSettlementGroups();
 
         REX::INFO("The Commonwealth wakes up: {} settlers became minds.", count);
         LCE::Logging::Info(
@@ -1493,6 +1973,8 @@ namespace TLC
         m_GriefAnnounced.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
+        m_UsedNames.clear();
+        m_News.Clear();
         m_TickCalled = false;
         m_FirstPassLogged = false;
         m_Started = false;
@@ -1795,6 +2277,52 @@ namespace TLC
             }
         }
 
+        // The conflict source (0.7.0 Stone 2): a hungry human arrived
+        // and the stall is shut. The world-facts gate stops new walks
+        // after hours, but a walk already in flight when the hour turns
+        // still arrives. No trade, no food — and the mind remembers the
+        // let-down. The engine's decided channel for an executed
+        // interaction that went badly: ReportOutcome({ keeper, Social,
+        // Failure }) cools the disposition 0.1 toward the stall-keeper,
+        // and the settlement echo spreads the chill through the group
+        // (Simulation.cpp — the sign lives in the kind and the result,
+        // never on the weight). A forgiving mind (temper below
+        // sim.slight.temper) blames no one — a world outcome, memory
+        // only: the stall was just shut. The feud's fuel: two or three
+        // shut-stall let-downs cross the rival line, and the 0.6.0 feud
+        // arc — gossip, mediation, the settlement's inherited cold
+        // shoulder — takes it from there.
+        const bool closed = WorldFacts::IsMarketClosed(
+            CurrentGameHour(),
+            m_Settings.MarketOpenHour, m_Settings.MarketCloseHour);
+
+        if (closed && species == Species::Human
+            && !keeperHome && !familyHome)
+        {
+            const auto keeperIterator = m_StallKeepers.find(target);
+            const auto keeper = keeperIterator != m_StallKeepers.end()
+                ? keeperIterator->second
+                : EntityId{};
+
+            const bool slighted =
+                TemperOf(a_entity) >= m_Settings.SlightTemper;
+
+            ReportOutcome(
+                m_Registry, a_entity,
+                Outcome{
+                    (slighted && keeper.IsValid()) ? keeper : EntityId{},
+                    InteractionKind::Social, OutcomeResult::Failure,
+                    1.0f },
+                m_CoreTuning, &m_Bus, WorldTime{ CurrentDay() });
+
+            REX::INFO(
+                "LCE: the stall at {} is shut — {} went hungry{}.",
+                MarketLabel(marketFormId), MindLabelForm(formId),
+                slighted ? " and blames the keeper" : "");
+
+            return;
+        }
+
         const auto outcome = ArrivalOutcome(species, counterparty, traded);
 
         // The outcome lands on the bus (0.6.0 stone 08): a sale that
@@ -1882,8 +2410,9 @@ namespace TLC
                 if (paid > 0)
                 {
                     REX::INFO(
-                        "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed, {} caps change hands ({}{} left, {} now).",
-                        formId, traderFormId, marketFormId,
+                        "LCE: {} trades with {} at market {} — fed, {} caps change hands ({}{} left, {} now).",
+                        MindLabelForm(formId), MindLabelForm(traderFormId),
+                        MarketLabel(marketFormId),
                         paid,
                         paidFromHousehold ? "household; " : "",
                         buyerCaps, sellerCaps);
@@ -1891,8 +2420,9 @@ namespace TLC
                 else
                 {
                     REX::INFO(
-                        "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed on the settlement's credit (no caps).",
-                        formId, traderFormId, marketFormId);
+                        "LCE: {} trades with {} at market {} — fed on the settlement's credit (no caps).",
+                        MindLabelForm(formId), MindLabelForm(traderFormId),
+                        MarketLabel(marketFormId));
                 }
             }
             else if (familyHome)
@@ -1929,27 +2459,27 @@ namespace TLC
                 }
 
                 REX::INFO(
-                    "LCE: settler {:#x} is at the family stall at market {:#x} — fed from the household's meal.",
-                    formId, marketFormId);
+                    "LCE: {} is at the family stall at market {} — fed from the household's meal.",
+                    MindLabelForm(formId), MarketLabel(marketFormId));
             }
             else if (keeperHome)
             {
                 REX::INFO(
-                    "LCE: settler {:#x} is at their own stall at market {:#x} — no customers yet.",
-                    formId, marketFormId);
+                    "LCE: {} is at their own stall at market {} — no customers yet.",
+                    MindLabelForm(formId), MarketLabel(marketFormId));
             }
             else
             {
                 REX::INFO(
-                    "LCE: settler {:#x} sets up the stall at market {:#x} — trade begins when customers come.",
-                    formId, marketFormId);
+                    "LCE: {} sets up the stall at market {} — trade begins when customers come.",
+                    MindLabelForm(formId), MarketLabel(marketFormId));
             }
         }
         else
         {
             REX::INFO(
-                "LCE: {} {:#x} arrived — fed, gives nothing in return (Aid, Success).",
-                label, formId);
+                "LCE: {} arrived — fed, gives nothing in return (Aid, Success).",
+                MindLabelForm(formId));
         }
 
         // The trip pays off (the real test): arriving at the market means
@@ -1965,8 +2495,8 @@ namespace TLC
             if (previous >= 0.0f)
             {
                 REX::INFO(
-                    "LCE: {} {:#x} fed: Hunger {:.2f} -> 1.00",
-                    label, formId, previous);
+                    "LCE: {} fed: Hunger {:.2f} -> 1.00",
+                    MindLabelForm(formId), previous);
             }
         }
     }
@@ -2193,7 +2723,8 @@ namespace TLC
 
         // Transitions only — these are the lines the player reads. The
         // push below is silent; announcing every second would drown the
-        // log in facts.
+        // log in facts. The player window (0.7.0 Stone 3) turns each
+        // transition into a headline.
         if (closed != m_MarketClosed)
         {
             m_MarketClosed = closed;
@@ -2203,12 +2734,16 @@ namespace TLC
                 REX::INFO(
                     "world fact: the market is closed ({}) — trade unavailable until {:02.0f}:00.",
                     FormatGameHour(hour), m_Settings.MarketOpenHour);
+
+                PushNews("the market closed for the night.");
             }
             else
             {
                 REX::INFO(
                     "world fact: the market is open ({}) — trade available.",
                     FormatGameHour(hour));
+
+                PushNews("the market opened — the Commonwealth trades.");
             }
         }
 
@@ -2409,6 +2944,16 @@ namespace TLC
 
             SeedMarket(false);
 
+            // The conflict source's settlement (0.7.0 Stone 2): late-
+            // loading minds join their settlement's group once their
+            // market memory lands. Idempotent — a mind with a group
+            // keeps it.
+            AssignSettlementGroups();
+
+            // The player window (0.7.0 Stone 3): the settlement radio
+            // speaks the news while one is near the player.
+            RadioCaptions();
+
             // The world's doors: the market's trading hours and the
             // weather. Pushed on the same cadence as the seed — silent
             // unless a door changes.
@@ -2578,6 +3123,11 @@ namespace TLC
             const auto actorFormId = m_Translator.FormFor(entry.Entity);
             const auto targetFormId = m_Translator.FormFor(entry.Intent.Target);
 
+            // The identity stone's voice (0.7.0 Stone 1): decisions speak
+            // in names — "Vera Hart [00048B77] decides MoveTo -> Sanctuary
+            // workshop [000250FE]" — with the console hex beside each.
+            const auto actorLabel = MindLabelForm(actorFormId);
+
             // Refusal is the contract (the intent is a hint, not a command):
             // an unloaded actor, an unloaded target, or a busy actor. The
             // dropped intent is simply re-decided next tick — nothing queued.
@@ -2587,8 +3137,8 @@ namespace TLC
 
                 LogPlanEntry(
                     entry.Entity,
-                    "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
-                        + " -> " + FormatHex8(targetFormId) + " — refused: actor not loaded",
+                    actorLabel + " decides " + ActionName(entry.Intent.Action)
+                        + " -> " + MindLabelForm(targetFormId) + " — refused: actor not loaded",
                     { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId, 1 });
                 continue;
             }
@@ -2599,8 +3149,8 @@ namespace TLC
 
                 LogPlanEntry(
                     entry.Entity,
-                    "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
-                        + " -> " + FormatHex8(targetFormId) + " — refused: target not loaded",
+                    actorLabel + " decides " + ActionName(entry.Intent.Action)
+                        + " -> " + MindLabelForm(targetFormId) + " — refused: target not loaded",
                     { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId, 2 });
                 continue;
             }
@@ -2611,8 +3161,8 @@ namespace TLC
 
                 LogPlanEntry(
                     entry.Entity,
-                    "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
-                        + " -> " + FormatHex8(targetFormId) + " — refused: actor busy",
+                    actorLabel + " decides " + ActionName(entry.Intent.Action)
+                        + " -> " + MindLabelForm(targetFormId) + " — refused: actor busy",
                     { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId, 3 });
                 continue;
             }
@@ -2726,7 +3276,7 @@ namespace TLC
 
                 LogPlanEntry(
                     entry.Entity,
-                    "settler " + FormatHex8(actorFormId) + " decides MoveTo -> " + FormatHex8(targetFormId)
+                    actorLabel + " decides MoveTo -> " + MindLabelForm(targetFormId)
                         + " (" + confidence + ")",
                     { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId,
                         walked ? 0u : 4u });
@@ -2756,7 +3306,7 @@ namespace TLC
 
                 LogPlanEntry(
                     entry.Entity,
-                    "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
+                    actorLabel + " decides " + ActionName(entry.Intent.Action)
                         + " (" + confidence + ")",
                     { static_cast<std::uint32_t>(entry.Intent.Action), 0, 0 });
 
@@ -2784,7 +3334,7 @@ namespace TLC
 
                 LogPlanEntry(
                     entry.Entity,
-                    "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
+                    actorLabel + " decides " + ActionName(entry.Intent.Action)
                         + " (" + confidence + ")",
                     { static_cast<std::uint32_t>(entry.Intent.Action), 0, 0 });
             }
@@ -2855,8 +3405,8 @@ namespace TLC
                 if (!session.Reached)
                 {
                     REX::DEBUG(
-                        "LCE: walk session settler {} ended (closest approach {:.1f} u).",
-                        FormatHex8(m_Translator.FormFor(it->first)),
+                        "LCE: walk session {} ended (closest approach {:.1f} u).",
+                        MindLabelForm(m_Translator.FormFor(it->first)),
                         session.MinDistance);
                 }
 
@@ -2933,8 +3483,8 @@ namespace TLC
 
                 ReportArrival(it->first, session.Target);
                 REX::INFO(
-                    "LCE: settler {} arrived (d = {:.1f} u).",
-                    FormatHex8(actorFormId), d);
+                    "LCE: {} arrived (d = {:.1f} u).",
+                    MindLabelForm(actorFormId), d);
 
                 // The trip is done — end the session now so the walk
                 // slot frees immediately (the sleep-cycle discovery:
@@ -2953,8 +3503,8 @@ namespace TLC
                 session.LastProbe = now;
                 session.LastDistance = d;
                 REX::DEBUG(
-                    "LCE: walk probe settler {} -> {} d = {:.1f} u (min {:.1f} u).",
-                    FormatHex8(actorFormId), FormatHex8(session.Target), d,
+                    "LCE: walk probe {} -> {} d = {:.1f} u (min {:.1f} u).",
+                    MindLabelForm(actorFormId), MindLabelForm(session.Target), d,
                     session.MinDistance);
             }
 

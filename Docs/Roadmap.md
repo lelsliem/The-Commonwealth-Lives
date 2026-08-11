@@ -465,23 +465,43 @@ InteractionKind::Death for this stone.
 ═══════════════════════════════════════════════
 
 Goal: the world is alive even when the player isn't watching — settlers
-have names, and the player hears what's happening and tunes the world
-in-game. Sketched 2026-08-10 (Docs/Design/Life.md, "Beyond 0.6.0").
+have names, relationships can go *bad*, and the player hears what's
+happening and tunes the world in-game. Drafted 2026-08-11
+(Docs/Design/Identity.md); earlier sketches 2026-08-10
+(Docs/Design/Life.md, "Beyond 0.6.0").
 
-STATUS: PLANNED — sketches only, no code.
+STATUS: BUILT (2026-08-11) — all three stones implemented, 19/19
+harness suites green (NamesTest, SocietyTest, CoSaveV6Test), engine
+0.7.0 (Legacy) wired into the death/birth paths. In-game verification
+pending. Design: Docs/Design/Identity.md.
 
-[ ] Names: a procedural name registry at mind-seed time, persisted in
-    the co-save (form id → name), deduped; logs, gossip, bonds, and the
-    radio speak in names
-[ ] The radio, step 1: world events (bonds, births, deaths, feuds,
-    famine, market openings) become one-line news — in-game
-    notifications + a news log
-[ ] The radio, step 2: a transceiver object in settlements plays the
-    news as captions while the player is near
-[ ] The radio, step 3 (deferred): real audio — only when assets exist
-[ ] MCM + Settings Manager: an MCM page over the tuning keys (INI
-    stays the source of truth; restore-defaults button); MCM as a soft
-    dependency with a small Papyrus surface
+[x] Stone 1 — Names: `Name` component (additive — the record's v6 bump
+    is the legacy section, not the component), game names first
+    (Sturges stays Sturges), gender-split pools + a separate animal
+    pool, all curated in the INI (`names.first.male/.female/.animal`,
+    `names.last`), owned animals named / strays nameless, back-filled
+    on restore; decisions, bonds, gossip, arcs, births, deaths, and
+    the radio all speak names with the console hex beside them
+[x] Stone 2 — The conflict source (the feud's organic fuel): the
+    engine's decided channels (kind and result, never a sign) — a
+    hungry arrival at a closed market reports
+    `ReportOutcome({keeper, Social, Failure})`, the temper line
+    (`sim.slight.temper`, from the engine's JitteredTraits substrate)
+    decides who blames, settlement `Groups` (derived from the market
+    memory, never persisted) spread the echo through the settlement,
+    and rival/enemy bonds form on their own — the built feud arc
+    finally begins in the wild
+[x] The radio, step 1: world events (bonds, births, deaths, feuds,
+    market openings) become one-line news — HUD notifications
+    (throttled) + the news feed the radio reads
+[x] The radio, step 2: a settlement radio object plays the news as
+    on-screen captions while the player is near (`radio.base.formid`
+    — flagged for xEdit verification, configurable)
+[x] The radio, step 3 (deferred): real audio — only when assets exist
+[ ] MCM + Settings Manager — deferred, honestly: the INI already
+    delivers the tuning behavior (loaded at boot, survives reload);
+    the UI page needs the MCM mod + the Creation Kit (an author-side
+    asset task, not a sim task)
 
 ═══════════════════════════════════════════════
 

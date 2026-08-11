@@ -14,6 +14,7 @@
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Outcome.h"
 #include "LCE/Simulation/Relationships.h"
+#include "LCE/Simulation/Traits.h"   // JitteredTraits — the temperament
 
 #include <algorithm>
 #include <cstdint>
@@ -113,6 +114,29 @@ namespace TLC
             static_cast<float>(hash & 0xFFFFFF) / static_cast<float>(0x1000000);
 
         return (unit - 0.5f) * 2.0f * a_span;
+    }
+
+    //-------------------------------------------------------------------------
+    // TemperOf — the conflict source's personality (0.7.0 Stone 2). The
+    // engine's JitteredTraits substrate (stone 09) varies a per-mind
+    // temperament around 1.0 (spread 0.2 → roughly 0.8–1.2), derived
+    // deterministically from the entity id — the same id draws the same
+    // temper every run, so a saved mind re-derives its own. The adapter's
+    // behaviour table decides what the number means: a mind at or above
+    // the sim.slight.temper line (a churlish one) blames the stall-keeper
+    // when a hungry arrival finds the market shut; a warm mind forgives.
+    // The core holds the substrate; the meaning is the world's — exactly
+    // the boundary the Traits stone declared.
+    //-------------------------------------------------------------------------
+    inline float TemperOf(LCE::Simulation::EntityId a_id) noexcept
+    {
+        const LCE::Simulation::Traits base{
+            { LCE::Simulation::TraitValue{ "temper", 1.0f } } };
+
+        const auto traits =
+            LCE::Simulation::JitteredTraits(base, a_id, nullptr, 0.2f);
+
+        return traits.List.empty() ? 1.0f : traits.List[0].Value;
     }
 
     //-------------------------------------------------------------------------

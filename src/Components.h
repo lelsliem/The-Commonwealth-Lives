@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "Names.h"
 #include "Behaviour.h"
 
 #include <cstdint>
@@ -51,6 +52,14 @@ namespace TLC
     {
         std::uint32_t Caps = 0;
     };
+
+    //-------------------------------------------------------------------------
+    // Name is defined in Names.h — the identity stone (0.7.0): every
+    // mind carries one, persisted in the co-save, the game's name first
+    // and a procedural Commonwealth name for the nameless. It lives in
+    // its own header with the name lists and generation; this include
+    // keeps the component visible wherever the adapter's components are.
+    //-------------------------------------------------------------------------
 
     //-------------------------------------------------------------------------
     // SeedPouch — a human mind's born wealth: a deterministic pouch from

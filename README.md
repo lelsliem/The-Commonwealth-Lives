@@ -4,7 +4,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.6.0-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.7.0-emerald.svg)](Docs/Roadmap.md)
 
 The settlers aren't on quest scripts — they're **hungry**, they **remember**
 where to trade, they walk to **their own settlement's market** when they're
@@ -23,7 +23,7 @@ survives save/load.
 
 Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
 through **0.6.0** is in and verified in-game; **0.7.0** (identity & the
-player window) is next:
+player window) is built and waiting its in-game verification:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -55,6 +55,18 @@ player window) is next:
   Social seeking company — `arcs: settler X grieves for Y`), and
   **children** are born: a spouse household's sim-only child, fed and
   bonded, living in the co-save like any mind (`sim.birth.enabled`).
+- **0.7** the player listens — settlers have **names** (the game's own
+  names win; the author curates the rest in the INI — gender-split
+  pools plus a separate animal pool; owned animals are named, strays
+  stay nameless), relationships can go **bad** (a hungry arrival at a
+  closed market blames the keeper — `ReportOutcome({keeper, Social,
+  Failure})` — the settlement's echo agrees, and rival/enemy bonds
+  form so **feuds begin on their own**), and the player **hears** the
+  world: events become one-line news (throttled HUD notifications) and
+  a settlement radio speaks them as captions. The engine's Legacy
+  stones ride the death and birth paths (a death bequeaths its
+  memories and leaves its name as a legacy; a child inherits the
+  parents' memories of the people). Record **v6**.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
 releases published: `0.5.0-beta` and **`0.6.0`** (2026-08-11, notes in

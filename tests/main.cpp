@@ -16,10 +16,14 @@
 #include "Households.h"
 #include "Lifecycle.h"
 #include "Market.h"
+#include "Names.h"
+#include "News.h"
 #include "Serialization.h"
 #include "Translator.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
+
+#include "LCE/Simulation/Groups.h"
 
 #include "LCE/Config/Configuration.h"
 #include "LCE/Events/EventBus.h"
@@ -61,6 +65,9 @@ namespace TLC::Tests
     bool GossipTest();
     bool ArcsTest();
     bool BirthTest();
+    bool NamesTest();
+    bool SocietyTest();
+    bool CoSaveV6Test();
 }
 
 namespace
@@ -106,6 +113,9 @@ int main()
     Run("GossipTest", TLC::Tests::GossipTest);
     Run("ArcsTest", TLC::Tests::ArcsTest);
     Run("BirthTest", TLC::Tests::BirthTest);
+    Run("NamesTest", TLC::Tests::NamesTest);
+    Run("SocietyTest", TLC::Tests::SocietyTest);
+    Run("CoSaveV6Test", TLC::Tests::CoSaveV6Test);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -3172,6 +3182,385 @@ namespace TLC::Tests
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    bool NamesTest()
+    {
+        using namespace TLC::Names;
+
+        // IsGenericName: the game's placeholders are generic; a real
+        // name is not. Empty counts (some refs read an empty full-name).
+        if (!IsGenericName(""))
+        {
+            return false;
+        }
+
+        if (!IsGenericName("Settler") || !IsGenericName("settler")
+            || !IsGenericName("Workshop Worker"))
+        {
+            return false;
+        }
+
+        if (IsGenericName("Sturges"))
+        {
+            return false;
+        }
+
+        const auto pool = DefaultPool();
+
+        // The gendered pools are disjoint — the same id draws different
+        // names for a man and a woman.
+        const auto id = EntityId{ 42 };
+        const auto male = GenerateName(id, pool, Gender::Male);
+        const auto female = GenerateName(id, pool, Gender::Female);
+
+        if (male == female)
+        {
+            return false;
+        }
+
+        // Determinism: the same id draws the same name every time.
+        if (GenerateName(id, pool, Gender::Male) != male)
+        {
+            return false;
+        }
+
+        // A person's name is first + family.
+        const auto space = male.find(' ');
+
+        if (space == std::string::npos || space + 1 >= male.size())
+        {
+            return false;
+        }
+
+        // FamilyOf: "Vera Hart" -> "Hart"; a single word -> "".
+        if (FamilyOf("Vera Hart") != "Hart"
+            || !FamilyOf("Rex").empty())
+        {
+            return false;
+        }
+
+        // Animals draw from their own pool and carry no family name.
+        const auto animal = GenerateAnimalName(EntityId{ 7 }, pool);
+
+        if (animal.find(' ') != std::string::npos)
+        {
+            return false;
+        }
+
+        // Dedup: a pre-claimed name is never handed out again, and the
+        // first free draw is deterministic.
+        std::unordered_set<std::string> used;
+        const auto claimed = GenerateName(EntityId{ 3 }, pool, Gender::Female);
+        used.insert(claimed);
+        const auto first = GenerateUnique(
+            used, EntityId{ 3 }, pool, Gender::Female);
+
+        if (used.find(first) == used.end() || first == claimed)
+        {
+            return false;
+        }
+
+        // ChildName: a first name plus the family name.
+        const auto child = ChildName(
+            "Vance", EntityId{ 9 }, pool, Gender::Female);
+
+        if (child.find("Vance") == std::string::npos)
+        {
+            return false;
+        }
+
+        // The INI pools: a provided list replaces its default, a missing
+        // list keeps its default, and a broken (empty) list keeps the
+        // default too.
+        LCE::Config::Configuration config;
+        config.Set("names.first.male", "Zeke, Milo");
+        config.Set("names.first.female", "Ada");
+        config.Set("names.first.animal", "");
+
+        const auto fromIni = PoolFrom(config);
+
+        if (fromIni.MaleFirsts
+                != std::vector<std::string>{ "Zeke", "Milo" }
+            || fromIni.FemaleFirsts
+                != std::vector<std::string>{ "Ada" }
+            || fromIni.AnimalFirsts != pool.AnimalFirsts
+            || fromIni.Lasts != pool.Lasts)
+        {
+            return false;
+        }
+
+        // A name drawn from the INI pool uses the INI's lists.
+        const auto zeke = GenerateName(
+            EntityId{ 5 }, fromIni, Gender::Male);
+
+        if (zeke.rfind("Zeke ", 0) != 0 && zeke.rfind("Milo ", 0) != 0)
+        {
+            return false;
+        }
+
+        // The news feed: capped, ordered, and rotatable — the radio's
+        // story.
+        TLC::News::NewsFeed feed;
+        feed.Cap = 3;
+        feed.Add("first");
+        feed.Add("second");
+        feed.Add("third");
+        feed.Add("fourth");   // pushes out "first"
+
+        if (feed.Lines.size() != 3 || feed.NextLine() != "second")
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool SocietyTest()
+    {
+        // The conflict source's substrate (0.7.0 Stone 2): the
+        // temperament is deterministic per mind and bounded around 1.0,
+        // and the engine's group echo spreads a feeling — warm or cold —
+        // through the settlement at sim.group.inheritance strength.
+
+        // Temper: deterministic, spread ±20% (roughly 0.8–1.2), and not
+        // one value for everyone.
+        const auto id = EntityId{ 123 };
+
+        if (TemperOf(id) != TemperOf(id))
+        {
+            return false;
+        }
+
+        const auto t = TemperOf(EntityId{ 999 });
+
+        if (t < 0.8f || t > 1.2f)
+        {
+            return false;
+        }
+
+        float distinct = 0.0f;
+
+        for (std::uint64_t i = 1; i <= 8; ++i)
+        {
+            distinct += TemperOf(EntityId{ i });
+        }
+
+        if (std::fabs(distinct - 8.0f * TemperOf(EntityId{ 1 })) < 0.001f)
+        {
+            return false;   // not one temper for everyone
+        }
+
+        // The echo: two minds share a settlement; a third is their
+        // target. A warmth echoes +0.1 * 0.5 = +0.05 to the mate; a
+        // wrong echoes −0.25 * 0.5 = −0.125.
+        EntityRegistry registry;
+
+        const auto subject = registry.CreateEntity();
+        const auto mate = registry.CreateEntity();
+        const auto target = registry.CreateEntity();
+
+        registry.AddComponent<Groups>(
+            subject, Groups{ { GroupId{ 7 } } });
+        registry.AddComponent<Groups>(
+            mate, Groups{ { GroupId{ 7 } } });
+        registry.AddComponent<Memory>(subject, Memory{});
+        registry.AddComponent<Memory>(mate, Memory{});
+        registry.AddComponent<Memory>(target, Memory{});
+
+        Remember(
+            registry, subject,
+            MemoryEvent{ target, InteractionKind::Social, 1.0f });
+
+        const auto mateRelationships =
+            registry.GetComponent<Relationships>(mate);
+
+        if (!mateRelationships)
+        {
+            return false;
+        }
+
+        const auto iterator = mateRelationships->ByEntity.find(target);
+
+        if (iterator == mateRelationships->ByEntity.end()
+            || std::fabs(iterator->second.Disposition - 0.05f) > 0.0001f)
+        {
+            return false;
+        }
+
+        Remember(
+            registry, subject,
+            MemoryEvent{ target, InteractionKind::Wronged, 1.0f });
+
+        if (std::fabs(iterator->second.Disposition - (-0.075f)) > 0.0001f)
+        {
+            return false;   // 0.05 − 0.125 — the settlement cools
+        }
+
+        // No group, no echo: a stranger's feelings stay private.
+        EntityRegistry isolated;
+
+        const auto a = isolated.CreateEntity();
+        const auto b = isolated.CreateEntity();
+        const auto c = isolated.CreateEntity();
+
+        isolated.AddComponent<Memory>(a, Memory{});
+        isolated.AddComponent<Memory>(b, Memory{});
+        isolated.AddComponent<Memory>(c, Memory{});
+
+        Remember(isolated, a,
+            MemoryEvent{ c, InteractionKind::Social, 1.0f });
+
+        if (isolated.GetComponent<Relationships>(b) != nullptr)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool CoSaveV6Test()
+    {
+        // The v6 record (0.7.0): a Name component rides an entity, and
+        // the registry-level legacy store rides the new section — the
+        // dead's stories survive save/load with the world that remembers
+        // them.
+        EntityRegistry source;
+        RegisterAllSerializers(source);
+
+        const auto farmer = source.CreateEntity();
+
+        source.AddComponent<FormRef>(farmer, FormRef{ 0x00012345u });
+        source.AddComponent<Name>(farmer, Name{ "Vera Hart" });
+        source.AddComponent<Needs>(farmer, SeededNeeds(Species::Human));
+
+        source.LeaveLegacy(LegacyFact{
+            farmer, 42, "the miller's pledge", 1.0f });
+
+        const auto snapshot = source.Capture();
+        const auto record = TLC::CoSave::Encode(
+            snapshot, 0x5EEDull, {}, {});
+
+        // The name rides under its stable key; the legacy's name rides
+        // in the record bytes.
+        const auto contains =
+            [](const std::vector<std::byte>& bytes, std::string_view needle)
+            {
+                for (std::size_t i = 0;
+                     i + needle.size() <= bytes.size(); ++i)
+                {
+                    bool match = true;
+
+                    for (std::size_t j = 0; j < needle.size(); ++j)
+                    {
+                        if (std::to_integer<char>(bytes[i + j])
+                            != needle[j])
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+        if (!contains(record, "name")
+            || !contains(record, "the miller's pledge"))
+        {
+            return false;
+        }
+
+        // Decode: the v6 section hands the legacy blob back.
+        RegistrySnapshot decoded;
+        std::uint64_t rngState = 0;
+        std::vector<TLC::CoSave::StallKeeperPair> stalls;
+        std::vector<TLC::CoSave::BondPair> bonds;
+
+        if (!TLC::CoSave::Decode(
+                record, decoded, rngState, stalls, bonds))
+        {
+            return false;
+        }
+
+        if (!decoded.Legacy.has_value())
+        {
+            return false;
+        }
+
+        // Restore into a fresh registry: the name and the legacy come
+        // back with the world.
+        EntityRegistry restored;
+        RegisterAllSerializers(restored);
+        restored.Restore(decoded);
+
+        EntityId restoredFarmer;
+        std::size_t farmers = 0;
+
+        restored.ForEachWithComponent<FormRef>(
+            [&](EntityId a_entity, const FormRef& a_form)
+            {
+                if (a_form.FormId == 0x00012345u)
+                {
+                    restoredFarmer = a_entity;
+                    ++farmers;
+                }
+            });
+
+        if (farmers != 1)
+        {
+            return false;
+        }
+
+        const auto name = restored.GetComponent<Name>(restoredFarmer);
+
+        if (!name || name->Full != "Vera Hart")
+        {
+            return false;
+        }
+
+        const auto legacy =
+            restored.ReadLegacy("the miller's pledge");
+
+        if (!legacy || legacy->Day != 42
+            || legacy->Name != "the miller's pledge")
+        {
+            return false;
+        }
+
+        // Migration: a v5 record (pre-0.7 — no legacy section) decodes
+        // with no legacy — the safe default, exactly like a missing
+        // component.
+        TLC::Codec::Writer writer;
+        writer.U32(5);                    // record version v5
+        writer.U32(snapshot.Version);     // the core's snapshot version
+        writer.U32(0);                    // no entities
+        writer.U64(0x1234ull);            // the v2 rng header
+        writer.U32(0);                    // no stalls (v3)
+        writer.U32(0);                    // no bonds (v5)
+
+        RegistrySnapshot v5Decoded;
+        std::uint64_t v5Rng = 0;
+        std::vector<TLC::CoSave::StallKeeperPair> v5Stalls;
+        std::vector<TLC::CoSave::BondPair> v5Bonds;
+
+        if (!TLC::CoSave::Decode(
+                writer.Bytes, v5Decoded, v5Rng, v5Stalls, v5Bonds))
+        {
+            return false;
+        }
+
+        if (v5Decoded.Legacy.has_value())
+        {
+            return false;
         }
 
         return true;

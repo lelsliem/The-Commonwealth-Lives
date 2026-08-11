@@ -15,6 +15,7 @@
 #include "Households.h"
 #include "Lifecycle.h"
 #include "Market.h"
+#include "News.h"
 #include "Translator.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
@@ -360,6 +361,43 @@ namespace TLC
         void ReportArrival(
             LCE::Simulation::EntityId a_entity, std::uint32_t a_targetFormId);
 
+        // The identity stone's voice (0.7.0 Stone 1): a mind's name with
+        // its form id — "Marcy Long [00050976]" — or, for a mind with no
+        // name yet, just the form id. The form-id form names a form
+        // directly (falling back to the market label for a workshop).
+        // MarketLabel names a workshop from its base form when one
+        // exists. The log's people are people now, and the hex stays
+        // beside the name for the console.
+        [[nodiscard]] std::string MindLabel(
+            LCE::Simulation::EntityId a_entity) const;
+        [[nodiscard]] std::string MindLabelForm(std::uint32_t a_formId) const;
+        [[nodiscard]] std::string MarketLabel(std::uint32_t a_formId) const;
+
+        // The conflict source's settlement (0.7.0 Stone 2): every mind
+        // remembers its market as a Trade-kind event whose Other is the
+        // workshop entity — this walks the memories and gives each mind
+        // a Groups membership keyed by its market's form id. The engine's
+        // group echo then spreads a slight (or a warmth) through the
+        // settlement, and InheritGroupAttitudes gives a newcomer the
+        // settlement's cold shoulder before they ever meet the feud's
+        // villain. Derived, never persisted: a restored world re-derives
+        // from its restored market memories. Idempotent — a mind with a
+        // group keeps it.
+        void AssignSettlementGroups();
+
+        // The player window (0.7.0 Stone 3): one line of world news — a
+        // bond, a feud, a birth, a death, the market's hours — appended
+        // to the feed (the settlement radio's story) and shown on-screen
+        // as a HUD notification, throttled by sim.news.cooldown so a
+        // flood of lines is not a flood of windows. The caller's own
+        // log line stays the verify channel; this is the human window.
+        void PushNews(const std::string& a_line);
+
+        // The settlement radio (0.7.0 Stone 3): while a radio the player
+        // built is near, the news feed plays as on-screen captions on the
+        // radio cadence. Runs in the per-second pass.
+        void RadioCaptions();
+
         // Who runs each market's stall this world (market entity →
         // stall-keeper mind). Set by the first human arrival at that
         // market; every later bench-arrival trades with them. Persisted
@@ -508,6 +546,31 @@ namespace TLC
             LCE::Simulation::EntityId,
             std::chrono::steady_clock::time_point>
             m_LastWander;
+
+        // The world's names (0.7.0 Stone 1): every name this world has
+        // assigned — procedural names drawn from the lists and game names
+        // from the actors — so no two minds share one. Rebuilt at world
+        // start and restore from the live Name components (a restored
+        // world keeps its names and reserves them against new arrivals);
+        // cleared on EndWorld with everything else.
+        std::unordered_set<std::string> m_UsedNames;
+
+        // The author's name lists (0.7.0 Stone 1): gender-split first
+        // names for people, a separate pool for animals, and the shared
+        // family names — overridable in the INI (names.* keys), defaults
+        // otherwise. Built once at tuning load, before any world.
+        Names::NamePool m_Names;
+
+        // The news feed (0.7.0 Stone 3): the world's paper, capped and
+        // rotated — the settlement radio reads it as captions. Session
+        // state (the log file keeps the full record); cleared on
+        // EndWorld.
+        News::NewsFeed m_News;
+
+        // On-screen news throttle and the radio caption cadence — when
+        // each last fired, so a world of news does not flood the player.
+        std::chrono::steady_clock::time_point m_LastNews{};
+        std::chrono::steady_clock::time_point m_LastRadioCaption{};
 
         // The recent deaths (the grief announce, 0.6.0 Stone 5): entity
         // value → form id, set when a death is booked and the dead is

@@ -15,9 +15,13 @@
 #include "LCE/Simulation/Behaviour.h"
 #include "LCE/Simulation/EntityRegistry.h"
 #include "LCE/Simulation/Goals.h"
+#include "LCE/Simulation/Legacy.h"
 #include "LCE/Simulation/Memory.h"
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Relationships.h"
+
+#include <string>
+#include <unordered_map>
 
 namespace TLC
 {
@@ -263,6 +267,92 @@ namespace TLC
                 }
             };
         }
+
+        ComponentSerializer<Name> MakeNameSerializer()
+        {
+            return {
+                [](const Name& name)
+                {
+                    Codec::Writer writer;
+                    writer.U32(static_cast<std::uint32_t>(name.Full.size()));
+                    writer.Raw(name.Full.data(), name.Full.size());
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+                    const auto length = reader.U32();
+                    const auto bytes = reader.Raw(length);
+
+                    return Name{ std::string(
+                        reinterpret_cast<const char*>(bytes.data()),
+                        bytes.size()) };
+                }
+            };
+        }
+
+        // The registry-level legacy store (0.7.0 stone 12, engine side):
+        // facts keyed by name — "the miller's pledge". One serializer,
+        // registered once at init, rides the co-save's v6 section like the
+        // component stores ride their rows.
+        ComponentSerializer<std::unordered_map<std::string, LegacyFact>>
+        MakeLegacySerializer()
+        {
+            return {
+                [](const std::unordered_map<std::string, LegacyFact>& facts)
+                {
+                    Codec::Writer writer;
+                    writer.U32(static_cast<std::uint32_t>(facts.size()));
+
+                    for (const auto& [key, fact] : facts)
+                    {
+                        writer.U32(static_cast<std::uint32_t>(key.size()));
+                        writer.Raw(key.data(), key.size());
+
+                        writer.U64(fact.Owner.Value());
+                        writer.U64(fact.Day);
+                        writer.U32(static_cast<std::uint32_t>(fact.Name.size()));
+                        writer.Raw(fact.Name.data(), fact.Name.size());
+                        writer.F(fact.Weight);
+                    }
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+                    std::unordered_map<std::string, LegacyFact> facts;
+
+                    const auto count = reader.U32();
+                    facts.reserve(count);
+
+                    for (std::uint32_t i = 0; i < count; ++i)
+                    {
+                        const auto keyLength = reader.U32();
+                        const auto keyBytes = reader.Raw(keyLength);
+                        const auto key = std::string(
+                            reinterpret_cast<const char*>(keyBytes.data()),
+                            keyBytes.size());
+
+                        LegacyFact fact;
+                        fact.Owner = EntityId{ reader.U64() };
+                        fact.Day = reader.U64();
+
+                        const auto nameLength = reader.U32();
+                        const auto nameBytes = reader.Raw(nameLength);
+                        fact.Name = std::string(
+                            reinterpret_cast<const char*>(nameBytes.data()),
+                            nameBytes.size());
+                        fact.Weight = reader.F();
+
+                        facts[std::move(key)] = std::move(fact);
+                    }
+
+                    return facts;
+                }
+            };
+        }
     }
 
     void RegisterAllSerializers(EntityRegistry& registry)
@@ -275,5 +365,9 @@ namespace TLC
         registry.RegisterSerializer<FormRef>(MakeFormRefSerializer());
         registry.RegisterSerializer<SpeciesTag>(MakeSpeciesTagSerializer());
         registry.RegisterSerializer<CapPouch>(MakeCapPouchSerializer());
+        registry.RegisterSerializer<Name>(MakeNameSerializer());
+
+        // The registry-level legacy store — the co-save's v6 section.
+        registry.RegisterLegacySerializer(MakeLegacySerializer());
     }
 }
