@@ -4,12 +4,15 @@
 // Links LCE.Core only — no game required.
 //=============================================================================//
 
+#include "Arcs.h"
 #include "Behaviour.h"
+#include "Birth.h"
 #include "BlobCodec.h"
 #include "Bonds.h"
 #include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
+#include "Gossip.h"
 #include "Households.h"
 #include "Lifecycle.h"
 #include "Market.h"
@@ -55,6 +58,9 @@ namespace TLC::Tests
     bool BondTest();
     bool HouseholdTest();
     bool SleepCycleTest();
+    bool GossipTest();
+    bool ArcsTest();
+    bool BirthTest();
 }
 
 namespace
@@ -97,6 +103,9 @@ int main()
     Run("BondTest", TLC::Tests::BondTest);
     Run("HouseholdTest", TLC::Tests::HouseholdTest);
     Run("SleepCycleTest", TLC::Tests::SleepCycleTest);
+    Run("GossipTest", TLC::Tests::GossipTest);
+    Run("ArcsTest", TLC::Tests::ArcsTest);
+    Run("BirthTest", TLC::Tests::BirthTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -2642,6 +2651,459 @@ namespace TLC::Tests
             if (!registry.GetComponent<Intent>(settler))
             {
                 return false;   // un-parked — a decision exists again
+            }
+        }
+
+        return true;
+    }
+
+    bool GossipTest()
+    {
+        using namespace Gossip;
+
+        //-------------------------------------------------------------------------
+        // 1. Spread — the settlement hears. Three minds with memory; a
+        //    bond between A and B means C hears about both, A hears
+        //    about B, B hears about A — and nobody gossips to itself.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();
+            const auto c = registry.CreateEntity();
+
+            registry.AddComponent<Memory>(a, Memory{});
+            registry.AddComponent<Memory>(b, Memory{});
+            registry.AddComponent<Memory>(c, Memory{});
+
+            const auto spread = SpreadBond(
+                registry, a, b, InteractionKind::Social, 3);
+
+            if (spread != 4)
+            {
+                return false;   // A→B, B→A, C→A, C→B
+            }
+
+            const auto hearsAbout = [&](EntityId who, EntityId subject)
+            {
+                const auto memory = registry.GetComponent<Memory>(who);
+
+                for (const auto& event : memory->Events)
+                {
+                    if (event.Other == subject
+                        && event.Kind == InteractionKind::Social)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            if (!hearsAbout(a, b) || !hearsAbout(b, a)
+                || !hearsAbout(c, a) || !hearsAbout(c, b))
+            {
+                return false;
+            }
+
+            // Nobody heard about themselves — the subject does not
+            // gossip to itself.
+            const auto memory = registry.GetComponent<Memory>(c);
+
+            for (const auto& event : memory->Events)
+            {
+                if (event.Other == c)
+                {
+                    return false;
+                }
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. Spread — an invalid subject spreads nothing; the day is
+        //    stamped onto the fact.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            registry.AddComponent<Memory>(a, Memory{});
+
+            if (Spread(registry, {}, InteractionKind::Death, 9) != 0)
+            {
+                return false;
+            }
+
+            const auto b = registry.CreateEntity();
+            registry.AddComponent<Memory>(b, Memory{});
+
+            if (Spread(registry, b, InteractionKind::Death, 9) != 1)
+            {
+                return false;
+            }
+
+            const auto memory = registry.GetComponent<Memory>(a);
+            const auto& event = memory->Events.back();
+
+            if (event.Other != b || event.Kind != InteractionKind::Death
+                || event.Day != 9 || event.Weight != WorldFacts::kFactWeight)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool ArcsTest()
+    {
+        using namespace Arcs;
+
+        //-------------------------------------------------------------------------
+        // 1. Grieving — a mind with a fresh death memory of someone it
+        //    loved (disposition at/above the friend line) is grieving;
+        //    a stranger's death, or a faded one, is not.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto mourner = registry.CreateEntity();
+            const auto loved = registry.CreateEntity();
+            const auto stranger = registry.CreateEntity();
+
+            registry.AddComponent<Needs>(mourner, Needs{});
+
+            Memory memory;
+            memory.Events.push_back(MemoryEvent{
+                loved, InteractionKind::Death, 1.0f, 1 });
+            memory.Events.push_back(MemoryEvent{
+                stranger, InteractionKind::Death, 1.0f, 1 });
+            registry.AddComponent<Memory>(mourner, std::move(memory));
+
+            Relationships relationships;
+            relationships.ByEntity[loved] =
+                Relationship{ 0.5f, 0.0f };   // loved — above the friend line
+            relationships.ByEntity[stranger] =
+                Relationship{ 0.1f, 0.0f };   // barely known
+            registry.AddComponent<Relationships>(
+                mourner, std::move(relationships));
+
+            if (!Grieving(registry, mourner, 1, 0.5f))
+            {
+                return false;   // loved the dead — grief
+            }
+
+            // A faded memory (below the fresh line) is not a fresh grief.
+            if (Grieving(registry, mourner, 1, 1.01f))
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. ApplyGrief — a grieving mind's Social need drains at the
+        //    grief rate; the fresh pairs are returned exactly once.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto mourner = registry.CreateEntity();
+            const auto loved = registry.CreateEntity();
+
+            registry.AddComponent<Needs>(
+                mourner, SeededNeeds(Species::Human));
+
+            Memory memory;
+            memory.Events.push_back(MemoryEvent{
+                loved, InteractionKind::Death, 1.0f, 1 });
+            registry.AddComponent<Memory>(mourner, std::move(memory));
+
+            Relationships relationships;
+            relationships.ByEntity[loved] = Relationship{ 0.5f, 0.0f };
+            registry.AddComponent<Relationships>(
+                mourner, std::move(relationships));
+
+            const auto fresh =
+                ApplyGrief(registry, 1, 0.01f, 10.0f, 0.9f);
+
+            if (fresh.size() != 1 || fresh[0].first != mourner
+                || fresh[0].second != loved)
+            {
+                return false;
+            }
+
+            // Re-read the component the registry actually holds — the
+            // module modified it in place.
+            const auto& needs =
+                *registry.GetComponent<Needs>(mourner);
+
+            const auto social = std::find_if(
+                needs.List.begin(), needs.List.end(),
+                [](const Need& a_need)
+                {
+                    return a_need.Type == NeedType::Social;
+                });
+
+            if (social == needs.List.end()
+                || social->Value > 1.0f - 0.09f)
+            {
+                return false;   // drained ~0.1 at 0.01/s × 10 s
+            }
+
+            // The next pass: the memory still sits above the fresh line,
+            // but the mind is only announced once per tick by the
+            // adapter's log — the module simply reports what is fresh.
+            if (ApplyGrief(registry, 1, 0.01f, 1.0f, 0.9f).size() != 1)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. Mediate — a liked mediator cools the feud (the pair warms
+        //    toward zero); an unloved meddler is told off (the feud
+        //    holds, they cool toward the meddler).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto enemyA = registry.CreateEntity();
+            const auto enemyB = registry.CreateEntity();
+            const auto mediator = registry.CreateEntity();
+
+            // The mediator has heard of both sides — the settlement
+            // knows its own feuds.
+            Memory mediatorMemory;
+            mediatorMemory.Events.push_back(MemoryEvent{
+                enemyA, InteractionKind::Social, 1.0f, 1 });
+            mediatorMemory.Events.push_back(MemoryEvent{
+                enemyB, InteractionKind::Social, 1.0f, 1 });
+            registry.AddComponent<Memory>(
+                mediator, std::move(mediatorMemory));
+
+            // Both sides like the mediator (pull > 0) — the cooling
+            // attempt should land.
+            Relationships relA;
+            relA.ByEntity[enemyB] = Relationship{ -0.7f, 0.0f };
+            relA.ByEntity[mediator] = Relationship{ 0.4f, 0.0f };
+            registry.AddComponent<Relationships>(enemyA, std::move(relA));
+
+            Relationships relB;
+            relB.ByEntity[enemyA] = Relationship{ -0.7f, 0.0f };
+            relB.ByEntity[mediator] = Relationship{ 0.4f, 0.0f };
+            registry.AddComponent<Relationships>(enemyB, std::move(relB));
+
+            const auto attempts = Mediate(
+                registry, { { enemyA, enemyB } });
+
+            if (attempts.size() != 1 || !attempts[0].Cooled
+                || attempts[0].Mediator != mediator)
+            {
+                return false;
+            }
+
+            const auto afterA =
+                registry.GetComponent<Relationships>(enemyA);
+            const auto afterB =
+                registry.GetComponent<Relationships>(enemyB);
+
+            if (afterA->ByEntity[enemyB].Disposition
+                    != -0.7f + 0.05f
+                || afterB->ByEntity[enemyA].Disposition
+                    != -0.7f + 0.05f)
+            {
+                return false;   // the feud cooled a step
+            }
+
+            // The unloved meddler: pull <= 0 — the feud holds and the
+            // pair cools toward the meddler.
+            EntityRegistry registry2;
+
+            const auto cA = registry2.CreateEntity();
+            const auto cB = registry2.CreateEntity();
+            const auto meddler = registry2.CreateEntity();
+
+            Memory meddlerMemory;
+            meddlerMemory.Events.push_back(MemoryEvent{
+                cA, InteractionKind::Social, 1.0f, 1 });
+            meddlerMemory.Events.push_back(MemoryEvent{
+                cB, InteractionKind::Social, 1.0f, 1 });
+            registry2.AddComponent<Memory>(
+                meddler, std::move(meddlerMemory));
+
+            Relationships relCA;
+            relCA.ByEntity[cB] = Relationship{ -0.7f, 0.0f };
+            relCA.ByEntity[meddler] = Relationship{ 0.0f, 0.0f };
+            registry2.AddComponent<Relationships>(cA, std::move(relCA));
+
+            Relationships relCB;
+            relCB.ByEntity[cA] = Relationship{ -0.7f, 0.0f };
+            relCB.ByEntity[meddler] = Relationship{ 0.0f, 0.0f };
+            registry2.AddComponent<Relationships>(cB, std::move(relCB));
+
+            const auto attempts2 = Mediate(
+                registry2, { { cA, cB } });
+
+            if (attempts2.size() != 1 || attempts2[0].Cooled)
+            {
+                return false;   // nobody liked the meddler
+            }
+
+            const auto afterCA =
+                registry2.GetComponent<Relationships>(cA);
+            const auto afterCB =
+                registry2.GetComponent<Relationships>(cB);
+
+            if (afterCA->ByEntity[meddler].Disposition != -0.05f
+                || afterCB->ByEntity[meddler].Disposition != -0.05f)
+            {
+                return false;   // the pair cooled toward the meddler
+            }
+        }
+
+        return true;
+    }
+
+    bool BirthTest()
+    {
+        using namespace Birth;
+
+        const NeedRates rates;   // the code's own defaults
+
+        //-------------------------------------------------------------------------
+        // 1. Create — a child mind: sim-only (no FormRef), fed from
+        //    full needs, warm to both parents — and the parents know
+        //    their child.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto parentA = registry.CreateEntity();
+            const auto parentB = registry.CreateEntity();
+
+            // The parents are minds — they carry relationships (the
+            // component Create warms with the child).
+            registry.AddComponent<FormRef>(parentA, FormRef{ 0x1234 });
+            registry.AddComponent<FormRef>(parentB, FormRef{ 0x5678 });
+            registry.AddComponent<Relationships>(parentA, Relationships{});
+            registry.AddComponent<Relationships>(parentB, Relationships{});
+
+            const auto child = Create(registry, parentA, parentB, rates);
+
+            if (!child.IsValid() || child == parentA || child == parentB)
+            {
+                return false;
+            }
+
+            const auto species =
+                registry.GetComponent<SpeciesTag>(child);
+            const auto needs = registry.GetComponent<Needs>(child);
+            const auto memory = registry.GetComponent<Memory>(child);
+            const auto goals = registry.GetComponent<Goals>(child);
+            const auto form = registry.GetComponent<FormRef>(child);
+
+            if (!species || species->Value != Species::Child
+                || !needs || !memory || !goals || form != nullptr)
+            {
+                return false;   // a sim-only child mind
+            }
+
+            for (const auto& need : needs->List)
+            {
+                if (need.Value < 1.0f - 0.001f)
+                {
+                    return false;   // born satisfied
+                }
+            }
+
+            const auto childRels =
+                registry.GetComponent<Relationships>(child);
+
+            if (!childRels
+                || childRels->ByEntity[parentA].Disposition < 0.4f
+                || childRels->ByEntity[parentB].Disposition < 0.4f)
+            {
+                return false;   // the child loves both parents
+            }
+
+            const auto relA =
+                registry.GetComponent<Relationships>(parentA);
+            const auto relB =
+                registry.GetComponent<Relationships>(parentB);
+
+            if (!relA || relA->ByEntity[child].Disposition < 0.5f
+                || !relB || relB->ByEntity[child].Disposition < 0.5f)
+            {
+                return false;   // the parents know their child
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. Create — invalid parents birth nothing.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto parentA = registry.CreateEntity();
+
+            if (Create(registry, parentA, {}, rates).IsValid())
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. FeedChildren — a sim-only child is fed by the household;
+        //    a child with a game form is a real, walkable mind and is
+        //    left to the market.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto child = registry.CreateEntity();
+            auto childNeeds = SeededNeeds(Species::Child);
+            childNeeds.List[0].Value = 0.5f;   // hungry
+            registry.AddComponent<Needs>(child, childNeeds);
+            registry.AddComponent<SpeciesTag>(
+                child, SpeciesTag{ Species::Child });
+
+            const auto walker = registry.CreateEntity();
+            registry.AddComponent<Needs>(
+                walker, SeededNeeds(Species::Child));
+            registry.AddComponent<SpeciesTag>(
+                walker, SpeciesTag{ Species::Child });
+            registry.AddComponent<FormRef>(walker, FormRef{ 0x9999 });
+
+            const auto fed = FeedChildren(registry, 1.0f);
+
+            if (fed != 1)
+            {
+                return false;   // only the sim-only child ate
+            }
+
+            const auto hungerOf = [](const Needs& a_needs)
+            {
+                for (const auto& need : a_needs.List)
+                {
+                    if (need.Type == NeedType::Hunger)
+                    {
+                        return need.Value;
+                    }
+                }
+
+                return -1.0f;
+            };
+
+            // Fed toward full at 0.2/s: 0.5 + 0.2 = 0.7. The walker (a
+            // real mind with a form) is left to the market, untouched
+            // at 1.0.
+            if (hungerOf(*registry.GetComponent<Needs>(child))
+                    != 0.5f + 0.2f * 1.0f
+                || hungerOf(*registry.GetComponent<Needs>(walker))
+                    != 1.0f)
+            {
+                return false;
             }
         }
 

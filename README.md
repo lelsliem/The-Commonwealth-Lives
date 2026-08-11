@@ -182,7 +182,7 @@ Runs the adapter's harness (translator tables, seeding, snapshot and
 co-save round-trips — including the v3 stall-keepers section and the
 migration paths, plan builder, market decision, species rules, pouch
 economy, tuning, lifecycle, bonds, households, sleep cycle) — links
-LCE.Core only, no game required. **13/13 suites green.**
+LCE.Core only, no game required. **16/16 suites green.**
 
 ## License
 

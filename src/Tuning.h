@@ -177,6 +177,22 @@ namespace TLC::Tuning
         // caps. A buyer pays what they can afford up to this; the rest
         // the settlement covers. 5 caps, a modest market.
         float MealPrice = 5.0f;
+
+        // The grief arc (0.6.0 Stone 5): how much faster a grieving
+        // mind's Social need empties, per second — they seek company.
+        // 0.01/s is a quiet ache; higher makes the bereaved visibly
+        // restless.
+        float GriefDecay = 0.01f;
+
+        // The feud arc (0.6.0 Stone 5): whether a settlement that has
+        // heard of a feud may try to mediate it (once per pair per day).
+        bool MediationEnabled = true;
+
+        // The birth stone (0.6.0 Stone 6, experimental): off by default.
+        // When on, a spouse household may have a child — a sim-only mind
+        // (no game actor), fed by the household, bonded to both parents,
+        // living in the co-save.
+        bool BirthEnabled = false;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -220,6 +236,30 @@ namespace TLC::Tuning
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
         settings.RestRecovery =
             read("sim.rest.recovery", settings.RestRecovery);
+
+        settings.GriefDecay =
+            read("sim.arc.grief.decay", settings.GriefDecay);
+
+        // The arc/birth toggles are bools, not rates — parse them
+        // separately: "1", "true", "yes", "on" mean on; anything else
+        // off (a broken line never breaks the world).
+        const auto readBool = [&a_config](std::string_view key, bool fallback)
+        {
+            const auto raw = a_config.Get(key);
+
+            if (raw.empty())
+            {
+                return fallback;
+            }
+
+            return raw == "1" || raw == "true"
+                || raw == "yes" || raw == "on";
+        };
+
+        settings.MediationEnabled =
+            readBool("sim.arc.mediation", settings.MediationEnabled);
+        settings.BirthEnabled =
+            readBool("sim.birth.enabled", settings.BirthEnabled);
 
         // The walk cap is a size, not a rate — parse it separately.
         const auto rawCap = a_config.Get("sim.walk.cap");

@@ -121,4 +121,32 @@ namespace TLC::Movement
             a_target->GetFormID());
         return true;
     }
+
+    bool HoldPlace(RE::Actor* a_actor)
+    {
+        if (a_actor == nullptr || a_actor->currentProcess == nullptr)
+        {
+            return false;
+        }
+
+        if (!Matches(kTravelPackageRva, kTravelPrologue))
+        {
+            return false;   // same pin, same refusal — never teleport
+        }
+
+        // Command the actor to "travel" to itself: the destination is
+        // its own position, so the package parks it and suspends the
+        // sandbox. The caller rate-limits the issue; this logs once per
+        // hold (debug — a held world is visible, not deafening).
+        using TravelFn = void (*)(RE::Actor*, RE::TESObjectREFR*, RE::COMMAND_TYPE);
+        const auto travel =
+            reinterpret_cast<TravelFn>(REL::Offset{ kTravelPackageRva }.address());
+
+        travel(a_actor, a_actor, RE::COMMAND_TYPE::kMove);
+
+        REX::DEBUG(
+            "LCE: hold — settler {:#x} commanded in place (Rest/Explore).",
+            a_actor->GetFormID());
+        return true;
+    }
 }

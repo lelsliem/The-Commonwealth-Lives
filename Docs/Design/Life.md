@@ -107,7 +107,7 @@ order; each one leaves the world strictly more alive.
   names none). Four shared meals cross the friend line; meals every
   ~10 s (the fast demo rhythm) bond in under a minute.
 
-### Stone 3 — Households — BUILT + TESTED (2026-08-11; 13/13 suites current) and VERIFIED in-game
+### Stone 3 — Households — BUILT + TESTED (2026-08-11) and VERIFIED in-game
 
 - A household is the deepest bond made concrete (`Households.h`, pure +
   tested): the moment a pair's bond becomes **Spouse** (the +0.8 mutual
@@ -151,7 +151,7 @@ order; each one leaves the world strictly more alive.
   meal cadence and make bonds and marriages form in minutes. This is
   the missing half of the sleep cycle's in-world presence.
 
-### Stone 3.5 — The sleep cycle — BUILT + TESTED (2026-08-11, 13/13 suites)
+### Stone 3.5 — The sleep cycle — BUILT + TESTED (2026-08-11, 16/16 suites)
 
 - The 24-hour market test exposed the gap: **a fed mind parks in Rest
   forever.** The engine's need loop only decays; nothing ever restored
@@ -188,63 +188,115 @@ order; each one leaves the world strictly more alive.
 - **Verify:** relaunch the fast demo (24h market + `sim.hunger.decay =
   0.1`) — customers return to the same bench for second meals; the first
   `bonds: settler X and settler Y became friends.` lands within minutes;
-  a marriage (and `households: … now a household`) follows.
+  a marriage (and `households: … now a household`) follows. The verify
+  chain ran 2026-08-11 — friendships cascaded from shared meals, the
+  first marriage formed, survived save/load, and the family bench fed
+  the spouse (Stone 3's verify line).
 
-### Stone 4 — Gossip
+### Stone 3.75 — The meal-cadence hold (Rest/Explore executes in-game) — BUILT + TESTED (2026-08-11)
 
-- Word spreads: a bond event, a death, a feud writes a fact to every mind
-  within a gossip radius (INI) of the settlement — the settlement knows
-  its own news; strangers and fresh arrivals don't.
-- **Verify:** kill a settler — a bystander across town mentions the death;
-  a newly arrived settler doesn't know.
+- The marriage test's honest gap: a fed mind that decides Rest or Explore
+  got *nothing* — both were table slots. The game's sandbox took over and
+  wandered the settler away from its bench; its market memory faded; the
+  next shared meal was 7–10 minutes away instead of the ~10 s the
+  cooldown allows (the observed stall in the first marriage hunt).
+- **The fix (`Movement::HoldPlace`):** Rest and Explore now execute
+  in-game as a commanded hold — the same verified command-mode travel
+  package, targeted at the actor itself, so the sandbox cannot wander it
+  away. Rate-limited to one hold per mind per 10 s (a command package
+  every frame would be a flood of its own). A fed mind rests at its
+  bench; the memory lives; the next meal is a cooldown away.
+- Walk, rest, explore — the sim's three movement intents are all real
+  game commands now. Socialize/Work/Flee remain table slots (their
+  stones are future work), and a resting mind stands in place rather
+  than sitting — furniture/animation is game-side polish for later.
+- **Verify (pending):** watch a fed mind at the bench — it holds its
+  ground through Rest instead of drifting, and meals to the same pair
+  collapse from minutes to the ~10 s cooldown cadence.
 
-### Stone 5 — Emergent arcs (the quests)
+### Stone 4 — Gossip — BUILT + TESTED (2026-08-11)
 
-Arcs are adapter-side state machines (stage + participants + memory keys)
-that steer intents. Five arcs ship:
+- Word spreads: a bond crossing (friend, sweetheart, spouse, rival,
+  enemy), a death, a feud writes a fact to every mind of the settlement
+  (`Gossip.h`). The "gossip radius" is the settlement itself — one book
+  per settlement; strangers and fresh arrivals don't know (gossip is
+  written once, it is not replayed).
+- Wired into both news channels: `OnBondChange` (every formation names
+  both participants) and `RemoveMind` (a death names the dead — the fact
+  the grief arc reads). Pure, harness-tested without the game.
+- **Verify (pending):** kill a settler — a bystander across town
+  remembers the death (a `Death` memory); a newly arrived settler
+  doesn't know.
 
-1. **The Feud** — repeated failed trades / slights drop disposition below
-   −0.6; the pair refuses to trade or socialize with each other; gossip
-   spreads it; a neutral settler may try to mediate.
-2. **The Grief** — a spouse or child dies; the survivor's comfort
-   plummets, they stop trading for a day, then fork on the evidence: hunt
-   the killer if they trust the killer was at fault, else seek comfort in
-   new bonds.
+### Stone 5 — Emergent arcs (the quests) — BUILT + TESTED (2026-08-11)
+
+Arcs read the world's own state — bonds, gossip, deaths — and steer the
+sim's numbers, so a story is never a script. Two arcs ship built; the
+other three stay sketched below.
+
+1. **The Feud — BUILT** — an enemy pair the settlement has heard of
+   draws a mediator once per day (`Arcs::Mediate`, run by
+   `Adapter::RunMediation` on the day cadence): a third mind who knows
+   both sides steps in. A mediator liked by both cools the feud (each
+   side warms a step toward zero and trusts the mediator more); a
+   meddler nobody likes is told off and the feud holds. The settlement
+   pulls its own apart — no scripts.
+2. **The Grief — BUILT** — a loved death (a `Death` memory still heavy,
+   of someone at/above the friend line) is grief (`Arcs::Grieving`): the
+   survivor's Social drains at `sim.arc.grief.decay` extra per second
+   (`Arcs::ApplyGrief`, every tick) — they seek company. Derived from
+   persisted components, so grief survives save/load for free. The
+   vengeance/comfort fork stays sketched for a later stone.
 3. **The Courtship** — repeated socializing at the same place raises
-   disposition; +0.6 → sweetheart; mutual +0.8 → spouse (hands off to the
-   household stone).
+   disposition; +0.6 → sweetheart; mutual +0.8 → spouse (hands off to
+   the household stone). Now visible in-game: shared meals *are* the
+   courtship (the observed friendships → sweethearts → marriage chain,
+   2026-08-11).
 4. **The Departure** — all bonds negative and needs unmet → the settler
    leaves; the settlement remembers them (a goodbye fact, then the mind
-   despawns).
-5. **The Famine** — the market can't feed the settlement (shortfall from
-   the sim); hunger spikes, dispositions fray, some settlers consider
-   leaving, and the market stays open late while the famine lasts.
+   despawns). Not built — sketched.
+5. **The Famine** — the market can't feed the settlement; hunger spikes,
+   dispositions fray, some settlers consider leaving, and the market
+   stays open late while the famine lasts. Not built — sketched.
 
-- **Verify:** the logs show each arc's lifecycle — start, play, resolve —
-  with no scripts: every arc is needs, bonds, and memory driving intents.
+- **Verify (pending):** the logs show each arc's lifecycle — start, play,
+  resolve — with no scripts: every arc is needs, bonds, and memory
+  driving intents.
 
-### Stone 6 — Birth (experimental, INI-gated)
+### Stone 6 — Birth (experimental, INI-gated) — BUILT + TESTED (2026-08-11)
 
-- A spouse pair can have a child: a child actor spawns (HumanChildRace), a
-  mind is born at Day 0.
-- The child is fed by the settlement (the existing species rule), bonds
-  with its parents, and — in a later stone — grows up.
-- INI gate: `sim.births = off` in the beta; on is a stress test.
-- **Verify:** the log records a birth; the child mind exists, protected,
-  fed, and bonded.
+- A spouse household has a child: **a sim-only mind** — there is no game
+  actor, no form, no translator entry (`Birth::Create`). Seeded like any
+  mind (needs, memory, goals) plus a warm relationship to both parents
+  — and the parents know their child. Fed by the household
+  (`Birth::FeedChildren`, every tick — hunger recovers directly,
+  protected and fed, never walking to a market). Lives in the co-save
+  like any mind.
+- One birth per sim day, at most; the household the Rng draws. Gated by
+  `sim.birth.enabled` (default 0) — off in the beta; on is a stress test.
+- The census cannot evict it: `Lifecycle::Diff` classifies the *census*,
+  never the registry, so a mind with no form is simply never scanned.
+- **Verify (pending):** the log records `birth: a child is born to …`;
+  the child mind exists, fed, and bonded — and returns from the co-save.
 
-### Co-save v5
+### Co-save — no v6 bump needed
 
-Bonds (form-id pairs + kind + since-Day), households, arcs in progress,
-gossip day-stamps, the birth registry. Version-gated exactly like v3/v4 —
-old saves load, new sections are additive.
+Bonds ride v5 (form-id pairs + kind + since-Day) and households ride the
+shared pouch. A child is an entity carrying existing components
+(SpeciesTag, Needs, Memory, Goals, Relationships) — all already
+serialized, so the child persists with no new record (the adapter's
+serializer registration covers it; the child's parents restore by their
+form refs). Gossip and arcs are *derived* from persisted components
+(memory events, relationships, needs) — no record of their own
+(ADR-0017).
 
 ### Tuning (INI additions)
 
-Bond thresholds (friend / sweetheart / spouse / rival / enemy), gossip
-radius, grief duration, famine threshold, population cap, births on/off.
-Every new number is a `sim.*` or `bond.*` key the adapter reads — same
-file, same rules (unknown keys ignored, broken lines keep defaults).
+Bond thresholds (friend / sweetheart / spouse / rival / enemy),
+grief decay (`sim.arc.grief.decay`), mediation on/off
+(`sim.arc.mediation`), births on/off (`sim.birth.enabled`). Every new
+number is a `sim.*` or `bond.*` key the adapter reads — same file, same
+rules (unknown keys ignored, broken lines keep defaults).
 
 ## What the adapter wants from the engine
 
@@ -292,13 +344,18 @@ required for 0.6.0** — the adapter chains the existing four.
 1. Two settlers become friends; one slights the other; the feud arc
    starts; gossip spreads it; a neutral settler mediates.
 2. A couple courtships at the bench, marries, and their pouch is shared —
-   save, reload, the bond and pouch survive.
-3. Kill the spouse: the survivor grieves (comfort plummets, trading
-   stops), then forks — vengeance or comfort — on what they trust.
+   save, reload, the bond and pouch survive. *(Verified in-game
+   2026-08-11 — the marriage chain and the family bench.)*
+3. Kill the spouse: the survivor grieves (Social drains at
+   `sim.arc.grief.decay`; they seek company — the built grief arc), then
+   the vengeance/comfort fork follows in a later stone.
 4. Let the settlement starve: the famine arc opens the market late,
-   dispositions fray, someone leaves.
-5. A birth (with the gate on): a child mind is born, protected, fed,
-   bonded to its parents, and its Day starts at 0.
+   dispositions fray, someone leaves. *(Not built — sketched.)*
+5. A birth (with `sim.birth.enabled = 1`): a child mind is born,
+   protected, fed, bonded to its parents — and returns from the co-save.
+6. The meal-cadence hold: a fed mind rests at its bench instead of
+   drifting, and the same pair's meals collapse from minutes to the
+   ~10 s cooldown cadence.
 
 Everything observable in the log; every behaviour driven by needs, bonds,
 memory, and the seeded RNG — never by a script.

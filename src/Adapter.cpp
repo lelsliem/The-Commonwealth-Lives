@@ -9,8 +9,11 @@
 
 #include "Adapter.h"
 
+#include "Arcs.h"
 #include "Behaviour.h"
+#include "Birth.h"
 #include "Components.h"
+#include "Gossip.h"
 #include "Market.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
@@ -745,6 +748,116 @@ namespace TLC
             : 0.0f;
     }
 
+    void Adapter::RunMediation()
+    {
+        // The feud pairs the settlement knows: every pair in the bond
+        // book at the enemy line. A feud is a story the world heard —
+        // strangers do not step in, but the settlement can try.
+        std::vector<std::pair<LCE::Simulation::EntityId,
+            LCE::Simulation::EntityId>> feuds;
+
+        for (const auto& [key, bond] : m_Bonds)
+        {
+            if (bond.Kind != Bonds::BondKind::Enemy)
+            {
+                continue;
+            }
+
+            feuds.emplace_back(
+                LCE::Simulation::EntityId{ key.first },
+                LCE::Simulation::EntityId{ key.second });
+        }
+
+        if (feuds.empty())
+        {
+            return;
+        }
+
+        const auto attempts = Arcs::Mediate(m_Registry, feuds, &m_Rng);
+
+        for (const auto& attempt : attempts)
+        {
+            const auto mediator = m_Translator.FormFor(attempt.Mediator);
+            const auto enemyA = m_Translator.FormFor(attempt.EnemyA);
+            const auto enemyB = m_Translator.FormFor(attempt.EnemyB);
+
+            if (mediator == 0 || enemyA == 0 || enemyB == 0)
+            {
+                continue;
+            }
+
+            if (attempt.Cooled)
+            {
+                REX::INFO(
+                    "arcs: {:#x} cooled the feud between {:#x} and {:#x} "
+                    "— the settlement pulls its own apart.",
+                    mediator, enemyA, enemyB);
+            }
+            else
+            {
+                REX::INFO(
+                    "arcs: {:#x} tried to cool the feud between {:#x} "
+                    "and {:#x} — nobody listened.",
+                    mediator, enemyA, enemyB);
+            }
+        }
+    }
+
+    void Adapter::RunBirth()
+    {
+        // The eligible households: every spouse pair with two real
+        // actors — a child is born to a couple that exists in the game.
+        // The child itself is sim-only: no form, no game actor, just a
+        // mind the household feeds.
+        std::vector<std::pair<LCE::Simulation::EntityId,
+            LCE::Simulation::EntityId>> couples;
+
+        for (const auto& [key, bond] : m_Bonds)
+        {
+            if (bond.Kind != Bonds::BondKind::Spouse)
+            {
+                continue;
+            }
+
+            const auto a = LCE::Simulation::EntityId{ key.first };
+            const auto b = LCE::Simulation::EntityId{ key.second };
+
+            if (m_Translator.FormFor(a) != 0
+                && m_Translator.FormFor(b) != 0)
+            {
+                couples.emplace_back(a, b);
+            }
+        }
+
+        if (couples.empty())
+        {
+            return;
+        }
+
+        // One birth per day: the household the Rng draws. The household
+        // already lives in the sim — the bond book and the shared pouch
+        // know where its home settlement is, and the child eats there
+        // for free.
+        const auto index = m_Rng.Next() % couples.size();
+        const auto& [parentA, parentB] = couples[index];
+
+        const auto child = Birth::Create(
+            m_Registry, parentA, parentB, m_Settings.Rates);
+
+        if (!child.IsValid())
+        {
+            return;
+        }
+
+        const auto formA = m_Translator.FormFor(parentA);
+        const auto formB = m_Translator.FormFor(parentB);
+
+        REX::INFO(
+            "birth: a child is born to {:#x} and {:#x} — a new mind, "
+            "fed by the household.",
+            formA, formB);
+    }
+
     void Adapter::OnBondChange(
         LCE::Simulation::EntityId a_entityA,
         LCE::Simulation::EntityId a_entityB,
@@ -838,6 +951,20 @@ namespace TLC
                     labelA, formA, labelB, formB,
                     holderShare, otherShare);
             }
+        }
+
+        // The settlement hears its own news (0.6.0 Stone 4 — gossip):
+        // a bond crossing — friend, sweetheart, spouse, rival, enemy —
+        // names both participants to every mind. Strangers and fresh
+        // arrivals never hear it (gossip is written once, not replayed).
+        // Deaths spread through the same channel in RemoveMind.
+        if (a_new != Bonds::BondKind::None
+            && a_old == Bonds::BondKind::None)
+        {
+            Gossip::SpreadBond(
+                m_Registry, a_entityA, a_entityB,
+                LCE::Simulation::InteractionKind::Social,
+                CurrentDay());
         }
     }
 
@@ -1163,6 +1290,7 @@ namespace TLC
         // arrival.
         m_Walks.erase(entity);
         m_ArrivedAt.erase(entity);
+        m_LastHold.erase(entity);
         m_LastLogged.erase(entity);
         m_FeederLogged.erase(entity);
 
@@ -1213,26 +1341,18 @@ namespace TLC
 
         if (a_isDeath)
         {
-            // The death fact: every surviving mind remembers who is gone —
-            // { the dead, Death, weight, day }. A fact, never a door:
-            // Decide gates only Trade and Social, so a death never blocks
-            // a walk or a trade. Survivors carry it across the co-save;
-            // the dead themselves are simply absent (they do not restore).
-            // Grief reads it in Stone 2.
-            const auto day = CurrentDay();
-
-            m_Registry.ForEachWithComponent<Memory>(
-                [&](EntityId a_survivor, Memory& a_memory)
-                {
-                    if (a_survivor == entity)
-                    {
-                        return;
-                    }
-
-                    a_memory.Events.push_back(MemoryEvent{
-                        entity, InteractionKind::Death,
-                        WorldFacts::kFactWeight, day });
-                });
+            // The death fact — the settlement's grief news (Stone 1,
+            // spread through the gossip channel of Stone 4): every
+            // surviving mind remembers who is gone — { the dead, Death,
+            // weight, day }. A fact, never a door: Decide gates only
+            // Trade and Social, so a death never blocks a walk or a
+            // trade. Survivors carry it across the co-save; the dead
+            // themselves are simply absent (they do not restore).
+            // Grief reads it in Stone 5.
+            Gossip::Spread(
+                m_Registry, entity,
+                LCE::Simulation::InteractionKind::Death,
+                CurrentDay());
         }
 
         m_Registry.DestroyEntity(entity);
@@ -1293,6 +1413,7 @@ namespace TLC
         m_Bonds.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
+        m_LastHold.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
         m_TickCalled = false;
@@ -2164,7 +2285,57 @@ namespace TLC
             // weather. Pushed on the same cadence as the seed — silent
             // unless a door changes.
             PushWorldFacts();
+
+            // 0.6.0 Stone 5 — the arcs, on a day cadence: mediation for
+            // every feud the settlement has heard of, once per day; and
+            // birth, at most once per day, when enabled (Stone 6).
+            const auto day = CurrentDay();
+
+            if (m_Settings.MediationEnabled
+                && day != m_LastMediationDay)
+            {
+                m_LastMediationDay = day;
+                RunMediation();
+            }
+
+            if (m_Settings.BirthEnabled && day != m_LastBirthDay)
+            {
+                m_LastBirthDay = day;
+                RunBirth();
+            }
         }
+
+        // The grief arc (0.6.0 Stone 5) runs every tick: a grieving mind
+        // — a recent death of someone it loved — drains Social faster
+        // and seeks company. Derived from persisted components, so no
+        // record of its own; the line announces each fresh bereavement
+        // once (the memory fades and the line stops on its own).
+        {
+            const auto grieving = Arcs::ApplyGrief(
+                m_Registry, CurrentDay(),
+                m_Settings.GriefDecay,
+                static_cast<float>(a_deltaSeconds));
+
+            for (const auto& [mind, dead] : grieving)
+            {
+                const auto formId = m_Translator.FormFor(mind);
+                const auto deadFormId = m_Translator.FormFor(dead);
+
+                if (formId == 0 || deadFormId == 0)
+                {
+                    continue;
+                }
+
+                REX::INFO(
+                    "arcs: settler {:#x} grieves for {:#x} — they seek company.",
+                    formId, deadFormId);
+            }
+        }
+
+        // The child's life (0.6.0 Stone 6): sim-only children are fed by
+        // their household — no walk, no market, just a full bowl.
+        Birth::FeedChildren(
+            m_Registry, static_cast<float>(a_deltaSeconds));
 
         // The sleep cycle (0.6.0): a mind rests while its last decision
         // was Rest — or while the engine silenced it because the need it
@@ -2254,6 +2425,10 @@ namespace TLC
         // (5.1M lines in five minutes — every deferred mind logged every
         // frame of the 600-mind revival flood).
         std::size_t deferred = 0;
+
+        // The hold clock (the meal-cadence stone): the same `now` the
+        // Rest/Explore branch rate-limits its commanded holds against.
+        const auto now = std::chrono::steady_clock::now();
 
         for (const auto& entry : a_plan)
         {
@@ -2416,20 +2591,45 @@ namespace TLC
             break;
 
             case ActionType::Rest:
-            case ActionType::Socialize:
             case ActionType::Explore:
-            case ActionType::Work:
-            case ActionType::Flee:
             {
-                // The session is deliberately kept: the walk was issued and
-                // the game's planner carries it, so ProbeWalks still
-                // measures progress (and arrival) after the memory fades.
-
+                // The meal-cadence stone: Rest and Explore now execute
+                // in-game as a commanded hold — the actor is parked in
+                // place and the sandbox cannot wander it away. Without
+                // this, a fed mind resting at its market drifts off, its
+                // market memory fades, and the next meal is minutes away
+                // (the observed 7–10 min gaps) instead of the cooldown's
+                // ~10 s. Rate-limited to one hold per mind per 10 s.
                 char confidence[16];
                 std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
 
-                // Table slots: the loop is proven; the game behaviours are
-                // the next stones' work.
+                LogPlanEntry(
+                    entry.Entity,
+                    "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
+                        + " (" + confidence + ")",
+                    { static_cast<std::uint32_t>(entry.Intent.Action), 0, 0 });
+
+                const auto holdIt = m_LastHold.find(entry.Entity);
+
+                if (holdIt == m_LastHold.end()
+                    || now - holdIt->second >= std::chrono::seconds(10))
+                {
+                    m_LastHold[entry.Entity] = now;
+                    Movement::HoldPlace(actor);
+                }
+            }
+            break;
+
+            case ActionType::Socialize:
+            case ActionType::Work:
+            case ActionType::Flee:
+            {
+                // Table slots still: socializing is the future stone,
+                // work and fleeing are unbuilt. The loop is proven;
+                // these execute nothing in-game yet.
+                char confidence[16];
+                std::snprintf(confidence, sizeof(confidence), "%.2f", entry.Intent.Confidence);
+
                 LogPlanEntry(
                     entry.Entity,
                     "settler " + FormatHex8(actorFormId) + " decides " + ActionName(entry.Intent.Action)
@@ -2444,8 +2644,6 @@ namespace TLC
         // world stays visible without the per-frame flood (the first
         // attempt — a per-entity DEBUG line — wrote 5.1M lines in five
         // minutes of the 600-mind revival flood).
-        const auto now = std::chrono::steady_clock::now();
-
         if (deferred > 0
             && (m_LastCapLog.time_since_epoch().count() == 0
                 || now - m_LastCapLog >= std::chrono::seconds(5)))

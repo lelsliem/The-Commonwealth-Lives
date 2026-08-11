@@ -449,3 +449,60 @@ constant, not yet an INI key. The observed 7–10 min meal gaps for
 settlers who wander (Rest/Explore are table slots; the game's sandbox
 moves them) are a separate gap, deferred to a game-side Rest/Explore
 execution stone.
+
+## 0017 — The rest of 0.6.0: meal-cadence, gossip, arcs, birth
+
+**Date.** 2026-08-11. Stones 1–3.5 closed (ADRs 0011–0016); this pass
+builds the remaining 0.6.0 stones — 4 (gossip), 5 (arcs), 6 (birth) —
+plus the game-side Rest/Explore execution the marriage test exposed
+(ADR-0016's deferred gap). Harness 13/13 → 16/16; in-game verification
+of this pass is pending.
+
+**The meal-cadence hold.** ADR-0016 deferred the 7–10 min meal gaps:
+a fed mind that decides Rest or Explore got nothing in-game (both were
+table slots), the sandbox wandered it away from its bench, and the next
+shared meal was minutes off instead of the cooldown's ~10 s. The fix is
+`Movement::HoldPlace`: the same verified command-mode travel package,
+targeted at the actor itself, commands it to "travel" to its own
+position — the package parks the actor and suspends the sandbox.
+Rate-limited (one hold per mind per 10 s — a command package every
+frame is a flood of its own). Walk, rest, and explore are now all real
+game commands.
+
+**Gossip (Stone 4).** `Gossip.h`, pure: a bond crossing, a feud, or a
+death writes a fact into every mind of the settlement. The "gossip
+radius" is the settlement itself — one book per settlement; strangers
+and fresh arrivals never hear it (written once, never replayed). Wired
+into `OnBondChange` (formation names both participants) and the death
+bookkeeping in `RemoveMind` (the fact the grief arc reads).
+
+**Arcs (Stone 5).** `Arcs.h`, pure. The Feud: `Mediate` runs once per
+day (adapter's `RunMediation` on the day cadence) over every enemy pair
+in the bond book; a third mind who has heard of both sides steps in — a
+mediator both sides like cools the feud a step toward zero and earns
+their trust, an unloved meddler is told off. The Grief: `Grieving`/
+`ApplyGrief` — a fresh death memory of someone at/above the friend line
+drains the survivor's Social at `sim.arc.grief.decay` extra per second;
+they seek company. Both are derived from persisted components (memory
+events, relationships), so they survive save/load with no record. The
+courtship is visible now (shared meals are it); departure and famine
+stay sketched in Life.md.
+
+**Birth (Stone 6, experimental).** `Birth.h`, pure: a spouse household
+has a child — a **sim-only mind**, no game actor, no form, no
+translator entry. Seeded like any mind, warm to both parents (and the
+parents to it), fed by the household every tick (never walks to a
+market). One birth per sim day at most, the household the Rng draws;
+gated by `sim.birth.enabled` (default 0). The census cannot evict it —
+`Lifecycle::Diff` classifies the census, never the registry.
+
+**No co-save bump.** A child is an entity carrying existing components
+(SpeciesTag, Needs, Memory, Goals, Relationships) — all already
+serialized. Gossip and arcs are derived, not stored. Bonds and
+households already ride v5. This is the same "derived state, no record"
+shape as households (ADR-0013).
+
+**Costs and deferrals.** A held settler stands in place (no
+furniture/animation — game-side polish). Socialize/Work/Flee remain
+table slots. The grief's vengeance/comfort fork and the departure and
+famine arcs remain sketched. The 10 s hold cooldown is a constant.

@@ -302,6 +302,18 @@ namespace TLC
         // deferral lines in five minutes).
         std::chrono::steady_clock::time_point m_LastCapLog{};
 
+        // The arcs and birth run on a day cadence (0.6.0 Stones 5–6):
+        // mediation once per day for each feud, birth at most once per
+        // day, each tracked by the day it last ran. Initialized to the
+        // sentinel (max) — never a real day — so the first day (0)
+        // runs, not skipped (a 0 sentinel would eat day 0). Session
+        // state, not persisted: after a restore, one run per current
+        // day — correct, since a day may have passed while away.
+        std::uint64_t m_LastMediationDay =
+            std::numeric_limits<std::uint64_t>::max();
+        std::uint64_t m_LastBirthDay =
+            std::numeric_limits<std::uint64_t>::max();
+
         // World facts (0.5.0): the doors the world shuts. The market
         // closes outside its trading hours — a remembered { invalid,
         // Trade } fact blocks the hungry walk until it fades — and a
@@ -392,6 +404,20 @@ namespace TLC
         // anything the bus missed all surface here.
         void ReconcileBonds();
 
+        // The arcs' day work (0.6.0 Stone 5): one mediation attempt per
+        // enemy pair the settlement knows, once per day — the settlement
+        // pulls its own feuds apart (Arcs::Mediate). Pure logic in
+        // Arcs.h; this is the edge: collect the enemy pairs from the
+        // bond book, run the mediation, log the attempts.
+        void RunMediation();
+
+        // The birth stone's day work (0.6.0 Stone 6, experimental): at
+        // most once per day, a spouse household has a child — a sim-only
+        // mind with no game actor (Birth::Create), fed by the
+        // household. The edge: pick the household, create the child, log
+        // the birth. Gated by sim.birth.enabled (default 0).
+        void RunBirth();
+
         // One pair's disposition in a given direction, 0 when unknown.
         float DispositionOf(
             LCE::Simulation::EntityId a_from,
@@ -463,6 +489,16 @@ namespace TLC
             LCE::Simulation::EntityId,
             std::pair<std::uint32_t, std::chrono::steady_clock::time_point>>
             m_ArrivedAt;
+
+        // When each mind was last held in place (the meal-cadence stone:
+        // Rest/Explore execute as a commanded hold so the sandbox cannot
+        // wander a resting settler away from its market). Rate-limited
+        // to one hold per mind per cooldown — a command package every
+        // frame would be a flood of its own.
+        std::unordered_map<
+            LCE::Simulation::EntityId,
+            std::chrono::steady_clock::time_point>
+            m_LastHold;
 
         // The world the co-save held for this save. Set by QueueRestore
         // during the load, consumed by GameLoaded; absent or empty means

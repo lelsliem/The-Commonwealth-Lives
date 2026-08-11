@@ -15,8 +15,9 @@ Status
 Current Version : 0.6.0 — in progress (0.5.0 complete and shipped,
                    tag `0.5.0-beta`, release page live)
 
-Current Stage   : Life & Emergent Quests — 0.6.0 Stones 1–3 verified
-                   in-game (2026-08-10/11): the world keeps its books
+Current Stage   : Life & Emergent Quests — 0.6.0 built, 16/16 harness
+                   green (2026-08-11). Stones 1–3 verified in-game
+                   (2026-08-10/11): the world keeps its books
                    (arrivals, deaths, departures), bonds (named
                    relationships + co-save v5 — friends, sweethearts,
                    and a first marriage observed), households (one
@@ -24,17 +25,28 @@ Current Stage   : Life & Emergent Quests — 0.6.0 Stones 1–3 verified
                    in-game and the marriage survived save/load), and
                    the sleep cycle (rest restores fatigue/safety/
                    comfort, so the same pair finally shares repeated
-                   meals). Review + walk-layer pass 2026-08-11 closed
+                   meals). Stones 4–6 are built and harness-tested,
+                   pending in-game verification: gossip (the
+                   settlement hears its own bonds, feuds, and deaths),
+                   the arcs (mediation cools feuds once a day; grief
+                   drains the bereaved's Social and sends them seeking
+                   company), and birth (experimental, INI-gated — a
+                   spouse household's sim-only child, fed by the
+                   household). The meal-cadence stone landed too: Rest
+                   and Explore now execute in-game as a commanded hold
+                   (Movement::HoldPlace), so a fed mind stays at its
+                   bench instead of drifting across cells between
+                   meals. Review + walk-layer pass 2026-08-11 closed
                    the structural gaps: rest rescues parked minds, the
                    walk cap is per-market and INI-tunable, the log
                    tells the truth about the live rhythm, and the
                    arrival cooldown stops the per-frame feed loop
                    (ADRs 0015–0016).
 
-Next Milestone  : 0.6.0 complete — gossip, emergent arcs, birth —
-                   then the engine's next hand-over (seeds: the Robot
-                   species — Behaviour.md — and deeper social
-                   simulation on the outcome channel)
+Next Milestone  : 0.6.0 in-game verification (Stones 4–6 + the
+                   meal-cadence hold), then the engine's next hand-over
+                   (seeds: the Robot species — Behaviour.md — and
+                   deeper social simulation on the outcome channel)
 
 ═══════════════════════════════════════════════
 
@@ -394,17 +406,30 @@ gained InteractionKind::Death for this stone.
     bond. In-game verification pending: customers return to the same
     bench for second meals; the first friendship lands within minutes
     at demo pace.
-[ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind
-    in the gossip radius — the settlement knows its own news
-[ ] Stone 5 — Emergent arcs: the feud, the grief (vengeance or
-    comfort), the courtship, the departure, the famine — adapter-side
-    state machines steering intents
-[ ] Stone 6 — Birth (experimental, INI-gated): a couple has a child; a
-    mind is born at Day 0, protected, fed, bonded
-[ ] Co-save v5: bonds, households, arcs in progress, gossip stamps,
-    birth registry — version-gated like v3/v4
-[ ] Tuning: bond thresholds, gossip radius, grief duration, famine
-    threshold, population cap, births on/off
+[x] Stone 4 — Gossip: bond, death, and feud events spread to every
+    mind in the settlement (Gossip.h — the "gossip radius" is the
+    settlement itself); wired into the bond-change handler and the
+    death bookkeeping. Built 2026-08-11, harness-tested.
+[x] Stone 5 — Emergent arcs: the feud (a settlement that has heard of
+    an enemy pair tries to cool it once per day — a liked mediator
+    warms the pair a step toward zero, an unloved meddler is told
+    off) and the grief (a loved death drains the bereaved's Social —
+    they seek company). Arcs.h, pure; RunMediation/RunBirth wired on
+    the day cadence. Built 2026-08-11, harness-tested.
+[x] Stone 6 — Birth (experimental, INI-gated sim.birth.enabled): a
+    spouse household has a child — a sim-only mind (no game actor),
+    fed by the household, bonded to both parents, living in the
+    co-save like any mind. Birth.h; one birth per sim day. Built
+    2026-08-11, harness-tested.
+[x] Co-save: no v6 bump needed — a child is an entity carrying
+    existing components (SpeciesTag, Needs, Memory, Goals,
+    Relationships), all already serialized; bonds v5 already persist
+    the household. Gossip and arcs are derived from persisted
+    components (memory events, relationships) — no record of their
+    own (ADR-0017).
+[x] Tuning: bond thresholds (v5), grief decay, mediation on/off,
+    births on/off — sim.arc.grief.decay, sim.arc.mediation,
+    sim.birth.enabled in the shipped INI
 [ ] Engine hand-over: Request A — RelationshipChanged observation
     event (core stone 08 candidate); Request B — GoalType growth
     (optional, deferred). Handed to the engine 2026-08-10.

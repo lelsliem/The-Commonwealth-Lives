@@ -34,5 +34,15 @@ namespace TLC
         // never crash, never teleport; the intent is dropped and the sim
         // re-decides next tick.
         bool WalkTo(RE::Actor* a_actor, RE::TESObjectREFR* a_target);
+
+        // Parks the actor in place: the same command-mode travel package,
+        // targeted at the actor itself, so the sandbox package cannot
+        // wander it away (the meal-cadence stone — a resting or exploring
+        // settler stays where it is, and a fed mind at the market stays
+        // at the bench between meals instead of drifting across cells).
+        // Same refusals as WalkTo; the caller rate-limits (once per mind
+        // per cooldown), because a command package every frame would be
+        // a flood of its own.
+        bool HoldPlace(RE::Actor* a_actor);
     }
 }
