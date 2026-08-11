@@ -632,7 +632,7 @@ namespace TLC
         // The 1-second pass (the dissolve net): re-derive every pair
         // from the live relationships. The event channel is instant; this
         // is complete — quiet drift, restores, and anything the bus
-        // missed all surface here. LogBondChange fires only on change,
+        // missed all surface here. OnBondChange fires only on change,
         // so a pair the event already settled is silent here.
         Bonds::Reconcile(
             m_Registry,
@@ -646,8 +646,14 @@ namespace TLC
                 Bonds::BondKind a_new,
                 std::uint64_t a_sinceDay)
             {
-                LogBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
+                OnBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
             });
+
+        // The household invariant (0.6.0 Stone 3): one pouch per married
+        // pair, one per unmarried human. The loud events fire in
+        // OnBondChange; this is the silent repair — a restored marriage,
+        // a defensive seed, anything the events missed.
+        Households::Enforce(m_Registry, m_Bonds);
     }
 
     void Adapter::OnRelationshipChanged(
@@ -687,7 +693,7 @@ namespace TLC
                 Bonds::BondKind a_new,
                 std::uint64_t a_sinceDay)
             {
-                LogBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
+                OnBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
             });
     }
 
@@ -710,7 +716,7 @@ namespace TLC
             : 0.0f;
     }
 
-    void Adapter::LogBondChange(
+    void Adapter::OnBondChange(
         LCE::Simulation::EntityId a_entityA,
         LCE::Simulation::EntityId a_entityB,
         Bonds::BondKind a_old,
@@ -770,6 +776,39 @@ namespace TLC
                 "bonds: {} {:#x} and {} {:#x} are now {}.",
                 labelA, formA, labelB, formB,
                 Bonds::BondPlural(a_new));
+        }
+
+        // The household follows the deepest bond (0.6.0 Stone 3): the
+        // moment a pair becomes spouses, their pouches become one shared
+        // wallet; when the marriage dissolves, the wallet splits. Formed
+        // exactly once — the pair rests at Spouse afterwards, so neither
+        // the event channel nor the 1-second pass says it again.
+        if (a_new == Bonds::BondKind::Spouse
+            && a_old != Bonds::BondKind::Spouse)
+        {
+            if (Households::FormHousehold(m_Registry, a_entityA, a_entityB))
+            {
+                REX::INFO(
+                    "households: {} {:#x} and {} {:#x} are now a household — one pouch, one bench.",
+                    labelA, formA, labelB, formB);
+            }
+        }
+
+        if (a_old == Bonds::BondKind::Spouse
+            && a_new != Bonds::BondKind::Spouse)
+        {
+            std::uint32_t holderShare = 0;
+            std::uint32_t otherShare = 0;
+
+            if (Households::DissolveHousehold(
+                    m_Registry, a_entityA, a_entityB,
+                    holderShare, otherShare))
+            {
+                REX::INFO(
+                    "households: {} {:#x} and {} {:#x} are no longer a household — the pouch splits ({} / {} caps).",
+                    labelA, formA, labelB, formB,
+                    holderShare, otherShare);
+            }
         }
     }
 
@@ -834,6 +873,13 @@ namespace TLC
         // dissolve line while the game was away dissolves, everything
         // else stands.
         RestoreBonds(m_PendingBonds);
+
+        // The household stone (v3? no — derived, ADR-0013): a restored
+        // marriage re-establishes its shared pouch silently. The loud
+        // events fired in OnBondChange when the pair crossed the line in
+        // life; here, the invariant is just repaired — one pouch per
+        // married pair, one per unmarried human.
+        Households::Enforce(m_Registry, m_Bonds);
 
         REX::INFO(
             "The Commonwealth wakes up: {} minds restored from the co-save.",
@@ -1100,6 +1146,22 @@ namespace TLC
             {
                 ++it;
             }
+        }
+
+        // The household (0.6.0 Stone 3): if the dead held the family
+        // pouch, it passes to the widow(er) — the wallet is the
+        // household's, not the holder's. Runs before the bond erase
+        // below, so the spouse still resolves.
+        const auto spouse = Households::SpouseOf(m_Bonds, entity);
+
+        if (spouse.IsValid()
+            && m_Registry.GetComponent<CapPouch>(entity)
+            && !m_Registry.GetComponent<CapPouch>(spouse))
+        {
+            const auto pouch = m_Registry.GetComponent<CapPouch>(entity);
+
+            m_Registry.AddComponent<CapPouch>(
+                spouse, CapPouch{ pouch->Caps });
         }
 
         // The bond book closes with the mind: every pair it belonged to
@@ -1413,6 +1475,7 @@ namespace TLC
         LCE::Simulation::EntityId counterparty = target;
         bool traded = false;
         bool keeperHome = false;   // the stall-keeper at their own bench
+        bool familyHome = false;   // the spouse of the keeper — the family bench
         std::uint32_t marketFormId = a_targetFormId;
 
         if (species == Species::Human)
@@ -1430,7 +1493,18 @@ namespace TLC
                     iterator != m_StallKeepers.end() ? iterator->second
                                                      : EntityId{};
 
-                if (stall.IsValid() && stall != a_entity)
+                const auto spouse = Households::SpouseOf(m_Bonds, a_entity);
+
+                if (stall.IsValid() && spouse.IsValid() && stall == spouse)
+                {
+                    // The family bench (0.6.0 Stone 3): my spouse keeps
+                    // this stall — a meal at home. No exchange: the
+                    // household pouch does not pay itself.
+                    counterparty = target;
+                    traded = false;
+                    familyHome = true;
+                }
+                else if (stall.IsValid() && stall != a_entity)
                 {
                     counterparty = stall;
                     traded = true;
@@ -1530,9 +1604,17 @@ namespace TLC
                 std::uint32_t buyerCaps = 0;
                 std::uint32_t sellerCaps = 0;
 
-                auto buyerPouch = m_Registry.GetComponent<CapPouch>(a_entity);
+                // The shared wallet (0.6.0 Stone 3): a married member
+                // trades with the household's pouch — their own, or the
+                // spouse's — on both sides of the bench. PouchOf resolves
+                // it either way, so one wallet round-trips.
+                auto buyerPouch =
+                    Households::PouchOf(m_Registry, m_Bonds, a_entity);
                 auto sellerPouch =
-                    m_Registry.GetComponent<CapPouch>(counterparty);
+                    Households::PouchOf(m_Registry, m_Bonds, counterparty);
+                const auto paidFromHousehold =
+                    buyerPouch != nullptr
+                    && m_Registry.GetComponent<CapPouch>(a_entity) == nullptr;
 
                 if (buyerPouch && sellerPouch)
                 {
@@ -1551,9 +1633,11 @@ namespace TLC
                 if (paid > 0)
                 {
                     REX::INFO(
-                        "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed, {} caps change hands ({} left, {} now).",
+                        "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed, {} caps change hands ({}{} left, {} now).",
                         formId, traderFormId, marketFormId,
-                        paid, buyerCaps, sellerCaps);
+                        paid,
+                        paidFromHousehold ? "household; " : "",
+                        buyerCaps, sellerCaps);
                 }
                 else
                 {
@@ -1561,6 +1645,12 @@ namespace TLC
                         "LCE: settler {:#x} trades with settler {:#x} at market {:#x} — fed on the settlement's credit (no caps).",
                         formId, traderFormId, marketFormId);
                 }
+            }
+            else if (familyHome)
+            {
+                REX::INFO(
+                    "LCE: settler {:#x} is at the family stall at market {:#x} — fed from the household's meal.",
+                    formId, marketFormId);
             }
             else if (keeperHome)
             {

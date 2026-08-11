@@ -12,6 +12,7 @@
 #include "Bonds.h"
 #include "CoSave.h"
 #include "Executor.h"
+#include "Households.h"
 #include "Lifecycle.h"
 #include "Market.h"
 #include "Translator.h"
@@ -398,11 +399,15 @@ namespace TLC
         // game was away); everything else stands.
         void RestoreBonds(const std::vector<TLC::CoSave::BondPair>& a_bonds);
 
-        // One bond change line, in the world's voice: "settler X and
-        // settler Y became friends." / "settler X is feuding with
-        // settler Y." Shared by the event channel and the reconcile
-        // pass — whichever detects the change first says it once.
-        void LogBondChange(
+        // One bond change, in the world's voice (0.6.0 Stone 2/3): the
+        // log line — "settler X and settler Y became friends." /
+        // "settler X is feuding with settler Y." — plus the household
+        // reaction (Stone 3): the moment a pair becomes spouses their
+        // pouches merge into one shared wallet; when the marriage
+        // dissolves, the wallet splits. Shared by the event channel and
+        // the reconcile pass — whichever detects the change first says
+        // it once.
+        void OnBondChange(
             LCE::Simulation::EntityId a_entityA,
             LCE::Simulation::EntityId a_entityB,
             Bonds::BondKind a_old,

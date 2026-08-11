@@ -10,6 +10,7 @@
 #include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
+#include "Households.h"
 #include "Lifecycle.h"
 #include "Market.h"
 #include "Serialization.h"
@@ -52,6 +53,7 @@ namespace TLC::Tests
     bool TuningTest();
     bool LifecycleTest();
     bool BondTest();
+    bool HouseholdTest();
 }
 
 namespace
@@ -92,6 +94,7 @@ int main()
     Run("TuningTest", TLC::Tests::TuningTest);
     Run("LifecycleTest", TLC::Tests::LifecycleTest);
     Run("BondTest", TLC::Tests::BondTest);
+    Run("HouseholdTest", TLC::Tests::HouseholdTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -2234,6 +2237,188 @@ namespace TLC::Tests
                 || !migratedBonds.empty())
             {
                 return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool HouseholdTest()
+    {
+        using namespace Households;
+
+        //-------------------------------------------------------------------------
+        // 1. FormHousehold — two pouches become one shared wallet on the
+        //    lower-id member; a second call is a no-op (idempotent, so
+        //    the caller may run it freely).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();   // lower id
+            const auto b = registry.CreateEntity();
+
+            registry.AddComponent<CapPouch>(a, CapPouch{ 40 });
+            registry.AddComponent<CapPouch>(b, CapPouch{ 60 });
+
+            if (!FormHousehold(registry, a, b))
+            {
+                return false;
+            }
+
+            const auto pouchA = registry.GetComponent<CapPouch>(a);
+            const auto pouchB = registry.GetComponent<CapPouch>(b);
+
+            if (!pouchA || pouchA->Caps != 100 || pouchB)
+            {
+                return false;   // merged onto the holder, other removed
+            }
+
+            if (FormHousehold(registry, a, b))
+            {
+                return false;   // already shared — no second merge
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. The pouch living on the higher-id member moves to the
+        //    deterministic holder (so a restored world always puts the
+        //    wallet in the same hands).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();   // higher id
+
+            registry.AddComponent<CapPouch>(b, CapPouch{ 25 });
+
+            if (!FormHousehold(registry, a, b))
+            {
+                return false;
+            }
+
+            const auto pouchA = registry.GetComponent<CapPouch>(a);
+            const auto pouchB = registry.GetComponent<CapPouch>(b);
+
+            if (!pouchA || pouchA->Caps != 25 || pouchB)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. DissolveHousehold — the shared wallet splits: the holder
+        //    keeps the remainder, the other member receives half. A
+        //    second call is a no-op.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();
+
+            registry.AddComponent<CapPouch>(a, CapPouch{ 101 });
+
+            std::uint32_t holderShare = 0;
+            std::uint32_t otherShare = 0;
+
+            if (!DissolveHousehold(registry, a, b, holderShare, otherShare)
+                || holderShare != 51 || otherShare != 50)
+            {
+                return false;
+            }
+
+            const auto pouchA = registry.GetComponent<CapPouch>(a);
+            const auto pouchB = registry.GetComponent<CapPouch>(b);
+
+            if (!pouchA || pouchA->Caps != 51
+                || !pouchB || pouchB->Caps != 50)
+            {
+                return false;
+            }
+
+            if (DissolveHousehold(registry, a, b, holderShare, otherShare))
+            {
+                return false;   // already split
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 4. SpouseOf and PouchOf — the married pair resolves each
+        //    other's wallet; an unmarried mind without a pouch has none.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();
+            const auto c = registry.CreateEntity();   // unmarried
+
+            registry.AddComponent<CapPouch>(a, CapPouch{ 80 });
+            registry.AddComponent<SpeciesTag>(a, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(b, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(c, SpeciesTag{ Species::Human });
+
+            Bonds::BondMap bonds;
+            bonds[Bonds::PairKey(a, b)] =
+                Bonds::PairBond{ Bonds::BondKind::Spouse, 5 };
+
+            if (SpouseOf(bonds, a) != b || SpouseOf(bonds, c).IsValid())
+            {
+                return false;
+            }
+
+            auto pouchB = PouchOf(registry, bonds, b);
+            auto pouchC = PouchOf(registry, bonds, c);
+
+            if (pouchB == nullptr || pouchB->Caps != 80)
+            {
+                return false;   // b trades with the shared wallet
+            }
+
+            if (pouchC != nullptr)
+            {
+                return false;   // unmarried and pouchless — none
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 5. Enforce — the silent invariant: a married pair with two
+        //    pouches merges (a restored marriage), and an unmarried
+        //    human without a pouch is seeded. Never reports.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();
+            const auto c = registry.CreateEntity();
+
+            registry.AddComponent<SpeciesTag>(a, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(b, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(c, SpeciesTag{ Species::Human });
+            registry.AddComponent<CapPouch>(a, CapPouch{ 30 });
+            registry.AddComponent<CapPouch>(b, CapPouch{ 70 });
+
+            Bonds::BondMap bonds;
+            bonds[Bonds::PairKey(a, b)] =
+                Bonds::PairBond{ Bonds::BondKind::Spouse, 5 };
+
+            Enforce(registry, bonds);
+
+            const auto pouchA = registry.GetComponent<CapPouch>(a);
+            const auto pouchB = registry.GetComponent<CapPouch>(b);
+            const auto pouchC = registry.GetComponent<CapPouch>(c);
+
+            if (!pouchA || pouchA->Caps != 100 || pouchB)
+            {
+                return false;   // married pair merged silently
+            }
+
+            if (!pouchC || pouchC->Caps == 0)
+            {
+                return false;   // unmarried human re-seeded
             }
         }
 

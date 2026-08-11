@@ -311,8 +311,9 @@ and quests happen because life happens — no scripts. The quest is the
 behaviour, visible in the world and the log.
 
 STATUS: IN PROGRESS — Stone 1 and Stone 2 verified in-game (2026-08-10 /
-2026-08-11), 11/11 suites green. The engine hand-over (Requests A–C) is
-in the engine's AdapterProject.md — the engine has since shipped stone 08
+2026-08-11); Stone 3 built + harness-green (12/12, 2026-08-11), in-game
+verification pending. The engine hand-over (Requests A–C) is in the
+engine's AdapterProject.md — the engine has since shipped stone 08
 (RelationshipChangedEvent + sim.bond.threshold.*) and stone 09 (Society
 — Groups & Traits), and gained InteractionKind::Death for this stone.
 
@@ -341,8 +342,16 @@ in the engine's AdapterProject.md — the engine has since shipped stone 08
     disposition) and the living drift clock (sim.drift.rate = 0.0002,
     ~1 h half-life — the core's 0.05/s demo default erased feelings
     between meals). ADR-0012.
-[ ] Stone 3 — Households: couples share a pouch, a stall, a bench, a
-    bed; the shared wallet round-trips
+[x] Stone 3 — Households: couples share a pouch, a stall, a bench, a
+    bed; the shared wallet round-trips. **Built + tested 2026-08-11
+    (12/12 suites)** — the Spouse bond forms a household (`Households.h`,
+    pure): the pouches merge into one shared wallet (split on dissolve),
+    the family bench feeds the keeper's spouse without exchange, PouchOf
+    resolves the wallet on both sides of the bench, and the one-pouch
+    invariant is enforced silently on restore (derived state — no record
+    bump, ADR-0013). The bed and walking-together are deferred (no rest /
+    companionship intents yet). In-game verification pending: a married
+    pair trades as one wallet; save, reload, still one.
 [ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind
     in the gossip radius — the settlement knows its own news
 [ ] Stone 5 — Emergent arcs: the feud, the grief (vengeance or

@@ -281,3 +281,38 @@ log against the core's source showed why, two independent gaps:
 Both are tuning/wiring decisions, not core changes: the core's
 `sim.drift.rate` key was already the designed knob, and the social half
 of a trade was always the plan — the adapter had simply never wired it.
+
+## 0013 — Households are derived state: the marriage rides the bond map, the wallet rides the pouch component
+
+**Accepted · 2026-08-11**
+
+Stone 3 ("couples share one pouch, one stall, the same bench") needed a
+way to persist a household. Two candidate homes: a new co-save record
+section (v6), or derived state built from what already round-trips. The
+derived option won, and no record bump was needed:
+
+- **The marriage rides the bond map** (co-save v5): a household *is* a
+  Spouse bond — the deepest line, mutual +0.8. When the bond change
+  handler sees a pair cross into Spouse, it forms the household
+  (`FormHousehold`): the two pouches merge into one on the deterministic
+  lower-id holder. When the bond dissolves, the wallet splits
+  (`DissolveHousehold`: holder keeps the remainder, the other takes
+  half).
+- **The wallet rides the `CapPouch` component**: a merged household is
+  simply one member with a pouch and one without. `PouchOf` resolves a
+  married member's pouch to the spouse's on both sides of the bench, so
+  the shared wallet round-trips with zero new bytes.
+- **The invariant is the schema**: one pouch per married pair, one per
+  unmarried human. `Enforce` repairs it silently on restore (a saved
+  marriage is already merged — no-op; a pre-household save's spouse pair
+  with two pouches merges on the first pass) and defensively each second.
+  A dead spouse's pouch passes to the widow(er) in `RemoveMind` before
+  the bond is erased.
+
+The alternative — a v6 household record — would have duplicated the
+spouse bond (already persisted) and the pouch (already a component);
+derived state keeps one source of truth and heals any drift by
+construction. What this stone deliberately does NOT do: the shared *bed*
+(no rest intent exists in the adapter yet) and walking to market
+*together* (no path coordination) — both documented as deferred in
+Life.md, waiting on companionship/rest intents of a later stone.

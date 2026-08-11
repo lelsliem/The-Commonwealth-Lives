@@ -107,12 +107,35 @@ order; each one leaves the world strictly more alive.
   names none). Four shared meals cross the friend line; meals every
   ~10 s (the fast demo rhythm) bond in under a minute.
 
-### Stone 3 — Households
+### Stone 3 — Households — BUILT + TESTED (2026-08-11, 12/12 suites), in-game verification pending
 
-- Couples share: one pouch, one stall preference, the same bench, the same
-  bed (rest intent pairs).
-- The couple walks to market together; the shared pouch round-trips.
-- **Verify:** a married pair trades as one wallet.
+- A household is the deepest bond made concrete (`Households.h`, pure +
+  tested): the moment a pair's bond becomes **Spouse** (the +0.8 mutual
+  line), their two pouches merge into **one shared wallet** (on the
+  deterministic lower-id holder); when the marriage dissolves, the wallet
+  splits (holder keeps the remainder, the other takes half). The reaction
+  rides the bond-change handler — whichever channel crossed the line
+  (event or 1-second pass) forms the household exactly once.
+- **One bench:** a spouse arriving at the market where their partner keeps
+  the stall is at the *family bench* — fed, no exchange (the household
+  pouch does not pay itself). The keeper's spouse is the one customer who
+  never pays.
+- **The shared wallet round-trips** — `PouchOf` resolves a married
+  member's pouch to the spouse's when they don't physically hold it, on
+  both sides of the bench, and the invariant *one pouch per married pair,
+  one per unmarried human* is enforced silently (`Enforce`) on restore
+  and as defensive repair each pass. Households are **derived state** —
+  the marriage rides the bond map (co-save v5) and the wallet rides the
+  `CapPouch` component — so no record bump was needed (ADR-0013). A dead
+  spouse's pouch passes to the widow(er), not the void.
+- **Deferred (documented, not built):** the same *bed* (there is no rest
+  intent yet) and walking to market *together* (no path coordination) —
+  the shared-bench behavior is the observable half, and both wait for the
+  rest/companionship intents of a later stone.
+- **Verify:** a married pair trades as one wallet — watch for
+  `households: settler X and settler Y are now a household — one pouch,
+  one bench.` then a trade line reading `(household; N left, M now)`;
+  save, reload, the shared pouch is still one.
 
 ### Stone 4 — Gossip
 
