@@ -46,7 +46,10 @@ progress:
   friendship, sweethearts, spouses, rivals, and feuds emerge from how
   they treat each other, spoken in the log (`settler X and settler Y
   became friends.` / `X is feuding with Y.`) and survived across
-  save/load.
+  save/load. Couples become **households** — one pouch, one bench — and
+  the **sleep cycle** keeps the world moving: a fed mind rests, recovers
+  its Fatigue (`sim.rest.recovery`), and walks again, so the same
+  settlers keep meeting and their bonds deepen.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
 the 0.5.0 milestone is published (first beta release: `0.5.0-beta`, notes

@@ -128,14 +128,38 @@ order; each one leaves the world strictly more alive.
   the marriage rides the bond map (co-save v5) and the wallet rides the
   `CapPouch` component — so no record bump was needed (ADR-0013). A dead
   spouse's pouch passes to the widow(er), not the void.
-- **Deferred (documented, not built):** the same *bed* (there is no rest
-  intent yet) and walking to market *together* (no path coordination) —
-  the shared-bench behavior is the observable half, and both wait for the
-  rest/companionship intents of a later stone.
+- **Deferred (documented, not built):** walking to market *together* (no
+  path coordination) — the shared-bench behavior is the observable half,
+  and it waits for the companionship intents of a later stone. The same
+  *bed* was the rest intent's work — delivered below as the sleep cycle.
 - **Verify:** a married pair trades as one wallet — watch for
   `households: settler X and settler Y are now a household — one pouch,
   one bench.` then a trade line reading `(household; N left, M now)`;
   save, reload, the shared pouch is still one.
+
+### Stone 3.5 — The sleep cycle — BUILT + TESTED (2026-08-11, 13/13 suites)
+
+- The 24-hour market test exposed the gap: **a fed mind parks in Rest
+  forever.** The engine's need loop only decays; nothing ever restored
+  Fatigue. Only Hunger was restored (the meal), so the moment a mind ate,
+  its drained Fatigue became the most urgent need → Rest → and Rest was
+  a table slot that did nothing. Seven trades, seven different buyers,
+  zero repeats — no pair ever shared a second meal, so no bond could
+  form (the household test's dead end).
+- The fix (`Behaviour.h` `RestRecovery`, wired in `Adapter::Tick` before
+  `Update`): a mind whose last intent was Rest recovers Fatigue at
+  `sim.rest.recovery` per second (default 0.2/s — a full nap in ~5 s).
+  The next `Update` decides from the rested mind: hunger is most urgent
+  again → `MoveTo` → walk to market → trade → meal → Rest → recover →
+  repeat. The same pair finally meets repeatedly, and bonds can form.
+- **The loop closes** (SleepCycleTest): a fed mind with drained Fatigue
+  decides Rest; after a nap it decides MoveTo to the remembered market.
+  Without the recovery it parks forever — the test pins the exact bug
+  the 24h-market run exposed.
+- **Verify:** relaunch the fast demo (24h market + `sim.hunger.decay =
+  0.1`) — customers return to the same bench for second meals; the first
+  `bonds: settler X and settler Y became friends.` lands within minutes;
+  a marriage (and `households: … now a household`) follows.
 
 ### Stone 4 — Gossip
 

@@ -427,16 +427,25 @@ namespace TLC
             m_CoreTuning.BondThresholds = Bonds::DefaultBondThresholds();
         }
 
+        // The sleep cycle (0.6.0): the recovery rate a resting mind
+        // refills Fatigue at. The adapter's own default (0.2/s — a full
+        // nap in ~5 s) applies when the config names none, so a world
+        // without the key still sleeps.
+        const auto restInjected =
+            config.Get("sim.rest.recovery").empty();
+
         m_BondThresholds =
             Bonds::ParseBondThresholds(m_CoreTuning.BondThresholds);
 
         REX::INFO(
-            "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00, drift {}{}.",
+            "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00, drift {}{}, rest {:.3f}/s{}.",
             ini.string(),
             m_Settings.MarketOpenHour,
             m_Settings.MarketCloseHour,
             m_CoreTuning.DriftRate,
-            driftInjected ? " (defaults)" : "");
+            driftInjected ? " (defaults)" : "",
+            m_Settings.RestRecovery,
+            restInjected ? " (defaults)" : "");
         REX::INFO(
             "bonds: friend {:+.2f}, sweetheart {:+.2f}, spouse {:+.2f}, "
             "rival {:+.2f}, enemy {:+.2f}{}.",
@@ -2134,6 +2143,34 @@ namespace TLC
             // unless a door changes.
             PushWorldFacts();
         }
+
+        // The sleep cycle (0.6.0): a mind whose last intent was Rest is
+        // resting — its Fatigue recovers at sim.rest.recovery per second
+        // (default 0.2/s, a full nap in ~5 s). The engine's need loop
+        // only decays; without this, a fed mind with drained Fatigue
+        // parks in Rest forever (the sleep-cycle discovery: only Hunger
+        // is ever restored, and only on the meal). Restored before
+        // Update so this tick's decisions see the rested mind.
+        m_Registry.ForEachWithComponent<LCE::Simulation::Intent>(
+            [&](EntityId a_entity, const LCE::Simulation::Intent& a_intent)
+            {
+                if (a_intent.Action == LCE::Simulation::ActionType::Rest)
+                {
+                    auto needs =
+                        m_Registry.GetComponent<Needs>(a_entity);
+
+                    if (needs)
+                    {
+                        // The recovery value is a defensive marker (-1
+                        // when a mind somehow lacks Fatigue); a resting
+                        // mind with one is recovered, nothing to branch.
+                        (void)RestRecovery(
+                            *needs,
+                            m_Settings.RestRecovery,
+                            static_cast<float>(a_deltaSeconds));
+                    }
+                }
+            });
 
         // The core's stateless tick: needs decay, memory fade, goal
         // urgency, then one Intent per mind. All of it on the game thread,

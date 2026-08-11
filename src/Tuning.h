@@ -153,6 +153,13 @@ namespace TLC::Tuning
         // warms like good company.
         float SaleWarmth = 0.1f;
 
+        // The sleep cycle (0.6.0): how fast a resting mind recovers
+        // Fatigue, per second of simulation time. 0.2/s fills a drained
+        // need in ~5 s of rest — a nap, a night. Without it, a fed mind
+        // with drained Fatigue parks in Rest forever: the need loop only
+        // ever decays, and only Hunger is restored (on the meal).
+        float RestRecovery = 0.2f;
+
         // The physical exchange (the economy stone): a meal's price in
         // caps. A buyer pays what they can afford up to this; the rest
         // the settlement covers. 5 caps, a modest market.
@@ -198,6 +205,8 @@ namespace TLC::Tuning
 
         settings.SaleWarmth = read("sim.sale.warmth", settings.SaleWarmth);
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
+        settings.RestRecovery =
+            read("sim.rest.recovery", settings.RestRecovery);
 
         return settings;
     }

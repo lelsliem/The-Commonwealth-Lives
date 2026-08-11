@@ -352,6 +352,17 @@ engine's AdapterProject.md — the engine has since shipped stone 08
     bump, ADR-0013). The bed and walking-together are deferred (no rest /
     companionship intents yet). In-game verification pending: a married
     pair trades as one wallet; save, reload, still one.
+[x] Stone 3.5 — The sleep cycle: a resting mind recovers Fatigue
+    (sim.rest.recovery, default 0.2/s), so a fed mind wakes and walks
+    again. **Built + tested 2026-08-11 (13/13 suites)** — the 24h-market
+    test exposed the park-forever bug: the need loop only decays, only
+    Hunger was ever restored (on the meal), so a fed mind with drained
+    Fatigue decided Rest — a table slot that did nothing — forever. The
+    fix restores Fatigue for Rest-intent minds before Update; the loop
+    closes (eat → rest → recover → walk → eat) and the same pair can
+    finally share repeated meals and bond. ADR-0014. In-game
+    verification pending: customers return to the same bench for second
+    meals; the first friendship lands within minutes at demo pace.
 [ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind
     in the gossip radius — the settlement knows its own news
 [ ] Stone 5 — Emergent arcs: the feud, the grief (vengeance or

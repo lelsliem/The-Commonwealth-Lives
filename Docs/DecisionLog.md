@@ -316,3 +316,51 @@ construction. What this stone deliberately does NOT do: the shared *bed*
 (no rest intent exists in the adapter yet) and walking to market
 *together* (no path coordination) — both documented as deferred in
 Life.md, waiting on companionship/rest intents of a later stone.
+
+## 0014 — The sleep cycle: Rest recovers Fatigue, because the need loop only decays
+
+**Status:** accepted (2026-08-11) — built, 13/13 suites green.
+
+**Context.** The 24-hour market test (2026-08-11) exposed a parked world:
+seven trades, seven different buyers, zero repeats — every customer ate
+once and went silent (`decides Rest (0.98)` and nothing after). The
+cause: the engine's need loop only *decays*; nothing ever *restored*
+Fatigue. Only Hunger was restored, and only on the meal. So the moment
+a mind ate (Hunger → 1.0), its drained Fatigue (0.0 after a long
+session at any decay rate) became the most urgent need → Rest — and
+Rest was a table slot that did nothing. A fed mind parked in Rest
+forever, never hungry again, never walking, never sharing a second
+meal with anyone. Without repeated meetings, no bond could ever form —
+the household verify's dead end was not the economy or the market
+hours, it was the missing half of the need loop.
+
+**Decision.** Rest is the recovery side. A mind whose last intent was
+Rest recovers its Fatigue need at `sim.rest.recovery` per second
+(default 0.2/s — a full nap in ~5 s; INI-tunable, adapter-default when
+the config names none, exactly like the drift and bond lines). The
+recovery runs in `Adapter::Tick` *before* `Update`, so this tick's
+decisions see the rested mind: hunger is most urgent again → `MoveTo`
+→ walk → trade → meal → Rest → recover → repeat. The same pair finally
+meets repeatedly, and bonds can form.
+
+**Why this shape.**
+- **Pure + testable:** `RestRecovery(Needs&, rate, delta)` in
+  `Behaviour.h` next to `RestoreHunger` — capped at 1.0, -1 sentinel
+  when a mind somehow lacks Fatigue (defensive; all seeds have one).
+- **Driven by the intent, not a timer:** keying off the stored Rest
+  intent means a mind recovers only while it actually rests, and stops
+  the moment `Update` re-decides it to MoveTo. No separate rest
+  bookkeeping to corrupt or persist.
+- **No new record:** Fatigue is already a component in the co-save; the
+  recovery rate is tuning, not state. No record bump.
+- **Fixes the living world too:** at any decay rhythm, Fatigue reaches 0
+  given enough sim time and nothing restored it — the whole settlement
+  would eventually park and only fresh arrivals would move. The sleep
+  cycle is the missing half of *every* mind's loop, not just the demo's.
+
+**What this stone deliberately does NOT do:** the game-side bed (a
+resting mind still stands in place — the Rest table slot executes
+nothing in-world) and walking to market *together*. Both stay deferred
+(companionship/social stones); the sim-level recovery is the observable
+half, and SleepCycleTest pins the exact bug: fed + drained-fatigue →
+Rest; after a nap → MoveTo to the remembered market.

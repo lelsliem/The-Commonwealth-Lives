@@ -135,6 +135,25 @@ namespace TLC
         return -1.0f;   // no Hunger need — defensive, all seeds have one
     }
 
+    float RestRecovery(
+        LCE::Simulation::Needs& a_needs,
+        float a_rate,
+        float a_delta)
+    {
+        using namespace LCE::Simulation;
+
+        for (auto& need : a_needs.List)
+        {
+            if (need.Type == NeedType::Fatigue)
+            {
+                need.Value = std::min(1.0f, need.Value + a_rate * a_delta);
+                return need.Value;
+            }
+        }
+
+        return -1.0f;   // no Fatigue need — defensive, all seeds have one
+    }
+
     LCE::Simulation::Goals SeededGoals(Species a_species)
     {
         using namespace LCE::Simulation;

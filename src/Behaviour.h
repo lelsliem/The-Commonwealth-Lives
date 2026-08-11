@@ -193,6 +193,22 @@ namespace TLC
     float RestoreHunger(LCE::Simulation::Needs& a_needs);
 
     //-------------------------------------------------------------------------
+    // The sleep cycle (0.6.0): a resting mind recovers Fatigue at
+    // a_rate per second of simulation time, capped at 1.0 (fully
+    // rested). Returns the new value, or -1 when the mind has no
+    // Fatigue need (a defensive marker, all seeded minds have one).
+    // The engine's need loop only decays; the adapter's Rest action is
+    // the recovery side — without it, a fed mind with drained Fatigue
+    // parks in Rest forever (the sleep-cycle discovery: only Hunger is
+    // ever restored, and only on the meal).
+    //-------------------------------------------------------------------------
+    [[nodiscard]]
+    float RestRecovery(
+        LCE::Simulation::Needs& a_needs,
+        float a_rate,
+        float a_delta);
+
+    //-------------------------------------------------------------------------
     // The ambition a fresh mind of a species is born with. Humans carry
     // the AcquireFood ambition (served when trading lands; Partial halves
     // it per arrival). Children and animals carry none yet — their loop

@@ -54,6 +54,7 @@ namespace TLC::Tests
     bool LifecycleTest();
     bool BondTest();
     bool HouseholdTest();
+    bool SleepCycleTest();
 }
 
 namespace
@@ -95,6 +96,7 @@ int main()
     Run("LifecycleTest", TLC::Tests::LifecycleTest);
     Run("BondTest", TLC::Tests::BondTest);
     Run("HouseholdTest", TLC::Tests::HouseholdTest);
+    Run("SleepCycleTest", TLC::Tests::SleepCycleTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -2419,6 +2421,130 @@ namespace TLC::Tests
             if (!pouchC || pouchC->Caps == 0)
             {
                 return false;   // unmarried human re-seeded
+            }
+        }
+
+        return true;
+    }
+
+    bool SleepCycleTest()
+    {
+        using namespace TLC;
+
+        //-------------------------------------------------------------------------
+        // 1. RestRecovery — a drained Fatigue need refills at
+        //    rate × delta, capped at 1.0 (fully rested). The sleep
+        //    cycle's raw material: the need loop only decays, Rest is
+        //    the recovery side.
+        //-------------------------------------------------------------------------
+        {
+            auto needs = SeededNeeds(Species::Human);
+
+            // Drain fatigue: 0.2/s over 5 s.
+            RestRecovery(needs, 0.2f, -5.0f);
+
+            const auto fatigue = std::find_if(
+                needs.List.begin(), needs.List.end(),
+                [](const LCE::Simulation::Need& a_need)
+                {
+                    return a_need.Type == LCE::Simulation::NeedType::Fatigue;
+                });
+
+            if (fatigue == needs.List.end())
+            {
+                return false;   // all seeds have a Fatigue need
+            }
+
+            if (fatigue->Value > 0.001f)
+            {
+                return false;   // drained
+            }
+
+            const auto recovered = RestRecovery(needs, 0.2f, 4.0f);
+
+            if (recovered < 0.79f || recovered > 0.81f)
+            {
+                return false;   // 0.8 after 4 s at 0.2/s
+            }
+
+            const auto napped = RestRecovery(needs, 0.2f, 4.0f);
+
+            if (napped != 1.0f)
+            {
+                return false;   // capped at full
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. The loop closes — the discovery made real. A fed mind with
+        //    drained Fatigue decides Rest (fatigue is the most urgent
+        //    need); while resting it recovers; once rested, hunger is
+        //    the most urgent need again and the mind decides MoveTo —
+        //    it walks to market once more. Without the recovery the
+        //    mind would park in Rest forever (the bug the 24h-market
+        //    test exposed: only Hunger is ever restored, and only on
+        //    the meal).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto settler = registry.CreateEntity();
+            const auto market = registry.CreateEntity();
+
+            registry.AddComponent<Needs>(settler, SeededNeeds(Species::Human));
+            registry.AddComponent<Memory>(settler, Memory{});
+            registry.AddComponent<FormRef>(market, FormRef{ kMarketFormId });
+
+            SeedMarketMemory(registry, market);
+
+            // The meal: hunger full, fatigue drained — the post-meal
+            // state that parked every fed mind (fatigue 0 from the
+            // long session, hunger 1.0 from the bench).
+            auto needs = registry.GetComponent<Needs>(settler);
+
+            if (!needs)
+            {
+                return false;
+            }
+
+            for (auto& need : needs->List)
+            {
+                if (need.Type == LCE::Simulation::NeedType::Hunger)
+                {
+                    need.Value = 1.0f;
+                }
+
+                if (need.Type == LCE::Simulation::NeedType::Fatigue)
+                {
+                    need.Value = 0.0f;
+                }
+            }
+
+            Update(registry, 1.0);
+
+            const auto intent = registry.GetComponent<Intent>(settler);
+
+            if (!intent || intent->Action != ActionType::Rest)
+            {
+                return false;   // drained fatigue -> Rest
+            }
+
+            // The sleep cycle: rest recovers fatigue, and the next
+            // Update decides from the rested mind.
+            RestRecovery(*needs, 0.2f, 5.0f);   // a full nap
+
+            Update(registry, 1.0);
+
+            const auto again = registry.GetComponent<Intent>(settler);
+
+            if (!again || again->Action != ActionType::MoveTo)
+            {
+                return false;   // rested -> hungry -> walks to market
+            }
+
+            if (again->Target != market)
+            {
+                return false;   // to the remembered market
             }
         }
 
