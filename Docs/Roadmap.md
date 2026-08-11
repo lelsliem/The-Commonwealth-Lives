@@ -44,10 +44,11 @@ Current Stage   : Identity & the Player Window — every 0.7.0 stone
                    page stays honestly deferred (the INI already
                    delivers the tuning; the page needs MCM + the CK).
 
-Next Milestone  : 0.8.0 — Real Events ("Trade With Anyone, Talk,
-                   and Fight"): trade with traders/marketplaces/
-                   provisioners/each other, conversations, and
-                   altercations — words first, sometimes physical
+Next Milestone  : 0.7.1 — Talk, then the staged run to 1.0.0
+                   (Docs/Design/ReleasePlan.md): 0.7.1 Talk → 0.7.2
+                   Rows → 0.7.3 Fights → 0.8.0 Trade with anyone →
+                   0.9.0 the release gate (scale verified, docs) →
+                   1.0.0 freeze and ship
 
 ═══════════════════════════════════════════════
 
@@ -553,28 +554,38 @@ radio captions verified on-screen, audio honestly deferred after
 
 ═══════════════════════════════════════════════
 
-0.8.0 — Real Events · "Trade With Anyone, Talk, and Fight"
+0.8.0 — Real Events · "Trade With Anyone" (and the staged run to 1.0.0)
 
 ═══════════════════════════════════════════════
 
 Goal: the world's events become real — trade with anyone who sells,
 conversations between minds, and altercations that start with words and
-sometimes turn physical. Planned 2026-08-11 (Docs/Design/RealEvents.md);
-still sketched here, no code.
+sometimes turn physical. Planned 2026-08-11 (Docs/Design/RealEvents.md
++ Docs/Design/ReleasePlan.md); still sketched here, no code.
 
-STATUS: PLANNED — design doc written, no code.
+The roadmap to 1.0.0 is staged so each piece lands, tests, and ships
+in-game before the next (Docs/Design/ReleasePlan.md):
 
-[ ] Trade with anyone who sells: a vendor census (traders,
+STATUS: PLANNED — design docs written, no code.
+
+[ ] 0.7.1 — Talk: the dialogue pools speak on the social interactions
+    the sim already makes; captions via the radio channel
+[ ] 0.7.2 — Rows: verbal altercations — `dialogue.row` lines, Wronged
+    outcomes, gossip spread
+[ ] 0.7.3 — Fights: physical escalation via real combat (the game's
+    own punch/shove anims — no pex needed); feedback into bonds and
+    news
+[ ] 0.8.0 — Trade with anyone who sells: a vendor census (traders,
     marketplaces, provisioners as mobile traders) — the hungry walk
     resolves to a person, not only the bench
-[ ] Conversations: INI dialogue pools, speech on the social
-    interactions the sim already makes, captions via the radio channel
-[ ] Altercations, verbal: rows on rival/enemy crossings — Wronged
-    outcomes, gossip, the settlement hears the shouting
-[ ] Altercations, physical: enemy + temper roll → Combat or a
-    pex-driven confrontation scene; feedback into bonds and news
-[ ] The hands (deferred agency stones, from Life.md's sketch):
-    move items, build, destroy — still future, after the events
-[ ] Engine asks: none for pillars 1–3 (Trade/Social/Combat/Wronged
-    kinds all exist); pex scene driver is an author-side asset task
-    (Creation Kit), like the audio radio and MCM
+[ ] 0.9.0 — The release gate (hard): performance at scale verified
+    in-game (a normal save with hundreds of settlers ticks inside a
+    frame budget), the remove-the-DLL trust story documented, player
+    docs and compatibility notes, news polish (player's settlement
+    prioritized)
+[ ] 1.0.0 — Freeze and ship
+[ ] CUT from 1.0.0 (the honest calls, ReleasePlan.md): the "hands"
+    pillar (build/move/destroy — post-1.0 if ever), pex scripted
+    scenes (real combat covers fights), MCM (INI already delivers), 
+    audio radio (captions work; assets deferred), visible child
+    actors (sim-only children stay)
