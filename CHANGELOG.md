@@ -70,6 +70,12 @@ slighted at a shut stall says a line.
   as a caption.
 - 20/20 harness suites green (DialogueTest added). In-game
   verification pending.
+- `04b0ef5` Plan 0.8.1 Illness & Medicine: the engine's one open
+  design question answered — Health is an adapter-owned component
+  (fact-plus-tick), not a new NeedType
+- `2d34030` Life/death visibility: the body is buried (0.8.2, after
+  the mourning window), the child is a mind by design (visible
+  children are a CK asset stone, post-1.0) — ADR-0023
 
 ---
 
