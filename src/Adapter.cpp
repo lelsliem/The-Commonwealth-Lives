@@ -53,6 +53,8 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <typeindex>
+#include <typeinfo>
 
 // Windows.h LAST: its macros (min/max, MEM_*, ...) collide with
 // commonlibf4's tokens (REX::W32::MEM_RELEASE, std::numeric_limits::max)
@@ -130,6 +132,28 @@ namespace TLC
             }
 
             return Species::Human;
+        }
+
+        // The world's voice for a mind — the same labels the arrival
+        // logging uses, read from the mind's tag (a missing tag reads as
+        // a settler, the workshop default).
+        const char* SpeciesLabel(
+            const SpeciesTag* a_tag)
+        {
+            if (a_tag == nullptr)
+            {
+                return "settler";
+            }
+
+            switch (a_tag->Value)
+            {
+            case Species::Child:
+                return "child";
+            case Species::Animal:
+                return "animal";
+            default:
+                return "settler";
+            }
         }
 
         //-------------------------------------------------------------------------
@@ -312,6 +336,22 @@ namespace TLC
         // co-save stone) always has its serializers.
         RegisterAllSerializers(m_Registry);
 
+        // The observation bus (Request A — stone 08): the core publishes
+        // RelationshipChangedEvent when a configured disposition line is
+        // crossed. Subscribed once for the adapter's lifetime; the
+        // handler reads the live relationships and applies the same
+        // derivation the 1-second pass uses, so the two channels never
+        // disagree. No logging here — the constructor runs before the
+        // logger attaches.
+        m_Bus.Subscribe(
+            std::type_index(typeid(LCE::Simulation::RelationshipChangedEvent)),
+            [this](const LCE::Events::Event& a_event)
+            {
+                OnRelationshipChanged(
+                    static_cast<const LCE::Simulation::RelationshipChangedEvent&>(
+                        a_event));
+            });
+
         // Tuning is loaded from GameLoaded (not here): the constructor
         // runs before the logger attaches, so its confirmation lines
         // would be silently dropped — and the modder should see them.
@@ -359,11 +399,37 @@ namespace TLC
             LCE::Simulation::SimulationTuning::FromConfiguration(config);
         m_Settings = Tuning::AdapterSettingsFrom(config);
 
+        // Bonds (0.6.0 Stone 2): the core's watch-list is empty unless
+        // the world names its lines — the adapter names them here, so a
+        // world without a config file still bonds (friend +0.3 through
+        // enemy −0.6). The INI's sim.bond.threshold.<name> keys override
+        // whatever they set; the same values drive the core's events and
+        // the adapter's derivation.
+        const auto bondDefaultsInjected =
+            m_CoreTuning.BondThresholds.empty();
+
+        if (bondDefaultsInjected)
+        {
+            m_CoreTuning.BondThresholds = Bonds::DefaultBondThresholds();
+        }
+
+        m_BondThresholds =
+            Bonds::ParseBondThresholds(m_CoreTuning.BondThresholds);
+
         REX::INFO(
             "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00.",
             ini.string(),
             m_Settings.MarketOpenHour,
             m_Settings.MarketCloseHour);
+        REX::INFO(
+            "bonds: friend {:+.2f}, sweetheart {:+.2f}, spouse {:+.2f}, "
+            "rival {:+.2f}, enemy {:+.2f}{}.",
+            m_BondThresholds.Friend,
+            m_BondThresholds.Sweetheart,
+            m_BondThresholds.Spouse,
+            m_BondThresholds.Rival,
+            m_BondThresholds.Enemy,
+            bondDefaultsInjected ? " (defaults)" : "");
     }
 
     void Adapter::GameLoaded()
@@ -420,11 +486,13 @@ namespace TLC
     void Adapter::QueueRestore(
         LCE::Simulation::RegistrySnapshot a_snapshot,
         std::uint64_t a_rngState,
-        std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers)
+        std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
+        std::vector<TLC::CoSave::BondPair> a_bonds)
     {
         m_PendingRestore = std::move(a_snapshot);
         m_PendingRngState = a_rngState;
         m_PendingStallKeepers = std::move(a_stallKeepers);
+        m_PendingBonds = std::move(a_bonds);
     }
 
     std::vector<TLC::CoSave::StallKeeperPair> Adapter::StallKeepersForSave() const
@@ -472,6 +540,220 @@ namespace TLC
             REX::INFO(
                 "LCE: stall restored — market {:#x} reopens under keeper {:#x}.",
                 marketFormId, keeperFormId);
+        }
+    }
+
+    std::vector<TLC::CoSave::BondPair> Adapter::BondsForSave() const
+    {
+        // Entity ids are session-local; the durable form is form ids.
+        // A pair whose form the translator cannot resolve is skipped — it
+        // was never a real pair this world. A resting (None) row is never
+        // written.
+        std::vector<TLC::CoSave::BondPair> result;
+        result.reserve(m_Bonds.size());
+
+        for (const auto& [key, bond] : m_Bonds)
+        {
+            if (bond.Kind == Bonds::BondKind::None)
+            {
+                continue;
+            }
+
+            const auto formA = m_Translator.FormFor(
+                LCE::Simulation::EntityId{ key.first });
+            const auto formB = m_Translator.FormFor(
+                LCE::Simulation::EntityId{ key.second });
+
+            if (formA == 0 || formB == 0)
+            {
+                continue;
+            }
+
+            result.push_back(TLC::CoSave::BondPair{
+                formA, formB,
+                static_cast<std::uint32_t>(bond.Kind),
+                bond.SinceDay });
+        }
+
+        return result;
+    }
+
+    void Adapter::RestoreBonds(
+        const std::vector<TLC::CoSave::BondPair>& a_bonds)
+    {
+        m_Bonds.clear();
+
+        for (const auto& bond : a_bonds)
+        {
+            const auto a = m_Translator.EntityFor(bond.FormA);
+            const auto b = m_Translator.EntityFor(bond.FormB);
+
+            // Both ride the snapshot (both are minds with FormRefs) — a
+            // pair whose actor is missing is simply absent, and the 1s
+            // reconcile pass re-derives what it can from the restored
+            // relationships.
+            if (!a.IsValid() || !b.IsValid())
+            {
+                continue;
+            }
+
+            m_Bonds[Bonds::PairKey(a, b)] =
+                Bonds::PairBond{
+                    static_cast<Bonds::BondKind>(bond.Kind),
+                    bond.SinceDay };
+        }
+
+        if (!m_Bonds.empty())
+        {
+            REX::INFO(
+                "bonds: {} bond{} restored from the co-save.",
+                m_Bonds.size(), m_Bonds.size() == 1 ? "" : "s");
+        }
+    }
+
+    void Adapter::ReconcileBonds()
+    {
+        // The 1-second pass (the dissolve net): re-derive every pair
+        // from the live relationships. The event channel is instant; this
+        // is complete — quiet drift, restores, and anything the bus
+        // missed all surface here. LogBondChange fires only on change,
+        // so a pair the event already settled is silent here.
+        Bonds::Reconcile(
+            m_Registry,
+            m_BondThresholds,
+            m_Bonds,
+            CurrentDay(),
+            [this](
+                LCE::Simulation::EntityId a_entityA,
+                LCE::Simulation::EntityId a_entityB,
+                Bonds::BondKind a_old,
+                Bonds::BondKind a_new,
+                std::uint64_t a_sinceDay)
+            {
+                LogBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
+            });
+    }
+
+    void Adapter::OnRelationshipChanged(
+        const LCE::Simulation::RelationshipChangedEvent& a_event)
+    {
+        // The immediate channel (Request A — stone 08): the core crossed
+        // a bond line mid-mutation. Re-derive that pair now, the same
+        // rule the 1-second pass applies — the pass then finds the pair
+        // resting and stays silent. The event's day is the crossing day,
+        // the honest birthdate of a fresh bond.
+        if (!a_event.Subject.IsValid() || !a_event.Other.IsValid())
+        {
+            return;
+        }
+
+        // Both must be minds — a workshop is a target, never a bond
+        // partner (the same gate the reconcile pass applies).
+        if (!m_Registry.GetComponent<SpeciesTag>(a_event.Subject)
+            || !m_Registry.GetComponent<SpeciesTag>(a_event.Other))
+        {
+            return;
+        }
+
+        const auto dToOther = DispositionOf(a_event.Subject, a_event.Other);
+        const auto dOtherToMe = DispositionOf(a_event.Other, a_event.Subject);
+
+        Bonds::ApplyPair(
+            m_Bonds,
+            Bonds::PairKey(a_event.Subject, a_event.Other),
+            dToOther, dOtherToMe,
+            m_BondThresholds,
+            a_event.Day,
+            [this](
+                LCE::Simulation::EntityId a_entityA,
+                LCE::Simulation::EntityId a_entityB,
+                Bonds::BondKind a_old,
+                Bonds::BondKind a_new,
+                std::uint64_t a_sinceDay)
+            {
+                LogBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
+            });
+    }
+
+    float Adapter::DispositionOf(
+        LCE::Simulation::EntityId a_from,
+        LCE::Simulation::EntityId a_to)
+    {
+        const auto relationships =
+            m_Registry.GetComponent<LCE::Simulation::Relationships>(a_from);
+
+        if (!relationships)
+        {
+            return 0.0f;
+        }
+
+        const auto iterator = relationships->ByEntity.find(a_to);
+
+        return iterator != relationships->ByEntity.end()
+            ? iterator->second.Disposition
+            : 0.0f;
+    }
+
+    void Adapter::LogBondChange(
+        LCE::Simulation::EntityId a_entityA,
+        LCE::Simulation::EntityId a_entityB,
+        Bonds::BondKind a_old,
+        Bonds::BondKind a_new,
+        std::uint64_t)
+    {
+        const auto formA = m_Translator.FormFor(a_entityA);
+        const auto formB = m_Translator.FormFor(a_entityB);
+
+        if (formA == 0 || formB == 0)
+        {
+            return;   // defensive — a translated pair names two minds
+        }
+
+        const auto labelA = SpeciesLabel(
+            m_Registry.GetComponent<SpeciesTag>(a_entityA).get());
+        const auto labelB = SpeciesLabel(
+            m_Registry.GetComponent<SpeciesTag>(a_entityB).get());
+
+        // The world's voice: formation, change, and dissolution each get
+        // their line. The feud line is Life.md's own: "X is feuding
+        // with Y." — only the crossing into Enemy says it; the rest use
+        // the pair's plural.
+        if (a_new == Bonds::BondKind::None)
+        {
+            if (Bonds::IsNegative(a_old))
+            {
+                REX::INFO(
+                    "bonds: {} {:#x} and {} {:#x} made peace.",
+                    labelA, formA, labelB, formB);
+            }
+            else
+            {
+                REX::INFO(
+                    "bonds: {} {:#x} and {} {:#x} are no longer {}.",
+                    labelA, formA, labelB, formB,
+                    Bonds::BondPlural(a_old));
+            }
+        }
+        else if (a_old == Bonds::BondKind::None
+            && a_new == Bonds::BondKind::Enemy)
+        {
+            REX::INFO(
+                "bonds: {} {:#x} is feuding with {} {:#x}.",
+                labelA, formA, labelB, formB);
+        }
+        else if (a_old == Bonds::BondKind::None)
+        {
+            REX::INFO(
+                "bonds: {} {:#x} and {} {:#x} became {}.",
+                labelA, formA, labelB, formB,
+                Bonds::BondPlural(a_new));
+        }
+        else
+        {
+            REX::INFO(
+                "bonds: {} {:#x} and {} {:#x} are now {}.",
+                labelA, formA, labelB, formB,
+                Bonds::BondPlural(a_new));
         }
     }
 
@@ -529,6 +811,13 @@ namespace TLC
         // whoever happens to arrive first. Runs after the translator
         // rebuild above, so both the market and the keeper resolve.
         RestoreStallKeepers(m_PendingStallKeepers);
+
+        // The bonds stone (v5): a spouse is still a spouse after reload.
+        // The book restores by form ids; the 1-second reconcile pass
+        // then re-derives — a bond whose relationship drifted below its
+        // dissolve line while the game was away dissolves, everything
+        // else stands.
+        RestoreBonds(m_PendingBonds);
 
         REX::INFO(
             "The Commonwealth wakes up: {} minds restored from the co-save.",
@@ -797,6 +1086,23 @@ namespace TLC
             }
         }
 
+        // The bond book closes with the mind: every pair it belonged to
+        // dissolves (the survivors' relationship rows still hold the
+        // stale id, but the id is dead — the reconcile pass skips pairs
+        // whose members are not minds, so no ghost bond lingers).
+        for (auto it = m_Bonds.begin(); it != m_Bonds.end();)
+        {
+            if (it->first.first == entity.Value()
+                || it->first.second == entity.Value())
+            {
+                it = m_Bonds.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
         if (a_isDeath)
         {
             // The death fact: every surviving mind remembers who is gone —
@@ -876,6 +1182,7 @@ namespace TLC
         m_LastLogged.clear();
         m_FeederLogged.clear();
         m_StallKeepers.clear();
+        m_Bonds.clear();
         m_Walks.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
@@ -1151,7 +1458,14 @@ namespace TLC
 
         const auto outcome = ArrivalOutcome(species, counterparty, traded);
 
-        ReportOutcome(m_Registry, a_entity, outcome, m_CoreTuning);
+        // The outcome lands on the bus (0.6.0 stone 08): a sale that
+        // warms the buyer past the friend line publishes
+        // RelationshipChangedEvent — the instant bond channel. The
+        // world day rides along so the event (and the memory it stamps)
+        // is anchored to the calendar.
+        ReportOutcome(
+            m_Registry, a_entity, outcome, m_CoreTuning,
+            &m_Bus, LCE::Simulation::WorldTime{ CurrentDay() });
 
         if (species == Species::Human)
         {
@@ -1683,6 +1997,12 @@ namespace TLC
             // before the seed so this tick's Update sees consistent state.
             KeepBooks();
 
+            // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
+            // event channel is instant; this pass is complete — quiet
+            // drift (the core never publishes a dissolve), restores,
+            // and anything the bus missed all surface here.
+            ReconcileBonds();
+
             SeedMarket(false);
 
             // The world's doors: the market's trading hours and the
@@ -1693,8 +2013,11 @@ namespace TLC
 
         // The core's stateless tick: needs decay, memory fade, goal
         // urgency, then one Intent per mind. All of it on the game thread,
-        // with the modder's tuning (the config file) when present.
-        Update(m_Registry, a_deltaSeconds, m_CoreTuning, nullptr, &m_Rng);
+        // with the modder's tuning (the config file) when present. The
+        // observation bus rides along so the sim's changes flow out —
+        // bond crossings surface as RelationshipChangedEvent (0.6.0
+        // stone 08).
+        Update(m_Registry, a_deltaSeconds, m_CoreTuning, &m_Bus, &m_Rng);
 
         // The read + the table. "Already acting" is a future refinement —
         // every loaded settler is available for now.

@@ -6,6 +6,7 @@
 
 #include "Behaviour.h"
 #include "BlobCodec.h"
+#include "Bonds.h"
 #include "CoSave.h"
 #include "Components.h"
 #include "Executor.h"
@@ -16,6 +17,8 @@
 #include "Tuning.h"
 #include "WorldFacts.h"
 
+#include "LCE/Config/Configuration.h"
+#include "LCE/Events/EventBus.h"
 #include "LCE/Simulation/Behaviour.h"
 #include "LCE/Simulation/EntityRegistry.h"
 #include "LCE/Simulation/Goals.h"
@@ -23,11 +26,15 @@
 #include "LCE/Simulation/Needs.h"
 #include "LCE/Simulation/Relationships.h"
 #include "LCE/Simulation/Simulation.h"
+#include "LCE/Simulation/SimulationEvents.h"
+#include "LCE/Simulation/WorldTime.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <string_view>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -44,6 +51,7 @@ namespace TLC::Tests
     bool WorldFactsTest();
     bool TuningTest();
     bool LifecycleTest();
+    bool BondTest();
 }
 
 namespace
@@ -83,6 +91,7 @@ int main()
     Run("WorldFactsTest", TLC::Tests::WorldFactsTest);
     Run("TuningTest", TLC::Tests::TuningTest);
     Run("LifecycleTest", TLC::Tests::LifecycleTest);
+    Run("BondTest", TLC::Tests::BondTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -686,10 +695,12 @@ namespace TLC::Tests
 
         // v3 (the stall-keepers stone): the record carries who runs each
         // market's stall, as (market FormID, keeper FormID) — form ids,
-        // never the session-local entity ids.
+        // never the session-local entity ids. v5 rides along with an
+        // empty bond section.
         const auto record = TLC::CoSave::Encode(
             snapshot, 0x5EEDC0DEull,
-            { { 0x000250FEu, 0x0001A4DAu } });
+            { { 0x000250FEu, 0x0001A4DAu } },
+            {});
 
         // The record carries the adapter's stable names — literally in the
         // bytes — never the process-local std::type_index addresses.
@@ -732,9 +743,12 @@ namespace TLC::Tests
         RegistrySnapshot decoded;
         std::uint64_t rngState = 0xABCDEF0123456789ull;
         std::vector<TLC::CoSave::StallKeeperPair> stalls;
+        std::vector<TLC::CoSave::BondPair> bonds;
 
-        if (!TLC::CoSave::Decode(record, decoded, rngState, stalls)
-            || rngState != 0x5EEDC0DEull)
+        if (!TLC::CoSave::Decode(
+                record, decoded, rngState, stalls, bonds)
+            || rngState != 0x5EEDC0DEull
+            || !bonds.empty())
         {
             return false;
         }
@@ -834,8 +848,10 @@ namespace TLC::Tests
             RegistrySnapshot bad;
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (TLC::CoSave::Decode(truncated, bad, rngState, stalls))
+            if (TLC::CoSave::Decode(
+                    truncated, bad, rngState, stalls, bonds))
             {
                 return false;
             }
@@ -851,8 +867,10 @@ namespace TLC::Tests
             RegistrySnapshot bad;
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (TLC::CoSave::Decode(badVersion, bad, rngState, stalls))
+            if (TLC::CoSave::Decode(
+                    badVersion, bad, rngState, stalls, bonds))
             {
                 return false;
             }
@@ -892,8 +910,10 @@ namespace TLC::Tests
             RegistrySnapshot migrated;
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (!TLC::CoSave::Decode(unknownName, migrated, rngState, stalls))
+            if (!TLC::CoSave::Decode(
+                    unknownName, migrated, rngState, stalls, bonds))
             {
                 return false;
             }
@@ -948,8 +968,10 @@ namespace TLC::Tests
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0x1122334455667788ull;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState, stalls)
+            if (!TLC::CoSave::Decode(
+                    writer.Bytes, decoded, rngState, stalls, bonds)
                 || decoded.Entities.size() != 1
                 || decoded.Entities[0].Components.size() != 1)
             {
@@ -990,15 +1012,17 @@ namespace TLC::Tests
         {
             TLC::Codec::Writer writer;
 
-            writer.U32(5);   // newer than this build — refuse, never half-apply
+            writer.U32(6);   // newer than this build — refuse, never half-apply
             writer.U32(0);
             writer.U32(0);
 
             RegistrySnapshot bad;
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (TLC::CoSave::Decode(writer.Bytes, bad, rngState, stalls))
+            if (TLC::CoSave::Decode(
+                    writer.Bytes, bad, rngState, stalls, bonds))
             {
                 return false;
             }
@@ -1029,11 +1053,14 @@ namespace TLC::Tests
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0xFEEDFACE00000000ull;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState, stalls)
+            if (!TLC::CoSave::Decode(
+                    writer.Bytes, decoded, rngState, stalls, bonds)
                 || rngState != 0xFEEDFACE00000000ull   // untouched
                 || decoded.Entities.size() != 1
-                || !stalls.empty())   // v1 predates the stall section
+                || !stalls.empty()   // v1 predates the stall section
+                || !bonds.empty())   // and the bond section
             {
                 return false;
             }
@@ -1080,9 +1107,12 @@ namespace TLC::Tests
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (!TLC::CoSave::Decode(writer.Bytes, decoded, rngState, stalls)
-                || decoded.Entities.size() != 1)
+            if (!TLC::CoSave::Decode(
+                    writer.Bytes, decoded, rngState, stalls, bonds)
+                || decoded.Entities.size() != 1
+                || !bonds.empty())   // v3 predates the bond section
             {
                 return false;
             }
@@ -1848,6 +1878,360 @@ namespace TLC::Tests
             const auto events = Lifecycle::Diff(known, scans);
 
             if (events.size() != 2)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool BondTest()
+    {
+        using namespace Bonds;
+
+        const BondThresholds t;   // the defaults
+
+        //-------------------------------------------------------------------------
+        // 1. Derive — formation. The pair's shared disposition is the
+        //    minimum of the two directions: both must feel it (mutual
+        //    warmth); negatives are mutual too (one strong dislike names
+        //    the pair).
+        //-------------------------------------------------------------------------
+        {
+            if (Derive(0.35f, 0.40f, t, BondKind::None) != BondKind::Friend
+                || Derive(0.65f, 0.70f, t, BondKind::None)
+                    != BondKind::Sweetheart
+                || Derive(0.85f, 0.90f, t, BondKind::None)
+                    != BondKind::Spouse
+                || Derive(-0.35f, -0.40f, t, BondKind::None)
+                    != BondKind::Rival
+                || Derive(-0.65f, -0.70f, t, BondKind::None)
+                    != BondKind::Enemy)
+            {
+                return false;
+            }
+
+            // One-sided warmth is not yet a bond; a thin pair is none.
+            if (Derive(0.35f, -0.10f, t, BondKind::None)
+                    != BondKind::None
+                || Derive(0.20f, 0.20f, t, BondKind::None)
+                    != BondKind::None)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. Derive — sticky dissolution. A bond persists until the pair
+        //    falls halfway back from its line (drift is quiet); below it,
+        //    the bond dissolves.
+        //-------------------------------------------------------------------------
+        {
+            if (Derive(0.16f, 0.16f, t, BondKind::Friend)
+                    != BondKind::Friend   // above half (0.15)
+                || Derive(0.14f, 0.14f, t, BondKind::Friend)
+                    != BondKind::None
+                || Derive(0.31f, 0.31f, t, BondKind::Sweetheart)
+                    != BondKind::Sweetheart   // above half (0.30)
+                || Derive(-0.31f, -0.31f, t, BondKind::Enemy)
+                    != BondKind::Enemy   // above half (−0.30)
+                || Derive(-0.29f, -0.29f, t, BondKind::Enemy)
+                    != BondKind::None)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. Derive — upgrades are immediate, downgrades wait for the
+        //    sticky dissolve, and a family flip is news.
+        //-------------------------------------------------------------------------
+        {
+            if (Derive(0.65f, 0.65f, t, BondKind::Friend)
+                    != BondKind::Sweetheart   // upgraded
+                || Derive(-0.65f, -0.65f, t, BondKind::Rival)
+                    != BondKind::Enemy   // upgraded
+                || Derive(0.35f, 0.35f, t, BondKind::Sweetheart)
+                    != BondKind::Sweetheart   // no downgrade
+                || Derive(-0.35f, -0.35f, t, BondKind::Enemy)
+                    != BondKind::Enemy   // no downgrade
+                || Derive(-0.40f, -0.40f, t, BondKind::Friend)
+                    != BondKind::Rival   // friends turned rivals
+                || Derive(0.40f, 0.40f, t, BondKind::Enemy)
+                    != BondKind::Friend)   // feud resolved into friendship
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 4. Thresholds — the typed copy parses the core's watch-list;
+        //    a partial config falls back to the defaults for the rest.
+        //-------------------------------------------------------------------------
+        {
+            const std::vector<BondThreshold> lines{
+                { "friend", 0.25f }, { "spouse", 0.75f },
+            };
+
+            const auto parsed = ParseBondThresholds(lines);
+
+            if (parsed.Friend != 0.25f
+                || parsed.Spouse != 0.75f
+                || parsed.Sweetheart != 0.6f   // untouched — the default
+                || parsed.Rival != -0.3f
+                || parsed.Enemy != -0.6f)
+            {
+                return false;
+            }
+
+            const auto defaults = DefaultBondThresholds();
+
+            if (defaults.size() != 5)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 5. Reconcile — the 1-second pass walks the registry, derives
+        //    each unordered pair once, and reports changes. A workshop
+        //    (no SpeciesTag) is never a bond partner.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();
+            const auto workshop = registry.CreateEntity();
+
+            registry.AddComponent<SpeciesTag>(a, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(b, SpeciesTag{ Species::Human });
+            registry.AddComponent<FormRef>(workshop, FormRef{ 0x000250FEu });
+
+            registry.AddComponent<Relationships>(a, Relationships{
+                { { b, Relationship{ 0.4f, 0.0f } },
+                  { workshop, Relationship{ 0.5f, 0.0f } } } });
+            registry.AddComponent<Relationships>(b, Relationships{
+                { { a, Relationship{ 0.4f, 0.0f } } } });
+
+            BondMap bonds;
+            std::vector<BondKind> changes;
+            std::uint64_t sinceDay = 0;
+
+            Reconcile(
+                registry, t, bonds, 12,
+                [&](EntityId, EntityId, BondKind old, BondKind fresh,
+                    std::uint64_t since)
+                {
+                    changes.push_back(old);
+                    changes.push_back(fresh);
+                    sinceDay = since;
+                });
+
+            // One pair, one event: the workshop is skipped; the pair
+            // formed as friends on day 12.
+            if (changes.size() != 2
+                || changes[0] != BondKind::None
+                || changes[1] != BondKind::Friend
+                || sinceDay != 12
+                || bonds.size() != 1)
+            {
+                return false;
+            }
+
+            // Drift below the dissolve line — the second pass reports
+            // the quiet dissolve the events never announce.
+            registry.GetComponent<Relationships>(a)->ByEntity[b]
+                = Relationship{ 0.10f, 0.0f };
+            registry.GetComponent<Relationships>(b)->ByEntity[a]
+                = Relationship{ 0.10f, 0.0f };
+
+            changes.clear();
+
+            Reconcile(
+                registry, t, bonds, 12,
+                [&](EntityId, EntityId, BondKind old, BondKind fresh,
+                    std::uint64_t since)
+                {
+                    changes.push_back(old);
+                    changes.push_back(fresh);
+                    sinceDay = since;
+                });
+
+            if (changes.size() != 2
+                || changes[0] != BondKind::Friend
+                || changes[1] != BondKind::None
+                || sinceDay != 0   // dissolved — no since-day
+                || bonds.size() != 1)   // resting row kept, kind None
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 6. The event channel — the full wiring: a configured line, an
+        //    experience that crosses it, the RelationshipChangedEvent on
+        //    the bus, and the adapter's handler folding the pair into the
+        //    bond map. One crossing, one change — resting stays silent.
+        //-------------------------------------------------------------------------
+        {
+            LCE::Config::Configuration config;
+            config.Set(std::string("sim.bond.threshold.friend"), "0.05");
+
+            const auto tuning =
+                SimulationTuning::FromConfiguration(config);
+            const auto thresholds =
+                ParseBondThresholds(tuning.BondThresholds);
+
+            LCE::Events::EventBus bus;
+            EntityRegistry registry;
+
+            const auto a = registry.CreateEntity();
+            const auto b = registry.CreateEntity();
+
+            registry.AddComponent<SpeciesTag>(a, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(b, SpeciesTag{ Species::Human });
+
+            // b already feels warmly about a — one aid from a crosses the
+            // friend line for the pair.
+            registry.AddComponent<Relationships>(a, Relationships{});
+            registry.AddComponent<Relationships>(b, Relationships{
+                { { a, Relationship{ 0.5f, 0.0f } } } });
+
+            BondMap bonds;
+            int changes = 0;
+            BondKind lastKind = BondKind::None;
+            std::uint64_t lastDay = 0;
+
+            bus.Subscribe(
+                std::type_index(typeid(RelationshipChangedEvent)),
+                [&](const LCE::Events::Event& event)
+                {
+                    const auto& crossing =
+                        static_cast<const RelationshipChangedEvent&>(event);
+
+                    const auto dToOther =
+                        registry.GetComponent<Relationships>(crossing.Subject)
+                            ->ByEntity[crossing.Other].Disposition;
+
+                    float dOtherToMe = 0.0f;
+
+                    if (const auto reverse = registry.GetComponent<Relationships>(
+                            crossing.Other))
+                    {
+                        const auto iterator =
+                            reverse->ByEntity.find(crossing.Subject);
+
+                        if (iterator != reverse->ByEntity.end())
+                        {
+                            dOtherToMe = iterator->second.Disposition;
+                        }
+                    }
+
+                    ApplyPair(
+                        bonds, PairKey(crossing.Subject, crossing.Other),
+                        dToOther, dOtherToMe, thresholds, crossing.Day,
+                        [&](EntityId, EntityId, BondKind, BondKind fresh,
+                            std::uint64_t since)
+                        {
+                            ++changes;
+                            lastKind = fresh;
+                            lastDay = since;
+                        });
+                });
+
+            ReportOutcome(
+                registry, a,
+                { b, InteractionKind::Aid, OutcomeResult::Success },
+                tuning, &bus, WorldTime{ 7 });
+
+            // One aid warms a→b by the core's DispositionGain (0.1) past
+            // the 0.05 line; the event fires once, the pair forms as
+            // friends on day 7.
+            if (changes != 1
+                || lastKind != BondKind::Friend
+                || lastDay != 7
+                || bonds.size() != 1)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 7. The co-save (v5): bonds round-trip exactly — form pair, kind,
+        //    since-day — and a v4 record (pre-bonds) decodes with an
+        //    empty bond section (the reconcile pass re-derives instead).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry source;
+            RegisterAllSerializers(source);
+
+            const auto a = source.CreateEntity();
+            const auto b = source.CreateEntity();
+
+            source.AddComponent<FormRef>(a, FormRef{ 0x00011111u });
+            source.AddComponent<FormRef>(b, FormRef{ 0x00022222u });
+            source.AddComponent<SpeciesTag>(a, SpeciesTag{ Species::Human });
+            source.AddComponent<SpeciesTag>(b, SpeciesTag{ Species::Human });
+
+            const auto snapshot = source.Capture();
+
+            const std::vector<TLC::CoSave::BondPair> savedBonds{
+                { 0x00011111u, 0x00022222u,
+                  static_cast<std::uint32_t>(BondKind::Spouse), 42 },
+            };
+
+            const auto record = TLC::CoSave::Encode(
+                snapshot, 0x5EEDC0DEull, {}, savedBonds);
+
+            RegistrySnapshot decoded;
+            std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
+
+            if (!TLC::CoSave::Decode(
+                    record, decoded, rngState, stalls, bonds)
+                || rngState != 0x5EEDC0DEull
+                || bonds.size() != 1
+                || bonds[0].FormA != 0x00011111u
+                || bonds[0].FormB != 0x00022222u
+                || bonds[0].Kind
+                    != static_cast<std::uint32_t>(BondKind::Spouse)
+                || bonds[0].SinceDay != 42)
+            {
+                return false;
+            }
+
+            // A malformed bond — a self-pair — is skipped, not fatal.
+            const auto badRecord = TLC::CoSave::Encode(
+                snapshot, 0, {},
+                { { 0x00011111u, 0x00011111u,
+                    static_cast<std::uint32_t>(BondKind::Friend), 1 } });
+
+            std::vector<TLC::CoSave::BondPair> badBonds;
+
+            if (!TLC::CoSave::Decode(
+                    badRecord, decoded, rngState, stalls, badBonds)
+                || !badBonds.empty())
+            {
+                return false;
+            }
+
+            // A v4 record (the world-calendar stone, pre-bonds): header +
+            // Rng + entities(0) + stalls(0) — decodes with no bonds.
+            TLC::Codec::Writer legacy;
+            legacy.U32(4);
+            legacy.U32(0);
+            legacy.U32(0);
+            legacy.U64(0x5EEDC0DEull);
+            legacy.U32(0);
+
+            std::vector<TLC::CoSave::BondPair> migratedBonds;
+
+            if (!TLC::CoSave::Decode(
+                    legacy.Bytes, decoded, rngState, stalls, migratedBonds)
+                || !migratedBonds.empty())
             {
                 return false;
             }

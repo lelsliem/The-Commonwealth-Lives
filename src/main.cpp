@@ -50,12 +50,14 @@ namespace
     {
         const auto snapshot = g_Adapter.CaptureWorld();
         const auto stalls = g_Adapter.StallKeepersForSave();
-        const auto record =
-            TLC::CoSave::Encode(snapshot, g_Adapter.RngState(), stalls);
+        const auto bonds = g_Adapter.BondsForSave();
+        const auto record = TLC::CoSave::Encode(
+            snapshot, g_Adapter.RngState(), stalls, bonds);
 
         REX::INFO(
-            "co-save: writing {} entities ({} bytes).",
-            snapshot.Entities.size(), record.size());
+            "co-save: writing {} entities, {} stall-keepers, {} bonds ({} bytes).",
+            snapshot.Entities.size(), stalls.size(), bonds.size(),
+            record.size());
 
         if (!a_intfc->WriteRecord(
                 TLC::CoSave::kRecordType, TLC::CoSave::kRecordVersion,
@@ -94,17 +96,21 @@ namespace
             // (that world never had a saved stream).
             std::uint64_t rngState = TLC::kRngSeed;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
 
-            if (!TLC::CoSave::Decode(record, snapshot, rngState, stalls))
+            if (!TLC::CoSave::Decode(
+                    record, snapshot, rngState, stalls, bonds))
             {
                 REX::ERROR("co-save: record decode failed (version {}).", version);
                 continue;
             }
 
             REX::INFO(
-                "co-save: read {} entities, {} stall-keepers — the world will be restored on load.",
-                snapshot.Entities.size(), stalls.size());
-            g_Adapter.QueueRestore(std::move(snapshot), rngState, std::move(stalls));
+                "co-save: read {} entities, {} stall-keepers, {} bonds — the world will be restored on load.",
+                snapshot.Entities.size(), stalls.size(), bonds.size());
+            g_Adapter.QueueRestore(
+                std::move(snapshot), rngState,
+                std::move(stalls), std::move(bonds));
         }
     }
 

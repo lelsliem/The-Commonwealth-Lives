@@ -64,17 +64,36 @@ order; each one leaves the world strictly more alive.
   burst after a big load reads the same actors dead on first sight for
   ~2 s, and only an alive reading un-parks them).
 
-### Stone 2 — Bonds (relationships, good and bad)
+### Stone 2 — Bonds (relationships, good and bad) — BUILT + TESTED (2026-08-11), in-game verification pending
 
 - Named bond states derived from the core's `Relationship`
-  (Disposition + Trust) plus interaction history, thresholds from the INI:
-  friend +0.3, sweetheart +0.6, spouse +0.8 (mutual), rival −0.3,
-  enemy −0.6.
+  (Disposition + Trust), thresholds from the INI:
+  friend +0.3, sweetheart +0.6, spouse +0.8, rival −0.3, enemy −0.6 —
+  the adapter's own defaults when the config file names no lines.
+- **Two channels, one derivation** (`Bonds.h`, pure + tested): the
+  `RelationshipChangedEvent` on the adapter's `EventBus` (Request A —
+  the core crosses a line mid-mutation; the adapter re-derives that pair
+  instantly) and the 1-second `ReconcileBonds` pass (drift is quiet in
+  the core — a bond cooling below its line is a dissolve, not an event,
+  so only the pass sees it). Both feed `Bonds::ApplyPair`, so they can
+  never disagree.
+- **Mutual and sticky.** The pair's shared disposition is the *minimum*
+  of the two directions — both must feel it (one-sided warmth is not
+  yet a bond). Formation is immediate at the line; dissolution waits
+  until the pair falls halfway back (friend +0.3 dissolves below +0.15)
+  — a fresh bond must not vanish to the next drift tick. Same-family
+  downgrades are sticky too; a family flip (friends turned rivals) is
+  news.
 - Bonds are **persisted** (co-save v5: form-id pair, kind, since-Day) — a
-  spouse is still a spouse after reload.
-- Log lines: `X and Y became friends.` / `X is feuding with Y.`
+  spouse is still a spouse after reload; a v4 save loads with no bonds
+  and the pass re-derives them from the restored relationships.
+- Log lines: `settler X and settler Y became friends.` /
+  `settler X is feuding with settler Y.` — with species labels
+  (`child`, `animal`) so a dog bonding with its feeder speaks plainly.
+  Formation, upgrade, family flip, and dissolution each get their line.
 - **Verify:** watch two settlers socialize into a bond; reload; the bond
-  stands.
+  stands (the `bonds: N bonds restored from the co-save.` line at
+  restore, and the bond lines on formation).
 
 ### Stone 3 — Households
 

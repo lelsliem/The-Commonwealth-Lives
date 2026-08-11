@@ -10,6 +10,7 @@
 #include "CoSave.h"
 
 #include "BlobCodec.h"
+#include "Bonds.h"
 #include "Components.h"
 
 #include "LCE/Simulation/Behaviour.h"
@@ -92,7 +93,8 @@ namespace TLC::CoSave
     std::vector<std::byte> Encode(
         const RegistrySnapshot& a_snapshot,
         std::uint64_t a_rngState,
-        const std::vector<StallKeeperPair>& a_stallKeepers)
+        const std::vector<StallKeeperPair>& a_stallKeepers,
+        const std::vector<BondPair>& a_bonds)
     {
         Codec::Writer writer;
 
@@ -147,6 +149,21 @@ namespace TLC::CoSave
             writer.U32(stall.second);
         }
 
+        // v5 (the bonds stone): the per-world bond section — who is
+        // bonded to whom, as (form A, form B, kind ordinal, since-day)
+        // tuples, stable across sessions. Present only in v5+ records;
+        // older records end after the stalls, and the bonds re-derive
+        // from the restored relationships on the first reconcile pass.
+        writer.U32(static_cast<std::uint32_t>(a_bonds.size()));
+
+        for (const auto& bond : a_bonds)
+        {
+            writer.U32(bond.FormA);
+            writer.U32(bond.FormB);
+            writer.U32(bond.Kind);
+            writer.U64(bond.SinceDay);
+        }
+
         return writer.Bytes;
     }
 
@@ -154,7 +171,8 @@ namespace TLC::CoSave
         const std::vector<std::byte>& a_record,
         RegistrySnapshot& a_out,
         std::uint64_t& a_rngState,
-        std::vector<StallKeeperPair>& a_stallKeepers)
+        std::vector<StallKeeperPair>& a_stallKeepers,
+        std::vector<BondPair>& a_bonds)
     {
         Codec::Reader reader{ a_record };
 
@@ -321,6 +339,52 @@ namespace TLC::CoSave
                 const auto keeperFormId = reader.U32();
 
                 a_stallKeepers.emplace_back(marketFormId, keeperFormId);
+            }
+        }
+
+        // v5 (the bonds stone): the per-world bond section follows the
+        // stalls. Older records have no section — the caller's bond list
+        // stands empty, and the adapter's reconcile pass re-derives bonds
+        // from the restored relationships (a safe default, like a missing
+        // component). A malformed entry (a self-pair, an unknown kind) is
+        // skipped, not fatal — same tolerance as an unknown component
+        // name; truncation is still a refusal.
+        a_bonds.clear();
+
+        if (recordVersion >= 5)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto bondCount = reader.U32();
+            a_bonds.reserve(bondCount);
+
+            for (std::uint32_t i = 0; i < bondCount; ++i)
+            {
+                if (reader.Remaining() < 20)   // 4 + 4 + 4 + 8
+                {
+                    return false;
+                }
+
+                BondPair bond;
+                bond.FormA = reader.U32();
+                bond.FormB = reader.U32();
+                bond.Kind = reader.U32();
+                bond.SinceDay = reader.U64();
+
+                const auto kind = static_cast<Bonds::BondKind>(bond.Kind);
+
+                if (bond.FormA == 0 || bond.FormB == 0
+                    || bond.FormA == bond.FormB
+                    || kind < Bonds::BondKind::None
+                    || kind > Bonds::BondKind::Spouse)
+                {
+                    continue;   // malformed — skipped, never half-applied
+                }
+
+                a_bonds.push_back(bond);
             }
         }
 

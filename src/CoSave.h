@@ -44,10 +44,11 @@ namespace TLC::CoSave
     // missing SpeciesTag reads as Human). v2 (the decay-jitter wiring)
     // added the Rng state to the header; v3 (the stall-keepers stone)
     // added the per-world stall section after the entities; v4 (the
-    // world-calendar stone) added the world day to every memory event —
-    // all real format changes, so all bumped. Older versions are
-    // migrated forward on load, never dropped.
-    inline constexpr std::uint32_t kRecordVersion = 4;
+    // world-calendar stone) added the world day to every memory event;
+    // v5 (the bonds stone) added the per-world bond section after the
+    // stalls — all real format changes, so all bumped. Older versions
+    // are migrated forward on load, never dropped.
+    inline constexpr std::uint32_t kRecordVersion = 5;
 
     // A market's stall-keeper, in the durable form: the market's
     // workbench FormID and the keeper's actor FormID — form ids, not
@@ -55,6 +56,19 @@ namespace TLC::CoSave
     // world). The adapter translates at the edges (StallKeepersForSave /
     // RestoreStallKeepers).
     using StallKeeperPair = std::pair<std::uint32_t, std::uint32_t>;
+
+    // A bond, in the durable form (v5): the two form ids (stable across
+    // sessions, entity ids are session-local), the kind ordinal (the
+    // adapter's Bonds::BondKind — append-only, never reorder), and the
+    // world day the bond formed. The adapter translates at the edges
+    // (BondsForSave / RestoreBonds).
+    struct BondPair
+    {
+        std::uint32_t FormA = 0;
+        std::uint32_t FormB = 0;
+        std::uint32_t Kind = 0;
+        std::uint64_t SinceDay = 0;
+    };
 
     // Encodes a registry snapshot as the durable record bytes: stable
     // component names (never std::type_index), the core's snapshot version
@@ -64,7 +78,8 @@ namespace TLC::CoSave
     [[nodiscard]] std::vector<std::byte> Encode(
         const LCE::Simulation::RegistrySnapshot& a_snapshot,
         std::uint64_t a_rngState,
-        const std::vector<StallKeeperPair>& a_stallKeepers);
+        const std::vector<StallKeeperPair>& a_stallKeepers,
+        const std::vector<BondPair>& a_bonds);
 
     // Decodes record bytes back into a snapshot. Returns false — the load
     // is refused, never half-applied — when the record version is newer
@@ -84,5 +99,6 @@ namespace TLC::CoSave
         const std::vector<std::byte>& a_record,
         LCE::Simulation::RegistrySnapshot& a_out,
         std::uint64_t& a_rngState,
-        std::vector<StallKeeperPair>& a_stallKeepers);
+        std::vector<StallKeeperPair>& a_stallKeepers,
+        std::vector<BondPair>& a_bonds);
 }

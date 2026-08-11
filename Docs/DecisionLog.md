@@ -209,3 +209,42 @@ pass merely confirmed the artifact. The rule now: a death is a
 transition, so a mind must have read **alive at least once** before it
 can be booked dead. Never-alive dead reads are parked forever and
 un-park the moment the actor reads alive.
+
+## 0012 — Bonds are derived adapter state: two channels, one derivation; mutual and sticky
+
+**Accepted · 2026-08-11**
+
+Stone 2 ("bonds") needed named relationship states — friend, sweetheart,
+spouse, rival, enemy — built on the core's Disposition/Trust numbers.
+Two questions drove the design.
+
+**Where does the bond live?** The core holds dispositions and trusts;
+the *name* is the adapter's vocabulary (the core's `BondThreshold` is a
+name/value pair precisely so the world names its own lines). The bond
+book (`Bonds::BondMap`, keyed by unordered entity-id pair) is adapter
+state, persisted like the stall-keepers — the co-save translates it to
+form ids at the edges (v5: form A, form B, kind ordinal, since-day). A
+v4 save loads with an empty bond section and the 1-second pass
+re-derives bonds from the restored relationships.
+
+**How does a bond change?** Two channels feed one derivation
+(`Bonds::ApplyPair`), so they cannot disagree. The event channel (Request
+A — the core's `RelationshipChangedEvent`, edge-triggered on
+`sim.bond.threshold.*` crossings) is instant: the adapter re-derives the
+pair the moment a line is crossed. The 1-second `ReconcileBonds` pass is
+complete: the core's drift is deliberately quiet — a bond cooling below
+its line is a dissolve, not an event — so only the pass sees dissolves,
+restores, and anything the bus missed. Whichever channel detects a
+change first says it once; the other finds the pair resting.
+
+**Mutual and sticky.** The pair's shared disposition is the *minimum* of
+the two directions — both must feel it (one-sided warmth is not yet a
+bond; spouse's "(mutual)" in the plan is the min rule at +0.8). And
+formation is immediate while dissolution is sticky: a bond persists
+until the pair falls halfway back from its line (friend +0.3 dissolves
+below +0.15). Without the stickiness, drift (0.05/s toward neutral)
+would dissolve a fresh +0.31 friendship within a second of its formation
+line — every "became friends" instantly followed by "no longer friends".
+Same-family downgrades wait for the sticky dissolve; only a family flip
+(friends turned rivals) changes the bond outright. This is hysteresis,
+chosen deliberately and documented in `Bonds.h`.

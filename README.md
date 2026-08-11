@@ -22,7 +22,8 @@ survives save/load.
 ## Roadmap
 
 Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
-through **0.5.0** is in and verified in-game:
+through **0.5.0** is in and verified in-game; **0.6.0** (life) is in
+progress:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -39,6 +40,13 @@ through **0.5.0** is in and verified in-game:
   per-tick decay jitter (a seeded `Rng`, persisted in the co-save), and
   hardenings: `DeleteGame` no longer kills a running world, and the walk
   probe reads the actor's data position instead of a lying 3D transform.
+- **0.6** the Commonwealth remembers — the world keeps its books
+  (arrivals wake mid-session, deaths and departures leave it, and every
+  survivor remembers who is gone — record **v5**), and settlers **bond**:
+  friendship, sweethearts, spouses, rivals, and feuds emerge from how
+  they treat each other, spoken in the log (`settler X and settler Y
+  became friends.` / `X is feuding with Y.`) and survived across
+  save/load.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
 the 0.5.0 milestone is published (first beta release: `0.5.0-beta`, notes

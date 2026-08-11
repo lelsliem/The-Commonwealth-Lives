@@ -310,12 +310,12 @@ Goal: settlers are born, live, and die; they make friends and enemies;
 and quests happen because life happens — no scripts. The quest is the
 behaviour, visible in the world and the log.
 
-STATUS: IN PROGRESS — Stone 1 built and verified in-game (2026-08-10);
-the rest planned in Docs/Design/Life.md. The engine hand-over (Requests
-A–C) is in the engine's AdapterProject.md — the engine has since shipped
-stone 08 (RelationshipChangedEvent + sim.bond.threshold.*) and stone 09
-(Society — Groups & Traits), and gained InteractionKind::Death for this
-stone.
+STATUS: IN PROGRESS — Stone 1 verified in-game (2026-08-10) and Stone 2
+built + harness-green (11/11, 2026-08-11), in-game verification pending.
+The engine hand-over (Requests A–C) is in the engine's AdapterProject.md
+— the engine has since shipped stone 08 (RelationshipChangedEvent +
+sim.bond.threshold.*) and stone 09 (Society — Groups & Traits), and
+gained InteractionKind::Death for this stone.
 
 [x] Stone 1 — The world keeps its books: the per-second census
     (Lifecycle::Diff, pure + tested) — arrivals become minds mid-session
@@ -328,9 +328,16 @@ stone.
     books zero false deaths, and already-dead settlers from old saves
     are parked and never booked (three hardenings: the 3D gate,
     two-pass confirmation, the alive-first rule — ADR-0011)
-[ ] Stone 2 — Bonds: named relationship states (friend / sweetheart /
-    spouse / rival / enemy) from Disposition/Trust thresholds,
-    persisted in the co-save (record v5)
+[x] Stone 2 — Bonds: named relationship states (friend / sweetheart /
+    spouse / rival / enemy) from Disposition/Trust thresholds, persisted
+    in the co-save (record v5). **Built + tested 2026-08-11 (11/11
+    suites)** — the EventBus subscription (Request A), the adapter's own
+    sim.bond.threshold.* defaults + INI keys, a mutual + sticky
+    derivation (formation at the line, dissolution halfway back; the
+    1-second reconcile pass catches the quiet dissolves), the event
+    channel for instant formation, and the v5 bond section (form pair,
+    kind, since-day) in the co-save. In-game verification pending:
+    watch two settlers socialize into a bond, reload, the bond stands.
 [ ] Stone 3 — Households: couples share a pouch, a stall, a bench, a
     bed; the shared wallet round-trips
 [ ] Stone 4 — Gossip: bond, death, and feud events spread to every mind

@@ -9,6 +9,7 @@
 
 #pragma once
 
+#include "Bonds.h"
 #include "CoSave.h"
 #include "Executor.h"
 #include "Lifecycle.h"
@@ -17,10 +18,12 @@
 #include "Tuning.h"
 #include "WorldFacts.h"
 
+#include "LCE/Events/EventBus.h"
 #include "LCE/Simulation/EntityRegistry.h"
 #include "LCE/Simulation/RegistrySnapshot.h"
 #include "LCE/Simulation/Rng.h"
 #include "LCE/Simulation/Simulation.h"
+#include "LCE/Simulation/SimulationEvents.h"
 
 #include <chrono>
 #include <cstdint>
@@ -128,7 +131,8 @@ namespace TLC
         void QueueRestore(
             LCE::Simulation::RegistrySnapshot a_snapshot,
             std::uint64_t a_rngState,
-            std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers);
+            std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
+            std::vector<TLC::CoSave::BondPair> a_bonds);
 
         // The stall-keepers in durable form — (market FormID, keeper
         // FormID) pairs, translated from the session-local entity ids via
@@ -137,6 +141,14 @@ namespace TLC
         // to arrive first.
         [[nodiscard]] std::vector<TLC::CoSave::StallKeeperPair>
         StallKeepersForSave() const;
+
+        // The bonds in durable form — (form A, form B, kind, since-day),
+        // translated from the session-local entity ids via the
+        // translator. The co-save persists this (v5) so a spouse is still
+        // a spouse after reload — the bond map is adapter state, never
+        // part of the core's snapshot.
+        [[nodiscard]] std::vector<TLC::CoSave::BondPair>
+        BondsForSave() const;
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -338,6 +350,65 @@ namespace TLC
             LCE::Simulation::EntityId, LCE::Simulation::EntityId>
             m_StallKeepers;
 
+        // The bond book (0.6.0 Stone 2): every bonded pair, by entity
+        // ids, with its kind and the day it formed. Adapter state — the
+        // core holds dispositions, the bond is the named state derived
+        // from them (Bonds.h). Two channels feed it: the
+        // RelationshipChangedEvent (instant — the core crossed a line
+        // mid-mutation) and the 1-second ReconcileBonds pass (the net —
+        // drift is quiet in the core, so dissolves only the pass can
+        // see). Persisted in the co-save (v5) and restored by form ids;
+        // cleared on EndWorld.
+        Bonds::BondMap m_Bonds;
+
+        // The typed bond lines (Bonds.h), parsed from the core's
+        // watch-list once at tuning load — the same values the core is
+        // watching, so the events and the derivation cannot disagree.
+        Bonds::BondThresholds m_BondThresholds;
+
+        // The observation bus (Request A — stone 08): the core's
+        // events — RelationshipChanged and friends — published into the
+        // adapter's handlers. One bus for the adapter's lifetime,
+        // subscribed once in the constructor, passed to every Update /
+        // Remember / ReportOutcome so the sim's changes flow out.
+        LCE::Events::EventBus m_Bus;
+
+        // The event channel: the core crossed a bond line — re-derive
+        // that pair now, the same rule the 1-second pass applies.
+        void OnRelationshipChanged(
+            const LCE::Simulation::RelationshipChangedEvent& a_event);
+
+        // The 1-second pass (the dissolve net): re-derives every pair
+        // from the live relationships and logs changes. The events are
+        // instant; this is complete — quiet drift, restores, and
+        // anything the bus missed all surface here.
+        void ReconcileBonds();
+
+        // One pair's disposition in a given direction, 0 when unknown.
+        float DispositionOf(
+            LCE::Simulation::EntityId a_from,
+            LCE::Simulation::EntityId a_to);
+
+        // Rebuilds m_Bonds from durable (form A, form B, kind, since)
+        // pairs after a restore — both forms resolve via the rebuilt
+        // translator (their FormRefs rode the snapshot), so this works
+        // even for actors not yet loaded. The 1-second reconcile pass
+        // then re-derives: a bond whose relationship drifted below its
+        // dissolve line dissolves (honest — the world moved while the
+        // game was away); everything else stands.
+        void RestoreBonds(const std::vector<TLC::CoSave::BondPair>& a_bonds);
+
+        // One bond change line, in the world's voice: "settler X and
+        // settler Y became friends." / "settler X is feuding with
+        // settler Y." Shared by the event channel and the reconcile
+        // pass — whichever detects the change first says it once.
+        void LogBondChange(
+            LCE::Simulation::EntityId a_entityA,
+            LCE::Simulation::EntityId a_entityB,
+            Bonds::BondKind a_old,
+            Bonds::BondKind a_new,
+            std::uint64_t a_sinceDay);
+
         // Which animals already got their feeder announced this world
         // (one line per animal, cleared on EndWorld).
         std::unordered_set<LCE::Simulation::EntityId> m_FeederLogged;
@@ -381,6 +452,11 @@ namespace TLC
         // m_PendingRestore; consumed by ApplyRestore (which translates
         // the FormID pairs back into this world's entity ids).
         std::vector<TLC::CoSave::StallKeeperPair> m_PendingStallKeepers;
+
+        // The bonds the co-save held for this save, riding with
+        // m_PendingRestore; consumed by ApplyRestore (which translates
+        // the FormID pairs back into this world's entity ids).
+        std::vector<TLC::CoSave::BondPair> m_PendingBonds;
 
         // Rebuilds m_StallKeepers from durable (market, keeper) FormID
         // pairs after a restore — the market entity and the keeper entity
