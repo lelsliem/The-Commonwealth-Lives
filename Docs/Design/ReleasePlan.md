@@ -43,7 +43,7 @@ serves the show.
 | **0.7.1 — Talk** | The drafted dialogue pools (greet/gossip/family) speak on the social interactions the sim already makes; captions via the radio channel | Two settlers chatting at the bench is the first "it's alive" moment |
 | **0.7.2 — Rows** | Verbal altercations: `dialogue.row` lines, Wronged outcomes, gossip spread | Feuds stop being log lines and become *heard* shouting |
 | **0.7.3 — Fights** | Physical escalation via real combat (the game's own punch/shove anims); feedback into bonds and news | The feud's payoff — the escalation line lands and they go at it |
-| **0.8.0 — Trade with anyone** | Vendor census: traders, marketplaces, provisioners as trade targets; caps change hands on the road | The world feels connected, not bench-to-bench; the player's provisioner is now part of the economy |
+| **0.8.0 — Trade with anyone** | Vendor census: traders, marketplaces, provisioners as trade targets; caps change hands on the road. Prefer each actor's existing in-game name (many fixed traders are already named, e.g. via We Have Names, Nexus 74287) — never overwrite a real name with a pool draw | The world feels connected, not bench-to-bench; the player's provisioner is now part of the economy |
 | **0.8.1 — Illness & Medicine** | A `Health` component (adapter-owned, hold-then-recover — the engine's locked shape); radstorm/food/wound/contagion vectors; the sick rest and buy medicine; untreated sickness can die | The wasteland has a price beyond hunger — settlements feel seasons, the radio reports the ill, and medicine makes the economy real |
 
 **The reliability gate (0.9.0, hard):**
@@ -109,14 +109,22 @@ gets spawned — the whole life/death cycle?*
    logs `the settlement laid X to rest` (+ a news line). Body state is
    game state — the adapter owns it, no engine change. Lands with the
    life/death polish, before 0.9.0's gate.
-2. **A child is a mind, not a body — honestly.** Born children are
-   sim-only by design: no FormRef, no actor. Making a child visible
-   means a Creation Kit child template (race, markers, no-combat) — an
-   author-asset stone, genuinely post-1.0. The visible story is the
-   household: parents walk, eat, trade, grieve; the child is fed,
-   bonded, named, and counted in the co-save. The sim-only child is
-   the design, not a missing feature — noted so the cut is a decision,
-   not an accident.
+2. **A child is a mind, not a body — honestly, and with a reachable
+   path.** Born children are sim-only by design: no FormRef, no actor.
+   Making a child visible means a Creation Kit child template (race,
+   markers, no-combat) — an author-asset stone, genuinely post-1.0.
+   **The asset side already exists: Baby Sim - Babies That Grow Up
+   (Nexus 100934)** — 10 babies, 20+ child variants, cribs, aging
+   baby → child → young adult, grown children become settlers. It is
+   player-driven (babies are crafted at a chemslab, placed, grown by
+   the player), so our side is a *bridge*: the sim's birth event
+   summons a Baby Sim child, names it, and ages it on our schedule.
+   Two gates: the author's permission (assets require it; the author
+   welcomes notification) and a hard mod dependency. Until then the
+   visible story is the household: parents walk, eat, trade, grieve;
+   the child is fed, bonded, named, and counted in the co-save. The
+   sim-only child is the design, not a missing feature — noted so the
+   cut is a decision, not an accident.
 
 ## The staged path to 1.0.0
 
