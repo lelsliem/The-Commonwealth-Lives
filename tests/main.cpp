@@ -3226,7 +3226,33 @@ namespace TLC::Tests
             return false;
         }
 
+        // The Red Rocket resident is a role label too — owned, it gets
+        // a real name.
+        if (!IsGenericName("Junkyard Dog", Species::Animal)
+            || IsGenericName("Dogmeat", Species::Animal))
+        {
+            return false;
+        }
+
+        // Provisioners keep the role and gain a first name.
+        if (!IsGenericName("Provisioner") || !IsProvisioner("Provisioner")
+            || !IsProvisioner("provisioner") || IsProvisioner("Sturges"))
+        {
+            return false;
+        }
+
         const auto pool = DefaultPool();
+
+        // A provisioner's first name: drawn once, deterministic.
+        const auto provisionerFirst = GenerateFirstName(
+            EntityId{ 42 }, pool, Gender::Male);
+
+        if (provisionerFirst.empty()
+            || GenerateFirstName(EntityId{ 42 }, pool, Gender::Male)
+                != provisionerFirst)
+        {
+            return false;
+        }
 
         // The gendered pools are disjoint — the same id draws different
         // names for a man and a woman.

@@ -296,6 +296,9 @@ namespace TLC::Names
                 "Protectron",    "Sentry Bot",   "Assaultron",
                 "Handy",         "Turret",       "Vertibird",
                 "Mirelurk King", "Mirelurk Queen",
+                // The Red Rocket resident: "Junkyard Dog" is a role
+                // label like "Dog", not a name — owned, it gets one.
+                "Junkyard Dog",
             };
 
             for (const auto word : kSpeciesWords)
@@ -309,7 +312,35 @@ namespace TLC::Names
             return false;
         }
 
-        return equals("Settler") || equals("Workshop Worker");
+        return equals("Settler") || equals("Workshop Worker")
+            || equals("Provisioner");
+    }
+
+    //-------------------------------------------------------------------------
+    // IsProvisioner — the caravan NPCs' base form reads "Provisioner".
+    // It is generic (IsGenericName), but a provisioner keeps the role
+    // and gains a first name — "Provisioner Hank", not a whole new
+    // name. Case-insensitive.
+    //-------------------------------------------------------------------------
+    inline bool IsProvisioner(std::string_view a_name) noexcept
+    {
+        if (a_name.size() != 11)
+        {
+            return false;
+        }
+
+        constexpr std::string_view kRole = "Provisioner";
+
+        for (std::size_t i = 0; i < kRole.size(); ++i)
+        {
+            if (std::tolower(static_cast<unsigned char>(a_name[i]))
+                != std::tolower(static_cast<unsigned char>(kRole[i])))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     //-------------------------------------------------------------------------
@@ -373,6 +404,28 @@ namespace TLC::Names
             + static_cast<std::uint64_t>(a_attempt) * 0xC2B2AE3D27D4EB4Full);
 
         return a_pool.AnimalFirsts[seed % a_pool.AnimalFirsts.size()];
+    }
+
+    // A first name only, from the gender's pool — the provisioner's
+    // half of "Provisioner Hank". Deterministic per id, like the full
+    // name; the caller composes the role in front.
+    inline std::string GenerateFirstName(
+        EntityId a_id, const NamePool& a_pool, Gender a_gender,
+        std::uint32_t a_attempt = 0) noexcept
+    {
+        const auto& firsts = a_gender == Gender::Male
+            ? a_pool.MaleFirsts : a_pool.FemaleFirsts;
+
+        if (firsts.empty())
+        {
+            return "Settler";
+        }
+
+        const auto seed = Mix(
+            a_id.Value() * 0x9E3779B97F4A7C15ull
+            + static_cast<std::uint64_t>(a_attempt) * 0xC2B2AE3D27D4EB4Full);
+
+        return firsts[seed % firsts.size()];
     }
 
     //-------------------------------------------------------------------------

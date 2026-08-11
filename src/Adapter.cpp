@@ -1396,8 +1396,19 @@ namespace TLC
                     gender = TLC::Names::Gender::Female;
                 }
 
-                fullName = TLC::Names::GenerateUnique(
-                    m_UsedNames, id, m_Names, gender);
+                // A provisioner keeps the role and gains a first name —
+                // "Provisioner Hank", not a whole new identity.
+                if (TLC::Names::IsProvisioner(gameName))
+                {
+                    fullName = "Provisioner "
+                        + TLC::Names::GenerateFirstName(
+                            id, m_Names, gender);
+                }
+                else
+                {
+                    fullName = TLC::Names::GenerateUnique(
+                        m_UsedNames, id, m_Names, gender);
+                }
             }
 
             // The name's visible half: write it onto the actor's extra
@@ -1852,6 +1863,29 @@ namespace TLC
 
                 // A generic base ("Settler", "Dog"): write the sim's
                 // name once — an actor already showing it is left alone.
+                // A provisioner from before the role-naming landed holds
+                // the bare role; upgrade it to "Provisioner Hank" once.
+                if (species == Species::Human
+                    && TLC::Names::IsProvisioner(baseName)
+                    && name->Full == "Provisioner")
+                {
+                    auto gender = TLC::Names::GenderOf(entity);
+                    const auto sex = actor->GetSex();
+
+                    if (sex == RE::SEX::kMale)
+                    {
+                        gender = TLC::Names::Gender::Male;
+                    }
+                    else if (sex == RE::SEX::kFemale)
+                    {
+                        gender = TLC::Names::Gender::Female;
+                    }
+
+                    m_Registry.GetComponent<Name>(entity)->Full =
+                        "Provisioner " + TLC::Names::GenerateFirstName(
+                            entity, m_Names, gender);
+                }
+
                 if (!actor->extraList->HasType(
                         RE::EXTRA_DATA_TYPE::kTextDisplayData))
                 {
