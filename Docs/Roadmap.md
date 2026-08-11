@@ -44,8 +44,10 @@ Current Stage   : Identity & the Player Window — every 0.7.0 stone
                    page stays honestly deferred (the INI already
                    delivers the tuning; the page needs MCM + the CK).
 
-Next Milestone  : 0.8.0 — Settler Agency ("Hands in the World"):
-                   settlers build, move items, and destroy
+Next Milestone  : 0.8.0 — Real Events ("Trade With Anyone, Talk,
+                   and Fight"): trade with traders/marketplaces/
+                   provisioners/each other, conversations, and
+                   altercations — words first, sometimes physical
 
 ═══════════════════════════════════════════════
 
@@ -551,22 +553,28 @@ radio captions verified on-screen, audio honestly deferred after
 
 ═══════════════════════════════════════════════
 
-0.8.0 — Settler Agency · "Hands in the World"
+0.8.0 — Real Events · "Trade With Anyone, Talk, and Fight"
 
 ═══════════════════════════════════════════════
 
-Goal: settlers have hands — their intents produce real world changes:
-build, move items, destroy. Sketched 2026-08-10 (Docs/Design/Life.md,
-"Beyond 0.6.0").
+Goal: the world's events become real — trade with anyone who sells,
+conversations between minds, and altercations that start with words and
+sometimes turn physical. Planned 2026-08-11 (Docs/Design/RealEvents.md);
+still sketched here, no code.
 
-STATUS: PLANNED — sketches only, no code.
+STATUS: PLANNED — design doc written, no code.
 
-[ ] Move items: a hauler transfers stock between containers; the stall
-    sells what was stocked
-[ ] Build: a builder places objects via the workshop placement path;
-    the settlement grows what it built
-[ ] Destroy: a destroyer clears clutter (disable refs); decay, raids,
-    and spite take things apart
-[ ] Engine ask (tentative): labour as first-class goals (Construct /
-    Haul / Demolish) grows Request B — otherwise the adapter maps
-    Prosper → labor intents on the existing surface
+[ ] Trade with anyone who sells: a vendor census (traders,
+    marketplaces, provisioners as mobile traders) — the hungry walk
+    resolves to a person, not only the bench
+[ ] Conversations: INI dialogue pools, speech on the social
+    interactions the sim already makes, captions via the radio channel
+[ ] Altercations, verbal: rows on rival/enemy crossings — Wronged
+    outcomes, gossip, the settlement hears the shouting
+[ ] Altercations, physical: enemy + temper roll → Combat or a
+    pex-driven confrontation scene; feedback into bonds and news
+[ ] The hands (deferred agency stones, from Life.md's sketch):
+    move items, build, destroy — still future, after the events
+[ ] Engine asks: none for pillars 1–3 (Trade/Social/Combat/Wronged
+    kinds all exist); pex scene driver is an author-side asset task
+    (Creation Kit), like the audio radio and MCM

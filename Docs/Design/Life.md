@@ -392,6 +392,8 @@ memory, and the seeded RNG — never by a script.
 
 Three pillars the author wants after the life core is real. They live
 here as sketches; each becomes a designed stone when its turn comes.
+(0.8.0's fuller plan — real trade, conversations, altercations — is
+Docs/Design/RealEvents.md.)
 
 ### Identity — settlers get names
 
