@@ -1400,6 +1400,13 @@ namespace TLC
                 LCE::Simulation::InteractionKind::Death,
                 CurrentDay());
 
+            // The grief announce's memory (0.6.0 Stone 5): the dead is
+            // about to leave the translator forever — FormFor can no
+            // longer answer — but the grief arc needs the form to say
+            // who is mourned. Recorded before the destroy, consulted by
+            // the announce, cleared on EndWorld.
+            m_RecentDeaths[entity.Value()] = a_formId;
+
             // The gossip stone's observable half: one line per death —
             // how many minds remember who is gone. The fact itself is
             // silent (a memory is not a door); this is the verify.
@@ -1482,6 +1489,7 @@ namespace TLC
         m_Walks.clear();
         m_ArrivedAt.clear();
         m_LastWander.clear();
+        m_RecentDeaths.clear();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
         m_TickCalled = false;
@@ -1714,6 +1722,7 @@ namespace TLC
         bool traded = false;
         bool keeperHome = false;   // the stall-keeper at their own bench
         bool familyHome = false;   // the spouse of the keeper — the family bench
+        LCE::Simulation::EntityId familySpouse{};   // who the family meal warms
         std::uint32_t marketFormId = a_targetFormId;
 
         if (species == Species::Human)
@@ -1741,6 +1750,7 @@ namespace TLC
                     counterparty = target;
                     traded = false;
                     familyHome = true;
+                    familySpouse = spouse;
                 }
                 else if (stall.IsValid() && stall != a_entity)
                 {
@@ -1886,6 +1896,37 @@ namespace TLC
             }
             else if (familyHome)
             {
+                // The family bench is the marriage's heartbeat: a shared
+                // meal at home warms both ways — the same Social warmth
+                // a bench-sale carries. Without this the couple's
+                // dispositions erode by drift (they stopped trading the
+                // moment they married — free meals), and a marriage
+                // quietly dies in about an hour; grief for a spouse then
+                // finds the love gone (the 2026-08-11 grief test).
+                if (familySpouse.IsValid() && familySpouse != a_entity)
+                {
+                    Remember(
+                        m_Registry, a_entity,
+                        MemoryEvent{
+                            familySpouse, InteractionKind::Social,
+                            WorldFacts::kFactWeight },
+                        m_CoreTuning,
+                        WorldTime{ CurrentDay() },
+                        &m_Bus);
+
+                    auto spouseMemory =
+                        m_Registry.GetComponent<Memory>(familySpouse);
+                    auto spouseRelationships =
+                        m_Registry.GetComponent<Relationships>(familySpouse);
+
+                    if (spouseMemory && spouseRelationships)
+                    {
+                        RecordSale(
+                            *spouseMemory, *spouseRelationships,
+                            a_entity, m_Settings.SaleWarmth);
+                    }
+                }
+
                 REX::INFO(
                     "LCE: settler {:#x} is at the family stall at market {:#x} — fed from the household's meal.",
                     formId, marketFormId);
@@ -2404,17 +2445,21 @@ namespace TLC
 
             for (const auto& [mind, dead] : grieving)
             {
+                // The dead's form is gone from the translator (RemoveMind
+                // destroyed it) — the announce reads the recent-deaths
+                // map recorded at booking time. Without it the line was
+                // dead code (FormFor(dead) was always 0).
                 const auto formId = m_Translator.FormFor(mind);
-                const auto deadFormId = m_Translator.FormFor(dead);
+                const auto deadIt = m_RecentDeaths.find(dead.Value());
 
-                if (formId == 0 || deadFormId == 0)
+                if (formId == 0 || deadIt == m_RecentDeaths.end())
                 {
                     continue;
                 }
 
                 REX::INFO(
                     "arcs: settler {:#x} grieves for {:#x} — they seek company.",
-                    formId, deadFormId);
+                    formId, deadIt->second);
             }
         }
 

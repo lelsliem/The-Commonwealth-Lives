@@ -571,3 +571,21 @@ children wake-line was absent — the loaded save predated the births
 (Capture iterates all live registry slots, formless children
 included — verified in the engine's `EntityRegistry::Capture`), so
 the line will appear once a save is made after a birth.
+
+**Addendum 5 — the grief test found two real bugs (same day).** The
+first in-game grief test killed the Sanctuary keeper's spouse and got
+the gossip line but no grief: (1) the announce was dead code — it
+resolved the dead's form via `FormFor(dead)`, but `RemoveMind` already
+destroyed the entity and removed it from the translator, so the form
+was always 0 and the line was skipped every time; the drain worked,
+the line could not. A small session map (`m_RecentDeaths`, entity
+value → form id, recorded at booking time, cleared on EndWorld) gives
+the announce the dead's form. (2) The keeper did not qualify — its
+warmth to the dead had eroded below the friend line, because the
+family bench feeds the spouse for free but never warmed the couple:
+after marriage they stopped trading, and drift (0.0002/s, ~1 h
+half-life) quietly killed the marriage's feelings in about an hour.
+The family meal is now the marriage's heartbeat: a shared meal at home
+warms both directions (Remember(Social) + RecordSale, the same warmth
+a bench-sale carries), so marriages stay warm and grief for a spouse
+finds the love there.

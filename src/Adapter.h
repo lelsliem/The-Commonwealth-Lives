@@ -509,6 +509,16 @@ namespace TLC
             std::chrono::steady_clock::time_point>
             m_LastWander;
 
+        // The recent deaths (the grief announce, 0.6.0 Stone 5): entity
+        // value → form id, set when a death is booked and the dead is
+        // removed from the translator (FormFor can no longer answer).
+        // The grief announce needs the dead's form to say who is
+        // mourned — without this the line was dead code, FormFor(dead)
+        // always 0. Session state, cleared on EndWorld; keys carry the
+        // dead's full id value (generation included), so a recycled
+        // registry slot never collides.
+        std::unordered_map<std::uint64_t, std::uint32_t> m_RecentDeaths;
+
         // The world the co-save held for this save. Set by QueueRestore
         // during the load, consumed by GameLoaded; absent or empty means
         // this session starts fresh (a new game, or a save made while the
