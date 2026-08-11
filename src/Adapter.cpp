@@ -1213,20 +1213,11 @@ namespace TLC
             });
 
         // The name's visible half after a restore: every mind whose
-        // actor is loaded gets its name written onto the actor. The
-        // co-save is the truth — an actor's extra data may predate the
-        // naming feature, so re-apply here (and again as actors load;
-        // SetOverrideName is idempotent). Game-named NPCs never have a
-        // mind Name that wasn't generated, so they are never touched.
-        m_Registry.ForEachWithComponent<FormRef>(
-            [this](LCE::Simulation::EntityId a_entity, const FormRef& a_ref)
-            {
-                if (const auto name =
-                        m_Registry.GetComponent<Name>(a_entity))
-                {
-                    ApplyActorName(a_ref.FormId, name->Full);
-                }
-            });
+        // actor is loaded gets its name written onto the actor — the
+        // same reconcile-aware rule as the per-second sweep (the base
+        // form is the truth; stale generated stamps on game-named NPCs
+        // are dropped). The sweep re-applies as the rest stream in.
+        ApplyLoadedActorNames();
 
         // The market was saved with the world (it owns a FormRef); now
         // that the world is back, every mind must remember where to trade
@@ -1367,9 +1358,17 @@ namespace TLC
         // stray with no owner stays nameless: the log labels it by
         // species and hex until someone claims it.
         std::string fullName;
-        const auto gameName = RE::TESFullName::GetFullName(*a_actor);
 
-        if (TLC::Names::IsGenericName(gameName))
+        // The name must come from the BASE form, not the reference: the
+        // reference's own full-name is the sparse map, which is empty
+        // for most actors — reading the ref made EVERYONE look generic
+        // and renamed Mama Murphy into "Milo Grey". The base form holds
+        // the real name (Sturges, Mama Murphy, even "Dog").
+        const auto gameName = a_actor->GetObjectReference()
+            ? RE::TESFullName::GetFullName(*a_actor->GetObjectReference())
+            : std::string_view{};
+
+        if (TLC::Names::IsGenericName(gameName, species))
         {
             if (species == Species::Animal)
             {
@@ -1814,16 +1813,50 @@ namespace TLC
 
                 auto* actor = const_cast<RE::Actor*>(a_actor);
 
-                // Write once: an actor already carrying a display name
-                // (ours, or the game's own) is left alone.
-                if (actor->extraList == nullptr
-                    || actor->extraList->HasType(
-                        RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                if (actor->extraList == nullptr)
                 {
                     return;
                 }
 
-                actor->extraList->SetOverrideName(name->Full.c_str());
+                const auto tag = m_Registry.GetComponent<SpeciesTag>(entity);
+                const auto species = tag ? tag->Value : Species::Human;
+
+                // The base form is the eternal truth: if the game gave
+                // this NPC a real name, the mind must carry it — and an
+                // earlier build's stale generated stamp ("Milo Grey" on
+                // Mama Murphy) is dropped so the real name shows again.
+                // The co-save holds the corrected name from the next
+                // save onward.
+                const auto baseName = actor->GetObjectReference()
+                    ? RE::TESFullName::GetFullName(
+                        *actor->GetObjectReference())
+                    : std::string_view{};
+
+                if (!TLC::Names::IsGenericName(baseName, species))
+                {
+                    if (name->Full != baseName)
+                    {
+                        m_Registry.GetComponent<Name>(entity)->Full =
+                            std::string(baseName);
+
+                        if (actor->extraList->HasType(
+                                RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                        {
+                            actor->extraList->RemoveExtra(
+                                RE::EXTRA_DATA_TYPE::kTextDisplayData);
+                        }
+                    }
+
+                    return;
+                }
+
+                // A generic base ("Settler", "Dog"): write the sim's
+                // name once — an actor already showing it is left alone.
+                if (!actor->extraList->HasType(
+                        RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                {
+                    actor->extraList->SetOverrideName(name->Full.c_str());
+                }
             });
     }
 

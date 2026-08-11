@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "Behaviour.h"  // Species — the generic-name rule is species-aware
+
 #include "LCE/Config/Configuration.h"
 #include "LCE/Simulation/EntityId.h"
 
@@ -245,18 +247,20 @@ namespace TLC::Names
     //-------------------------------------------------------------------------
     // IsGenericName — is this the game's placeholder for "no name yet"?
     // A real NPC keeps its name; a generic settler is named by the sim.
-    // Empty counts (some refs read an empty full-name) and the two stock
-    // placeholders FO4 uses for workshop actors.
+    // Empty counts (some refs read an empty full-name), the two stock
+    // placeholders FO4 uses for workshop humans ("Settler", "Workshop
+    // Worker"), and — for animals — the plain species words ("Dog",
+    // "Cat", "Brahmin"): a species label is not a name, so an owned
+    // companion gets a real one. A creature with a proper name keeps it
+    // (Dogmeat stays Dogmeat). Case-insensitive.
     //-------------------------------------------------------------------------
-    inline bool IsGenericName(std::string_view a_name) noexcept
+    inline bool IsGenericName(
+        std::string_view a_name, Species a_species = Species::Human) noexcept
     {
         if (a_name.empty())
         {
             return true;
         }
-
-        constexpr std::string_view kSettler = "Settler";
-        constexpr std::string_view kWorker = "Workshop Worker";
 
         const auto equals = [a_name](std::string_view other)
         {
@@ -279,7 +283,33 @@ namespace TLC::Names
             return true;
         };
 
-        return equals(kSettler) || equals(kWorker);
+        if (a_species == Species::Animal)
+        {
+            static constexpr std::string_view kSpeciesWords[] = {
+                "Dog",           "Cat",          "Brahmin",
+                "Rabbit",        "Molerat",      "Gorilla",
+                "Radstag",       "Yao Guai",     "Deathclaw",
+                "Mirelurk",      "Bloatfly",     "Bloodbug",
+                "Radroach",      "Stingwing",    "Radscorpion",
+                "Feral Ghoul",   "Ghoul",        "Raider Dog",
+                "Super Mutant",  "Synth",        "Eyebot",
+                "Protectron",    "Sentry Bot",   "Assaultron",
+                "Handy",         "Turret",       "Vertibird",
+                "Mirelurk King", "Mirelurk Queen",
+            };
+
+            for (const auto word : kSpeciesWords)
+            {
+                if (equals(word))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return equals("Settler") || equals("Workshop Worker");
     }
 
     //-------------------------------------------------------------------------

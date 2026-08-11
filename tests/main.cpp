@@ -3209,6 +3209,23 @@ namespace TLC::Tests
             return false;
         }
 
+        // Species-aware: a plain species word is generic for an animal
+        // (an owned dog gets a real name) but a proper creature name
+        // keeps itself; a species word is NOT generic for a human.
+        if (!IsGenericName("Dog", Species::Animal)
+            || !IsGenericName("Brahmin", Species::Animal)
+            || !IsGenericName("Cat", Species::Animal))
+        {
+            return false;
+        }
+
+        if (IsGenericName("Dogmeat", Species::Animal)
+            || IsGenericName("Rex", Species::Animal)
+            || IsGenericName("Dog", Species::Human))
+        {
+            return false;
+        }
+
         const auto pool = DefaultPool();
 
         // The gendered pools are disjoint — the same id draws different
