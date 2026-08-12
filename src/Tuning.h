@@ -227,10 +227,11 @@ namespace TLC::Tuning
         // crowd mod uses; the engine's function is AIProcess::
         // KnockExplosion, REL::ID-resolved against the installed
         // Address Library). Magnitude in game units — the crowd mod's
-        // default was 5 and "anything above 10 is pretty insane"; a
-        // modest 3 is a shove, not a ragdoll. 0 turns the shove off
-        // (the fight books without the animation).
-        float FightPush = 3.0f;
+        // default was 5 and "anything above 10 is pretty insane"; 4 is
+        // a shove that visibly registers (3 read as a tip-over in the
+        // loop test), and the ±25% jitter spreads it 3–5. 0 turns the
+        // shove off (the fight books without the animation).
+        float FightPush = 4.0f;
 
         // The test hook (0.7.5): sim.test.forceFight pins two minds by
         // base form id (low 24 bits) and brawls them on a loop every

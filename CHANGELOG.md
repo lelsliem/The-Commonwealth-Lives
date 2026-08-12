@@ -11,6 +11,17 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 — the shove logs its receipt (2026-08-12)
+
+The loop's close-range fights read as a double-fall with no visible
+shove — and zero retaliation lines in 37 fights proved it was the
+game's physics (the victim's ragdoll clipping the adjacent aggressor),
+not two punches. Every physical punch now logs its receipt: `shove:
+<pushed> pushed by <puncher> — <force> force at <distance> u.` — so a
+fall can always be matched to its push or proven not to be one. The
+base force moves 3 → 4 (3 read as a tip-over in testing), the jitter
+spreading 3–5 — a shove that visibly registers.
+
 ### 0.7.5 fix — the shove is a bench scene: no more ghost falls (2026-08-12)
 
 The force-test loop exposed it: a fight can book between minds that are

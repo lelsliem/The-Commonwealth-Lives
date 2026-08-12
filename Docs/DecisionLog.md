@@ -1397,3 +1397,21 @@ when the pair actually meets. The sim's own fights (which require a
 bench crossing) are untouched; the loop is now safe to watch from
 anywhere — a ranged brawl reads in the log and on the radio, and the
 falls only happen when the pair is genuinely face to face.
+
+### ADR-0039 — The shove logs its receipt: force, distance, who (2026-08-12)
+
+**Context.** The loop test's close-range fights showed "both go down at
+once, no shove animations" — with zero retaliation lines in 37 fights,
+so the double-fall is the game's physics (the victim's ragdoll clips
+the adjacent aggressor), not two punches. And a fall with no visible
+shove could be a too-weak knock or not ours at all. The shove was
+silent — the log only spoke when the shove did NOT fire (the range
+defer) or the victim answered. Falls couldn't be matched to pushes.
+
+**The change.** Every physical punch now logs its receipt: `shove:
+<pushed> pushed by <puncher> — <force> force at <distance> u.` A fall
+can always be matched to its push, or proven not to be one — the
+double-fall question resolves from the log, not the screen. The base
+force moves 3 → 4 (the crowd mod's proven 5 was a solid shove; 3 read
+as a tip-over in the loop test), so the jitter spreads 3–5 — a shove
+that visibly registers rather than a collapse.

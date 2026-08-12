@@ -2791,10 +2791,21 @@ namespace TLC
                 {
                     const auto pushJitter =
                         0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f));
+                    const auto force = m_Settings.FightPush * pushJitter;
 
                     victimActor->currentProcess->KnockExplosion(
                         victimActor, aggressorActor->GetPosition(),
-                        m_Settings.FightPush * pushJitter);
+                        force);
+
+                    // The shove's receipt (0.7.5): every physical punch
+                    // logs who, how hard, and how close — so a fall can
+                    // always be matched to its push, or proven not to
+                    // be one (the test loop's double-fall question).
+                    REX::INFO(
+                        "LCE: shove: {} pushed by {} — {:.1f} force at {:.0f} u.",
+                        MindLabelForm(m_Translator.FormFor(a_victim)),
+                        MindLabelForm(m_Translator.FormFor(a_aggressor)),
+                        force, scene);
 
                     if (TemperOf(a_victim) >= m_Settings.FightTemper)
                     {
