@@ -683,7 +683,9 @@ STATUS: PLANNED — design docs written, no code.
     pre-fix save's mistake on the first pass. Actual children are
     already gated by species. On load: `kin: N family pairs gated
     from romance`
-[x] 0.7.6 — Fight-feel bug pass (planned 2026-08-12, not yet built):
+[x] 0.7.6 — Fight-feel bug pass (planned 2026-08-12, not yet built; full
+    design for this and the run to 0.8.0 in Docs/Design/FutureStones.md,
+    including the engine audit — zero new surface):
     the known presentation bugs from the 0.7.5 field tests — the
     ghost-push slide (the fall's knock impulse dragging the victim
     along the ground after the kick), the both-fall look when the
