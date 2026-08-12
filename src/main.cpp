@@ -51,13 +51,14 @@ namespace
         const auto snapshot = g_Adapter.CaptureWorld();
         const auto stalls = g_Adapter.StallKeepersForSave();
         const auto bonds = g_Adapter.BondsForSave();
+        const auto gates = g_Adapter.ConflictGatesForSave();
         const auto record = TLC::CoSave::Encode(
-            snapshot, g_Adapter.RngState(), stalls, bonds);
+            snapshot, g_Adapter.RngState(), stalls, bonds, gates);
 
         REX::INFO(
-            "co-save: writing {} entities, {} stall-keepers, {} bonds ({} bytes).",
+            "co-save: writing {} entities, {} stall-keepers, {} bonds, {} gates ({} bytes).",
             snapshot.Entities.size(), stalls.size(), bonds.size(),
-            record.size());
+            gates.size(), record.size());
 
         if (!a_intfc->WriteRecord(
                 TLC::CoSave::kRecordType, TLC::CoSave::kRecordVersion,
@@ -97,20 +98,22 @@ namespace
             std::uint64_t rngState = TLC::kRngSeed;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (!TLC::CoSave::Decode(
-                    record, snapshot, rngState, stalls, bonds))
+                    record, snapshot, rngState, stalls, bonds, gates))
             {
                 REX::ERROR("co-save: record decode failed (version {}).", version);
                 continue;
             }
 
             REX::INFO(
-                "co-save: read {} entities, {} stall-keepers, {} bonds — the world will be restored on load.",
-                snapshot.Entities.size(), stalls.size(), bonds.size());
+                "co-save: read {} entities, {} stall-keepers, {} bonds, {} gates — the world will be restored on load.",
+                snapshot.Entities.size(), stalls.size(), bonds.size(),
+                gates.size());
             g_Adapter.QueueRestore(
                 std::move(snapshot), rngState,
-                std::move(stalls), std::move(bonds));
+                std::move(stalls), std::move(bonds), std::move(gates));
         }
     }
 

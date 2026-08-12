@@ -1110,3 +1110,40 @@ from the aggressor (sim.fight.push, default 3 units — a stagger, not a
 ragdoll; 0 turns it off), so the punch is visible in-game while the
 sim booking stays the deliverable. Still best-effort: a missing actor
 or process skips the shove; the fight is booked either way.
+
+### ADR-0031 — "Today" cannot live in fading memory: the once-per-day gate is a day-scoped map (2026-08-12)
+
+**Context.** The first 0.7.5 test in a restored 610-mind world showed
+fights firing in waves — the same pair "come to blows" 141 times in one
+session, 445 fights total, everyone shoved repeatedly, both sides
+falling over. The once-per-day gates (Rows::AlreadyRowedToday,
+Fights::AlreadyFoughtToday) gated on the pair's Wronged/Combat memory:
+a memory event stamped today, scanned each crossing. It looked right
+and the harness passed — but the harness never runs the engine's fade.
+
+**The bug.** Memory fades (sim.memory.fade 0.2/s, forget below
+sim.memory.forget 0.1). A Wronged or Combat event starts at weight 1.0
+(WorldFacts::kFactWeight) and erases itself in (1.0 − 0.1) / 0.2 = 4.5
+seconds. The waves were 10s apart: by the second wave the gate's
+evidence was gone, so the pair re-rowed and re-fought — every ~10s,
+forever. "Words once a day" and "blows once a day" are day-scoped
+facts; salience is the wrong substrate for them.
+
+**The fix.** The adapter owns a durable ConflictGates map — ordered
+pair → { last day rowed, last day fought } — explicit, O(1), rolled by
+comparison (a stored day != today means the pair is free), and co-saved
+(v7: the gate section rides the record, translated to form ids at the
+edges like bonds). The memory events still land (the feud still
+deepens, the threat still forms); only the *gate* moved out of memory.
+The regression test now erases the pair's memories mid-day and asserts
+the gate still holds — the old build fails it.
+
+**The retaliation.** The test also asked the natural question: after the
+punch, can the victim push back, hit back, or run away? Running away
+already exists — the Combat threat feeds the engine's danger-awareness,
+and the victim Flees when Safety is their most urgent need. Pushing
+back is now physical too: a victim whose temper is at or above the same
+sim.fight.temper line shoves the aggressor back — one exchange, never
+a loop (the aggressor threw the first punch, the victim answers once,
+and the day-gate holds the pair to a single scene). The temper line is
+the knob: raise it and fewer victims answer.

@@ -11,6 +11,7 @@
 
 #include "Bonds.h"
 #include "Gossip.h"
+#include "ConflictGates.h"
 #include "WorldFacts.h"
 
 #include "LCE/Simulation/Mind/Memory.h"
@@ -35,43 +36,22 @@ namespace TLC::Fights
     //-------------------------------------------------------------------------
 
     //-------------------------------------------------------------------------
-    // AlreadyFoughtToday — the pair has come to blows on this day: a
-    // Combat memory of the other stamped today, in either direction.
-    // The gate is co-saved (memories ride the co-save), so save/load
-    // never double-fights.
+    // AlreadyFoughtToday — the pair has come to blows on this day. The
+    // gate is the adapter's ConflictGates map (0.7.5 fix): a Combat
+    // memory cannot gate it — memory fades (a weight-1.0 event erases
+    // itself in seconds under the default sim.memory.fade), so the
+    // gate re-armed mid-day and pairs re-fought every ~10s — the fight
+    // waves and double-shoves of the first 0.7.5 build. The map is
+    // day-scoped, O(1), and co-saved (v7), so save/load never
+    // double-fights.
     //-------------------------------------------------------------------------
     inline bool AlreadyFoughtToday(
-        EntityRegistry& a_registry,
+        const ConflictGates::Map& a_gates,
         EntityId a_entityA, EntityId a_entityB,
-        std::uint64_t a_day)
+        std::uint64_t a_day) noexcept
     {
-        const auto otherOf = [&](EntityId a_who) -> EntityId
-        {
-            return a_who == a_entityA ? a_entityB : a_entityA;
-        };
-
-        for (const auto entity : { a_entityA, a_entityB })
-        {
-            const auto memory = a_registry.GetComponent<Memory>(entity);
-
-            if (memory == nullptr)
-            {
-                continue;
-            }
-
-            const auto other = otherOf(entity);
-
-            for (const auto& event : memory->Events)
-            {
-                if (event.Kind == InteractionKind::Combat
-                    && event.Other == other && event.Day == a_day)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return ConflictGates::FoughtToday(
+            a_gates, a_entityA, a_entityB, a_day);
     }
 
     //-------------------------------------------------------------------------
@@ -122,6 +102,7 @@ namespace TLC::Fights
     inline bool BookFight(
         EntityRegistry& a_registry,
         const Bonds::BondMap& a_bonds,
+        ConflictGates::Map& a_gates,
         EntityId a_aggressor, EntityId a_victim,
         std::uint64_t a_day,
         const SimulationTuning& a_tuning,
@@ -142,7 +123,7 @@ namespace TLC::Fights
         }
 
         // Blows once a day — the pair already fought today.
-        if (AlreadyFoughtToday(a_registry, a_aggressor, a_victim, a_day))
+        if (AlreadyFoughtToday(a_gates, a_aggressor, a_victim, a_day))
         {
             return false;
         }
@@ -166,6 +147,11 @@ namespace TLC::Fights
         Gossip::SpreadBond(
             a_registry, a_aggressor, a_victim,
             InteractionKind::Social, a_day);
+
+        // Blows once a day — the gate closes for the pair until
+        // tomorrow (the day rolls by comparison, never a reset pass).
+        ConflictGates::MarkFought(
+            a_gates, a_aggressor, a_victim, a_day);
 
         return true;
     }

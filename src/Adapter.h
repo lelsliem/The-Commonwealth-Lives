@@ -11,6 +11,7 @@
 
 #include "Bonds.h"
 #include "CoSave.h"
+#include "ConflictGates.h"
 #include "Dialogue.h"
 #include "Executor.h"
 #include "Households.h"
@@ -151,7 +152,8 @@ namespace TLC
             LCE::Simulation::RegistrySnapshot a_snapshot,
             std::uint64_t a_rngState,
             std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
-            std::vector<TLC::CoSave::BondPair> a_bonds);
+            std::vector<TLC::CoSave::BondPair> a_bonds,
+            std::vector<TLC::CoSave::ConflictGatePair> a_gates);
 
         // The stall-keepers in durable form — (market FormID, keeper
         // FormID) pairs, translated from the session-local entity ids via
@@ -168,6 +170,15 @@ namespace TLC
         // part of the core's snapshot.
         [[nodiscard]] std::vector<TLC::CoSave::BondPair>
         BondsForSave() const;
+
+        // The once-per-day conflict gates in durable form — (form A,
+        // form B, row day, fight day), translated from the
+        // session-local entity ids via the translator. The co-save
+        // persists this (v7) so a feud stays a single scene per day
+        // across save/load — the gate map is adapter state, never part
+        // of the core's snapshot.
+        [[nodiscard]] std::vector<TLC::CoSave::ConflictGatePair>
+        ConflictGatesForSave() const;
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -468,6 +479,14 @@ namespace TLC
         // cleared on EndWorld.
         Bonds::BondMap m_Bonds;
 
+        // The once-per-day conflict gates (0.7.5 fix): the last world
+        // day each pair had words and came to blows, by entity ids.
+        // Adapter state — the core's fading memories cannot gate
+        // "today" (a weight-1.0 event erases itself in seconds), so the
+        // day-scoped truth lives here. Persisted in the co-save (v7)
+        // and restored by form ids; cleared on EndWorld.
+        ConflictGates::Map m_ConflictGates;
+
         // The typed bond lines (Bonds.h), parsed from the core's
         // watch-list once at tuning load — the same values the core is
         // watching, so the events and the derivation cannot disagree.
@@ -526,8 +545,15 @@ namespace TLC
         // even for actors not yet loaded. The 1-second reconcile pass
         // then re-derives: a bond whose relationship drifted below its
         // dissolve line dissolves (honest — the world moved while the
-        // game was away); everything else stands.
-        void RestoreBonds(const std::vector<TLC::CoSave::BondPair>& a_bonds);
+        // game was away); everything else stands.        // Rebuilds m_ConflictGates from durable (form A, form B, row
+        // day, fight day) pairs after a restore — both entities resolve
+        // via the rebuilt translator (their FormRefs rode the snapshot),
+        // so the gate survives for every pair that still lives.
+        void RestoreConflictGates(
+            const std::vector<TLC::CoSave::ConflictGatePair>& a_gates);
+
+        void RestoreBonds(
+const std::vector<TLC::CoSave::BondPair>& a_bonds);
 
         // One bond change, in the world's voice (0.6.0 Stone 2/3): the
         // log line — "settler X and settler Y became friends." /
@@ -715,6 +741,12 @@ namespace TLC
         // m_PendingRestore; consumed by ApplyRestore (which translates
         // the FormID pairs back into this world's entity ids).
         std::vector<TLC::CoSave::BondPair> m_PendingBonds;
+
+        // The once-per-day conflict gates the co-save held for this
+        // save (v7), riding with m_PendingRestore; consumed by
+        // ApplyRestore (which translates the FormID pairs back into this
+        // world's entity ids).
+        std::vector<TLC::CoSave::ConflictGatePair> m_PendingGates;
 
         // Rebuilds m_StallKeepers from durable (market, keeper) FormID
         // pairs after a restore — the market entity and the keeper entity

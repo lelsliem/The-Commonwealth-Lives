@@ -18,8 +18,22 @@ row and the shut-stall slight — enemy pairs, the temper line and the
 chance coin (sim.fight.chance, sim.fight.temper), the engine's Combat
 wrong on both sides (the feud deepens; the victim carries a threat and
 may flee the aggressor), gossip, the fight pool's words, and the news
-("come to blows"). In-game verification pending; the punch/shove
-animation is the polish step after verification.
+("come to blows"). VERIFIED in-game (2026-08-12): the fight fires,
+the feud deepens, and the punch is physical — the victim is shoved
+back from the aggressor with the game's own knockback (KnockExplosion,
+sim.fight.push, default 3 — the same push the "Get Out Of My Face"
+crowd mod uses). The victim answers back when hot-headed enough (their
+temper at or above the same sim.fight.temper line): one shove back,
+never a loop — running away already exists (the Combat threat feeds
+the engine's danger-awareness, and the victim Flees when Safety is
+most urgent). Field fix (ADR-0031): the first test showed fight waves
+— the same pair fought 141 times in one session because the
+once-per-day gate lived in fading memory (a weight-1.0 Combat event
+erases itself in 4.5s under the default fade). The gate is now a
+durable adapter-owned map (ConflictGates.h — pair → { last day rowed,
+last day fought }), day-scoped, O(1), and co-saved (record v7) — rows
+and fights are once-a-day again. The punch is the knockback, not a
+combat state; a full combat/paired-idle scene is a later polish item.
 Written before any code; the author's vision, grounded in the seams
 the 0.5.0–0.7.0 stones already cut.
 **Related:** Trade.md (the stall-keeper), SettlementMarkets.md (per-
@@ -180,9 +194,12 @@ The escalation rule (verbal → physical) is adapter-side, tunable:
 **Adapter work:**
 - Verbal altercation: a row exchange (pillar 2's line pool) + Wronged
   outcome + gossip — on rival/enemy crossings and slights. ✅ built
-  (0.7.2): the crossing row at the bench, once per pair per day.
-- Physical escalation: a chance roll at enemy level; on success, real
-  combat or a pex-driven confrontation scene.
+  (0.7.2): the crossing row at the bench, once per pair per day (gated
+  by the durable ConflictGates map since ADR-0031).
+- Physical escalation: a chance roll at enemy level; on success, the
+  fight books (Combat both ways, threat, gossip, news) and the punch
+  lands as a physical shove (KnockExplosion); a hot-headed victim
+  shoves back — once, never a loop. ✅ built (0.7.5) + verified.
 - Consequences: the fight feeds back into bonds (a punch hurts trust)
   and news (the radio tells the settlement).
 

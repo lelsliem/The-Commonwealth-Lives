@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Bonds.h"
+#include "ConflictGates.h"
 #include "Gossip.h"
 #include "WorldFacts.h"
 
@@ -33,43 +34,21 @@ namespace TLC::Rows
     //-------------------------------------------------------------------------
 
     //-------------------------------------------------------------------------
-    // AlreadyRowedToday — the pair has had words on this day: a Wronged
-    // memory of the other stamped today, in either direction. The gate
-    // is co-saved (memories ride the co-save), so save/load never
+    // AlreadyRowedToday — the pair has had words on this day. The gate
+    // is the adapter's ConflictGates map (0.7.5 fix): a Wronged memory
+    // cannot gate it — memory fades (a weight-1.0 event erases itself
+    // in seconds under the default sim.memory.fade), so the gate
+    // re-armed mid-day and pairs re-rowed every ~10s. The map is
+    // day-scoped, O(1), and co-saved (v7), so save/load never
     // double-rows.
     //-------------------------------------------------------------------------
     inline bool AlreadyRowedToday(
-        EntityRegistry& a_registry,
+        const ConflictGates::Map& a_gates,
         EntityId a_entityA, EntityId a_entityB,
-        std::uint64_t a_day)
+        std::uint64_t a_day) noexcept
     {
-        const auto otherOf = [&](EntityId a_who) -> EntityId
-        {
-            return a_who == a_entityA ? a_entityB : a_entityA;
-        };
-
-        for (const auto entity : { a_entityA, a_entityB })
-        {
-            const auto memory = a_registry.GetComponent<Memory>(entity);
-
-            if (memory == nullptr)
-            {
-                continue;
-            }
-
-            const auto other = otherOf(entity);
-
-            for (const auto& event : memory->Events)
-            {
-                if (event.Kind == InteractionKind::Wronged
-                    && event.Other == other && event.Day == a_day)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return ConflictGates::RowedToday(
+            a_gates, a_entityA, a_entityB, a_day);
     }
 
     //-------------------------------------------------------------------------
@@ -84,6 +63,7 @@ namespace TLC::Rows
     inline bool Exchange(
         EntityRegistry& a_registry,
         const Bonds::BondMap& a_bonds,
+        ConflictGates::Map& a_gates,
         EntityId a_entityA, EntityId a_entityB,
         std::uint64_t a_day,
         const SimulationTuning& a_tuning,
@@ -107,7 +87,7 @@ namespace TLC::Rows
         }
 
         // Words once a day — the pair already had words today.
-        if (AlreadyRowedToday(a_registry, a_entityA, a_entityB, a_day))
+        if (AlreadyRowedToday(a_gates, a_entityA, a_entityB, a_day))
         {
             return false;
         }
@@ -133,6 +113,11 @@ namespace TLC::Rows
         Gossip::SpreadBond(
             a_registry, a_entityA, a_entityB,
             InteractionKind::Social, a_day);
+
+        // Words once a day — the gate closes for the pair until
+        // tomorrow (the day rolls by comparison, never a reset pass).
+        ConflictGates::MarkRowed(
+            a_gates, a_entityA, a_entityB, a_day);
 
         return true;
     }

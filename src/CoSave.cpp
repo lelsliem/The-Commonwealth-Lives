@@ -95,7 +95,8 @@ namespace TLC::CoSave
         const RegistrySnapshot& a_snapshot,
         std::uint64_t a_rngState,
         const std::vector<StallKeeperPair>& a_stallKeepers,
-        const std::vector<BondPair>& a_bonds)
+        const std::vector<BondPair>& a_bonds,
+        const std::vector<ConflictGatePair>& a_gates)
     {
         Codec::Writer writer;
 
@@ -184,6 +185,23 @@ namespace TLC::CoSave
             writer.U8(0);
         }
 
+        // v7 (the once-per-day conflict gates): the per-world gate
+        // section — the last day each pair had words and came to blows,
+        // as (form A, form B, row day, fight day) tuples, stable across
+        // sessions. Present only in v7+ records; older records end after
+        // the legacy, and a restored world's pairs are free to row and
+        // fight again that day — honest for a save made before the gate
+        // could be remembered.
+        writer.U32(static_cast<std::uint32_t>(a_gates.size()));
+
+        for (const auto& gate : a_gates)
+        {
+            writer.U32(gate.FormA);
+            writer.U32(gate.FormB);
+            writer.U64(gate.RowDay);
+            writer.U64(gate.FightDay);
+        }
+
         return writer.Bytes;
     }
 
@@ -192,7 +210,8 @@ namespace TLC::CoSave
         RegistrySnapshot& a_out,
         std::uint64_t& a_rngState,
         std::vector<StallKeeperPair>& a_stallKeepers,
-        std::vector<BondPair>& a_bonds)
+        std::vector<BondPair>& a_bonds,
+        std::vector<ConflictGatePair>& a_gates)
     {
         Codec::Reader reader{ a_record };
 
@@ -436,6 +455,48 @@ namespace TLC::CoSave
                 }
 
                 a_out.Legacy = reader.Raw(legacyLength);
+            }
+        }
+
+        // v7 (the once-per-day conflict gates): the per-world gate
+        // section follows the legacy. Older records have no section —
+        // the caller's gate list stands empty, and a restored world's
+        // pairs are free to row and fight again that day (a safe
+        // default, like a missing component). A malformed entry (a
+        // self-pair) is skipped, not fatal — same tolerance as an
+        // unknown component name; truncation is still a refusal.
+        a_gates.clear();
+
+        if (recordVersion >= 7)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto gateCount = reader.U32();
+            a_gates.reserve(gateCount);
+
+            for (std::uint32_t i = 0; i < gateCount; ++i)
+            {
+                if (reader.Remaining() < 24)   // 4 + 4 + 8 + 8
+                {
+                    return false;
+                }
+
+                ConflictGatePair gate;
+                gate.FormA = reader.U32();
+                gate.FormB = reader.U32();
+                gate.RowDay = reader.U64();
+                gate.FightDay = reader.U64();
+
+                if (gate.FormA == 0 || gate.FormB == 0
+                    || gate.FormA == gate.FormB)
+                {
+                    continue;   // malformed — skipped, never half-applied
+                }
+
+                a_gates.push_back(gate);
             }
         }
 

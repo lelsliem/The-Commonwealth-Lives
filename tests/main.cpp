@@ -73,7 +73,7 @@ namespace TLC::Tests
     bool RowsTest();
     bool FightsTest();
     bool SocietyTest();
-    bool CoSaveV6Test();
+    bool CoSaveV7Test();
 }
 
 namespace
@@ -124,7 +124,7 @@ int main()
     Run("RowsTest", TLC::Tests::RowsTest);
     Run("FightsTest", TLC::Tests::FightsTest);
     Run("SocietyTest", TLC::Tests::SocietyTest);
-    Run("CoSaveV6Test", TLC::Tests::CoSaveV6Test);
+    Run("CoSaveV7Test", TLC::Tests::CoSaveV7Test);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -729,11 +729,17 @@ namespace TLC::Tests
         // v3 (the stall-keepers stone): the record carries who runs each
         // market's stall, as (market FormID, keeper FormID) — form ids,
         // never the session-local entity ids. v5 rides along with an
-        // empty bond section.
+        // empty bond section, v7 with a pair of conflict gates — the
+        // last days they rowed and fought, so a feud stays a once-a-day
+        // scene across save/load.
         const auto record = TLC::CoSave::Encode(
             snapshot, 0x5EEDC0DEull,
             { { 0x000250FEu, 0x0001A4DAu } },
-            {});
+            { { 0x000250FEu, 0x0001A4DBu,
+                static_cast<std::uint32_t>(
+                    TLC::Bonds::BondKind::Enemy),
+                12 } },
+            { { 0x00012345u, 0x00012346u, 11, 12 } });
 
         // The record carries the adapter's stable names — literally in the
         // bytes — never the process-local std::type_index addresses.
@@ -777,11 +783,14 @@ namespace TLC::Tests
         std::uint64_t rngState = 0xABCDEF0123456789ull;
         std::vector<TLC::CoSave::StallKeeperPair> stalls;
         std::vector<TLC::CoSave::BondPair> bonds;
+        std::vector<TLC::CoSave::ConflictGatePair> gates;
 
         if (!TLC::CoSave::Decode(
-                record, decoded, rngState, stalls, bonds)
+                record, decoded, rngState, stalls, bonds, gates)
             || rngState != 0x5EEDC0DEull
-            || !bonds.empty())
+            || bonds.size() != 1
+            || bonds[0].Kind != static_cast<std::uint32_t>(
+                TLC::Bonds::BondKind::Enemy))
         {
             return false;
         }
@@ -791,6 +800,17 @@ namespace TLC::Tests
         if (stalls.size() != 1
             || stalls[0].first != 0x000250FEu
             || stalls[0].second != 0x0001A4DAu)
+        {
+            return false;
+        }
+
+        // The v7 gate section round-trips exactly: the same pair, the
+        // same last days of words and blows.
+        if (gates.size() != 1
+            || gates[0].FormA != 0x00012345u
+            || gates[0].FormB != 0x00012346u
+            || gates[0].RowDay != 11
+            || gates[0].FightDay != 12)
         {
             return false;
         }
@@ -882,9 +902,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (TLC::CoSave::Decode(
-                    truncated, bad, rngState, stalls, bonds))
+                    truncated, bad, rngState, stalls, bonds, gates))
             {
                 return false;
             }
@@ -901,9 +922,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (TLC::CoSave::Decode(
-                    badVersion, bad, rngState, stalls, bonds))
+                    badVersion, bad, rngState, stalls, bonds, gates))
             {
                 return false;
             }
@@ -944,9 +966,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (!TLC::CoSave::Decode(
-                    unknownName, migrated, rngState, stalls, bonds))
+                    unknownName, migrated, rngState, stalls, bonds, gates))
             {
                 return false;
             }
@@ -1002,9 +1025,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0x1122334455667788ull;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (!TLC::CoSave::Decode(
-                    writer.Bytes, decoded, rngState, stalls, bonds)
+                    writer.Bytes, decoded, rngState, stalls, bonds, gates)
                 || decoded.Entities.size() != 1
                 || decoded.Entities[0].Components.size() != 1)
             {
@@ -1058,9 +1082,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (TLC::CoSave::Decode(
-                    writer.Bytes, bad, rngState, stalls, bonds))
+                    writer.Bytes, bad, rngState, stalls, bonds, gates))
             {
                 return false;
             }
@@ -1092,9 +1117,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0xFEEDFACE00000000ull;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (!TLC::CoSave::Decode(
-                    writer.Bytes, decoded, rngState, stalls, bonds)
+                    writer.Bytes, decoded, rngState, stalls, bonds, gates)
                 || rngState != 0xFEEDFACE00000000ull   // untouched
                 || decoded.Entities.size() != 1
                 || !stalls.empty()   // v1 predates the stall section
@@ -1146,9 +1172,10 @@ namespace TLC::Tests
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (!TLC::CoSave::Decode(
-                    writer.Bytes, decoded, rngState, stalls, bonds)
+                    writer.Bytes, decoded, rngState, stalls, bonds, gates)
                 || decoded.Entities.size() != 1
                 || !bonds.empty())   // v3 predates the bond section
             {
@@ -2270,15 +2297,16 @@ namespace TLC::Tests
             };
 
             const auto record = TLC::CoSave::Encode(
-                snapshot, 0x5EEDC0DEull, {}, savedBonds);
+                snapshot, 0x5EEDC0DEull, {}, savedBonds, {});
 
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0;
             std::vector<TLC::CoSave::StallKeeperPair> stalls;
             std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
 
             if (!TLC::CoSave::Decode(
-                    record, decoded, rngState, stalls, bonds)
+                    record, decoded, rngState, stalls, bonds, gates)
                 || rngState != 0x5EEDC0DEull
                 || bonds.size() != 1
                 || bonds[0].FormA != 0x00011111u
@@ -2294,13 +2322,16 @@ namespace TLC::Tests
             const auto badRecord = TLC::CoSave::Encode(
                 snapshot, 0, {},
                 { { 0x00011111u, 0x00011111u,
-                    static_cast<std::uint32_t>(BondKind::Friend), 1 } });
+                    static_cast<std::uint32_t>(BondKind::Friend), 1 } },
+                {});
 
             std::vector<TLC::CoSave::BondPair> badBonds;
+            std::vector<TLC::CoSave::ConflictGatePair> badGates;
 
             if (!TLC::CoSave::Decode(
-                    badRecord, decoded, rngState, stalls, badBonds)
-                || !badBonds.empty())
+                    badRecord, decoded, rngState, stalls, badBonds, badGates)
+                || !badBonds.empty()
+                || !badGates.empty())
             {
                 return false;
             }
@@ -2315,10 +2346,13 @@ namespace TLC::Tests
             legacy.U32(0);
 
             std::vector<TLC::CoSave::BondPair> migratedBonds;
+            std::vector<TLC::CoSave::ConflictGatePair> migratedGates;
 
             if (!TLC::CoSave::Decode(
-                    legacy.Bytes, decoded, rngState, stalls, migratedBonds)
-                || !migratedBonds.empty())
+                    legacy.Bytes, decoded, rngState, stalls,
+                    migratedBonds, migratedGates)
+                || !migratedBonds.empty()
+                || !migratedGates.empty())
             {
                 return false;
             }
@@ -3649,8 +3683,11 @@ namespace TLC::Tests
         BondMap bonds;
         bonds[PairKey(a, b)] = PairBond{ BondKind::Rival, 10 };
 
+        TLC::ConflictGates::Map gates;
+
         // The row lands.
-        if (!TLC::Rows::Exchange(registry, bonds, a, b, 42, {}, nullptr))
+        if (!TLC::Rows::Exchange(
+                registry, bonds, gates, a, b, 42, {}, nullptr))
         {
             return false;
         }
@@ -3713,14 +3750,46 @@ namespace TLC::Tests
             return false;
         }
 
-        // Words once a day: the same pair rows again today — no.
-        if (TLC::Rows::Exchange(registry, bonds, a, b, 42, {}, nullptr))
+        // Words once a day — and the gate is the durable day-scoped
+        // map, not the fading memory (a Wronged memory erases itself in
+        // seconds under the default sim.memory.fade — the 0.7.5 fix):
+        // the same pair rows again today — no.
+        if (TLC::Rows::Exchange(
+                registry, bonds, gates, a, b, 42, {}, nullptr))
         {
             return false;
         }
 
+        // The regression the fix exists for: even after the Wronged
+        // memories fade away mid-day (erase them, exactly what
+        // sim.memory.fade does in seconds), the gate still holds — the
+        // day-scoped map, not the memory, is the truth. The old build
+        // failed here: the pair re-rowed every ~10s forever.
+        for (const auto& who : { a, b })
+        {
+            registry.GetComponent<Memory>(who)->Events.clear();
+        }
+
+        if (TLC::Rows::Exchange(
+                registry, bonds, gates, a, b, 42, {}, nullptr))
+        {
+            return false;
+        }
+
+        if (!TLC::ConflictGates::RowedToday(gates, a, b, 42)
+            || TLC::ConflictGates::RowedToday(gates, a, b, 43))
+        {
+            return false;   // today yes, tomorrow not yet
+        }
+
         // Tomorrow the words return.
-        if (!TLC::Rows::Exchange(registry, bonds, a, b, 43, {}, nullptr))
+        if (!TLC::Rows::Exchange(
+                registry, bonds, gates, a, b, 43, {}, nullptr))
+        {
+            return false;
+        }
+
+        if (!TLC::ConflictGates::RowedToday(gates, a, b, 43))
         {
             return false;
         }
@@ -3745,15 +3814,24 @@ namespace TLC::Tests
         BondMap friendBonds;
         friendBonds[PairKey(f1, f2)] = PairBond{ BondKind::Friend, 5 };
 
+        TLC::ConflictGates::Map quietGates;
+
         if (TLC::Rows::Exchange(
-                quiet, friendBonds, f1, f2, 1, {}, nullptr))
+                quiet, friendBonds, quietGates, f1, f2, 1, {}, nullptr))
         {
             return false;
         }
 
         BondMap noneBonds;
 
-        if (TLC::Rows::Exchange(quiet, noneBonds, f1, f2, 1, {}, nullptr))
+        if (TLC::Rows::Exchange(
+                quiet, noneBonds, quietGates, f1, f2, 1, {}, nullptr))
+        {
+            return false;
+        }
+
+        // A quiet pair never touched the gate.
+        if (!quietGates.empty())
         {
             return false;
         }
@@ -3832,7 +3910,10 @@ namespace TLC::Tests
         BondMap bonds;
         bonds[PairKey(a, b)] = PairBond{ BondKind::Enemy, 10 };
 
-        if (!TLC::Fights::BookFight(registry, bonds, a, b, 42, {}, nullptr))
+        TLC::ConflictGates::Map gates;
+
+        if (!TLC::Fights::BookFight(
+                registry, bonds, gates, a, b, 42, {}, nullptr))
         {
             return false;
         }
@@ -3866,14 +3947,42 @@ namespace TLC::Tests
             return false;
         }
 
-        // Blows once a day: the same pair again today — no.
-        if (TLC::Fights::BookFight(registry, bonds, a, b, 42, {}, nullptr))
+        // Blows once a day — and the gate is the durable day-scoped
+        // map, not the fading Combat memory (which erases itself in
+        // seconds under the default sim.memory.fade — the 0.7.5 fix
+        // that ended the fight waves): the same pair again today — no.
+        if (TLC::Fights::BookFight(
+                registry, bonds, gates, a, b, 42, {}, nullptr))
         {
             return false;
         }
 
+        // The regression the fix exists for: even after the Combat
+        // memories fade away mid-day (erase them, exactly what
+        // sim.memory.fade does in seconds), the gate still holds — the
+        // day-scoped map, not the memory, is the truth. The old build
+        // failed here: the pair re-fought every ~10s, shoving both
+        // sides repeatedly — the fight waves you saw.
+        for (const auto& who : { a, b })
+        {
+            registry.GetComponent<Memory>(who)->Events.clear();
+        }
+
+        if (TLC::Fights::BookFight(
+                registry, bonds, gates, a, b, 42, {}, nullptr))
+        {
+            return false;
+        }
+
+        if (!TLC::ConflictGates::FoughtToday(gates, a, b, 42)
+            || TLC::ConflictGates::FoughtToday(gates, a, b, 43))
+        {
+            return false;   // today yes, tomorrow not yet
+        }
+
         // The gate is per-day: tomorrow they can fight again.
-        if (!TLC::Fights::BookFight(registry, bonds, a, b, 43, {}, nullptr))
+        if (!TLC::Fights::BookFight(
+                registry, bonds, gates, a, b, 43, {}, nullptr))
         {
             return false;
         }
@@ -3889,7 +3998,16 @@ namespace TLC::Tests
         BondMap rivalBonds;
         rivalBonds[PairKey(f1, f2)] = PairBond{ BondKind::Rival, 3 };
 
-        if (TLC::Fights::BookFight(quiet, rivalBonds, f1, f2, 1, {}, nullptr))
+        TLC::ConflictGates::Map quietGates;
+
+        if (TLC::Fights::BookFight(
+                quiet, rivalBonds, quietGates, f1, f2, 1, {}, nullptr))
+        {
+            return false;
+        }
+
+        // A pair that never fought never touched the gate.
+        if (!quietGates.empty())
         {
             return false;
         }
@@ -4022,7 +4140,7 @@ namespace TLC::Tests
         return true;
     }
 
-    bool CoSaveV6Test()
+    bool CoSaveV7Test()
     {
         // The v6 record (0.7.0): a Name component rides an entity, and
         // the registry-level legacy store rides the new section — the
@@ -4042,7 +4160,7 @@ namespace TLC::Tests
 
         const auto snapshot = source.Capture();
         const auto record = TLC::CoSave::Encode(
-            snapshot, 0x5EEDull, {}, {});
+            snapshot, 0x5EEDull, {}, {}, {});
 
         // The name rides under its stable key; the legacy's name rides
         // in the record bytes.
@@ -4084,9 +4202,10 @@ namespace TLC::Tests
         std::uint64_t rngState = 0;
         std::vector<TLC::CoSave::StallKeeperPair> stalls;
         std::vector<TLC::CoSave::BondPair> bonds;
+        std::vector<TLC::CoSave::ConflictGatePair> gates;
 
         if (!TLC::CoSave::Decode(
-                record, decoded, rngState, stalls, bonds))
+                record, decoded, rngState, stalls, bonds, gates))
         {
             return false;
         }
@@ -4151,16 +4270,17 @@ namespace TLC::Tests
         std::uint64_t v5Rng = 0;
         std::vector<TLC::CoSave::StallKeeperPair> v5Stalls;
         std::vector<TLC::CoSave::BondPair> v5Bonds;
+        std::vector<TLC::CoSave::ConflictGatePair> v5Gates;
 
         if (!TLC::CoSave::Decode(
-                writer.Bytes, v5Decoded, v5Rng, v5Stalls, v5Bonds))
+                writer.Bytes, v5Decoded, v5Rng, v5Stalls, v5Bonds, v5Gates))
         {
             return false;
         }
 
-        if (v5Decoded.Legacy.has_value())
+        if (v5Decoded.Legacy.has_value() || !v5Gates.empty())
         {
-            return false;
+            return false;   // v5 predates both the legacy and the gates
         }
 
         return true;

@@ -614,12 +614,14 @@ namespace TLC
         LCE::Simulation::RegistrySnapshot a_snapshot,
         std::uint64_t a_rngState,
         std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
-        std::vector<TLC::CoSave::BondPair> a_bonds)
+        std::vector<TLC::CoSave::BondPair> a_bonds,
+        std::vector<TLC::CoSave::ConflictGatePair> a_gates)
     {
         m_PendingRestore = std::move(a_snapshot);
         m_PendingRngState = a_rngState;
         m_PendingStallKeepers = std::move(a_stallKeepers);
         m_PendingBonds = std::move(a_bonds);
+        m_PendingGates = std::move(a_gates);
     }
 
     std::vector<TLC::CoSave::StallKeeperPair> Adapter::StallKeepersForSave() const
@@ -703,6 +705,71 @@ namespace TLC
         }
 
         return result;
+    }
+
+    std::vector<TLC::CoSave::ConflictGatePair>
+    Adapter::ConflictGatesForSave() const
+    {
+        // Entity ids are session-local; the durable form is form ids.
+        // A pair whose form the translator cannot resolve is skipped —
+        // it was never a real pair this world.
+        std::vector<TLC::CoSave::ConflictGatePair> result;
+        result.reserve(m_ConflictGates.size());
+
+        for (const auto& [key, gate] : m_ConflictGates)
+        {
+            if (gate.RowDay == 0 && gate.FightDay == 0)
+            {
+                continue;   // never rowed, never fought — nothing to keep
+            }
+
+            const auto formA = m_Translator.FormFor(
+                LCE::Simulation::EntityId{ key.first });
+            const auto formB = m_Translator.FormFor(
+                LCE::Simulation::EntityId{ key.second });
+
+            if (formA == 0 || formB == 0)
+            {
+                continue;
+            }
+
+            result.push_back(TLC::CoSave::ConflictGatePair{
+                formA, formB, gate.RowDay, gate.FightDay });
+        }
+
+        return result;
+    }
+
+    void Adapter::RestoreConflictGates(
+        const std::vector<TLC::CoSave::ConflictGatePair>& a_gates)
+    {
+        m_ConflictGates.clear();
+
+        for (const auto& gate : a_gates)
+        {
+            const auto a = m_Translator.EntityFor(gate.FormA);
+            const auto b = m_Translator.EntityFor(gate.FormB);
+
+            // Both ride the snapshot (both are minds with FormRefs) — a
+            // pair whose actor is missing is simply absent, and the
+            // pair's gate is free again (they may row or fight once
+            // more today, which is honest for a dead world).
+            if (!a.IsValid() || !b.IsValid())
+            {
+                continue;
+            }
+
+            m_ConflictGates[ConflictGates::PairKey(a, b)] =
+                ConflictGates::Gate{ gate.RowDay, gate.FightDay };
+        }
+
+        if (!m_ConflictGates.empty())
+        {
+            REX::INFO(
+                "gates: {} feud gate{} restored from the co-save.",
+                m_ConflictGates.size(),
+                m_ConflictGates.size() == 1 ? "" : "s");
+        }
     }
 
     void Adapter::RestoreBonds(
@@ -1377,6 +1444,11 @@ namespace TLC
         // dissolve line while the game was away dissolves, everything
         // else stands.
         RestoreBonds(m_PendingBonds);
+
+        // The once-per-day conflict gates (v7): a feud is still a
+        // once-a-day scene after reload. The gates restore by form ids;
+        // a pair whose actor is missing is simply free again.
+        RestoreConflictGates(m_PendingGates);
 
         // The household stone (v3? no — derived, ADR-0013): a restored
         // marriage re-establishes its shared pouch silently. The loud
@@ -2363,7 +2435,8 @@ namespace TLC
         }
 
         if (!Fights::BookFight(
-                m_Registry, m_Bonds, a_aggressor, a_victim,
+                m_Registry, m_Bonds, m_ConflictGates,
+                a_aggressor, a_victim,
                 a_day, m_CoreTuning, &m_Bus))
         {
             return;
@@ -2376,21 +2449,39 @@ namespace TLC
         // the "Get Out Of My Face" crowd mod uses. Best-effort: a
         // missing actor or process skips the shove; the fight is
         // booked either way, and sim.fight.push = 0 turns it off.
+        //
+        // The retaliation (0.7.5): the punch is a scuffle, not a
+        // mugging — a victim hot-headed enough to have thrown the first
+        // punch (their temper at or above the same sim.fight.temper
+        // line) shoves back. One exchange, never an endless loop: the
+        // aggressor took the first swing, the victim answers once, and
+        // the day-gate holds the pair to a single scene today.
         if (m_Settings.FightPush > 0.0f)
         {
             auto* victimActor = RE::TESForm::GetFormByID<RE::Actor>(
                 m_Translator.FormFor(a_victim));
+            auto* aggressorActor = RE::TESForm::GetFormByID<RE::Actor>(
+                m_Translator.FormFor(a_aggressor));
 
-            if (victimActor != nullptr && victimActor->currentProcess != nullptr)
+            if (victimActor != nullptr
+                && victimActor->currentProcess != nullptr
+                && aggressorActor != nullptr
+                && aggressorActor->currentProcess != nullptr)
             {
-                auto* aggressorActor = RE::TESForm::GetFormByID<RE::Actor>(
-                    m_Translator.FormFor(a_aggressor));
+                victimActor->currentProcess->KnockExplosion(
+                    victimActor, aggressorActor->GetPosition(),
+                    m_Settings.FightPush);
 
-                if (aggressorActor != nullptr)
+                if (TemperOf(a_victim) >= m_Settings.FightTemper)
                 {
-                    victimActor->currentProcess->KnockExplosion(
-                        victimActor, aggressorActor->GetPosition(),
+                    aggressorActor->currentProcess->KnockExplosion(
+                        aggressorActor, victimActor->GetPosition(),
                         m_Settings.FightPush);
+
+                    REX::INFO(
+                        "LCE: {} shoves {} back — hot heads, both.",
+                        MindLabelForm(m_Translator.FormFor(a_victim)),
+                        MindLabelForm(m_Translator.FormFor(a_aggressor)));
                 }
             }
         }
@@ -2556,6 +2647,7 @@ namespace TLC
         m_FeederLogged.clear();
         m_StallKeepers.clear();
         m_Bonds.clear();
+        m_ConflictGates.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
         m_MarketAttendance.clear();
@@ -2920,7 +3012,7 @@ namespace TLC
                 }
 
                 if (Rows::Exchange(
-                        m_Registry, m_Bonds,
+                        m_Registry, m_Bonds, m_ConflictGates,
                         a_entity, a_other, day, m_CoreTuning, &m_Bus))
                 {
                     // The exchange itself: each says a line to the
@@ -3017,7 +3109,7 @@ namespace TLC
             // silent.
             if (slighted && keeper.IsValid()
                 && !Rows::AlreadyRowedToday(
-                    m_Registry, a_entity, keeper, CurrentDay()))
+                    m_ConflictGates, a_entity, keeper, CurrentDay()))
             {
                 Say(a_entity, keeper, Dialogue::Pool::Row);
             }

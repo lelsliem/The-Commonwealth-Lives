@@ -48,12 +48,15 @@ namespace TLC::CoSave
     // v5 (the bonds stone) added the per-world bond section after the
     // stalls; v6 (the identity stone) added the registry-level legacy
     // section after the bonds — the dead's stories, which the names
-    // stone keys by name — all real format changes, so all bumped. The
-    // `name` component itself never bumps (a new component is additive;
-    // an old record simply decodes without it and names are back-filled
-    // on restore). Older versions are migrated forward on load, never
-    // dropped.
-    inline constexpr std::uint32_t kRecordVersion = 6;
+    // stone keys by name; v7 (the once-per-day conflict gates) added
+    // the per-world gate section after the legacy — the last day each
+    // pair had words and came to blows, so a feud stays a once-a-day
+    // scene across save/load — all real format changes, so all bumped.
+    // The `name` component itself never bumps (a new component is
+    // additive; an old record simply decodes without it and names are
+    // back-filled on restore). Older versions are migrated forward on
+    // load, never dropped.
+    inline constexpr std::uint32_t kRecordVersion = 7;
 
     // A market's stall-keeper, in the durable form: the market's
     // workbench FormID and the keeper's actor FormID — form ids, not
@@ -75,6 +78,21 @@ namespace TLC::CoSave
         std::uint64_t SinceDay = 0;
     };
 
+    // A pair's once-per-day conflict gates, in the durable form (v7):
+    // the two form ids (stable across sessions, entity ids are
+    // session-local) and the last world day they had words (RowDay) and
+    // came to blows (FightDay) — 0 when never. The gates ride the
+    // co-save so a feud stays a single scene per day across save/load.
+    // The adapter translates at the edges (ConflictGatesForSave /
+    // RestoreConflictGates).
+    struct ConflictGatePair
+    {
+        std::uint32_t FormA = 0;
+        std::uint32_t FormB = 0;
+        std::uint64_t RowDay = 0;
+        std::uint64_t FightDay = 0;
+    };
+
     // Encodes a registry snapshot as the durable record bytes: stable
     // component names (never std::type_index), the core's snapshot version
     // layered underneath, the record's own version, and the Rng state (v2)
@@ -84,7 +102,8 @@ namespace TLC::CoSave
         const LCE::Simulation::RegistrySnapshot& a_snapshot,
         std::uint64_t a_rngState,
         const std::vector<StallKeeperPair>& a_stallKeepers,
-        const std::vector<BondPair>& a_bonds);
+        const std::vector<BondPair>& a_bonds,
+        const std::vector<ConflictGatePair>& a_gates);
 
     // Decodes record bytes back into a snapshot. Returns false — the load
     // is refused, never half-applied — when the record version is newer
@@ -105,5 +124,6 @@ namespace TLC::CoSave
         LCE::Simulation::RegistrySnapshot& a_out,
         std::uint64_t& a_rngState,
         std::vector<StallKeeperPair>& a_stallKeepers,
-        std::vector<BondPair>& a_bonds);
+        std::vector<BondPair>& a_bonds,
+        std::vector<ConflictGatePair>& a_gates);
 }

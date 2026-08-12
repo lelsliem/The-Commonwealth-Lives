@@ -647,14 +647,27 @@ STATUS: PLANNED — design docs written, no code.
     the radio carries it ("X and Y come to blows — the feud turns
     physical"). Tunable: sim.fight.chance (0.1 — verbal-first is the
     rule; 1.0 forces every eligible escalation, the test knob) and
-    sim.fight.temper (1.0, the aggressor's line). Built 2026-08-12 —
-    22/22 harness suites green (FightsTest). In-game verification
-    pending. Honest note: v1 books the fight with zero new game
-    calls; the punch/shove animation is the polish step after
-    verification (the base game has no playable shove idle — the
-    punches are paired kill-cams and the crowd shove is a sandbox
-    behavior, so the animation is either a paired-idle or a
-    byte-verified combat pin, decided after the test)
+    sim.fight.temper (1.0, the aggressor's line). Built and verified
+    2026-08-12 — 22/22 harness suites green (FightsTest); in-game
+    confirmed: the fight fires, the feud deepens, and the victim is
+    physically shoved (KnockExplosion — the same knockback the "Get
+    Out Of My Face" crowd mod uses; sim.fight.push, default 3, 0
+    off). Verified during testing: a victim whose temper is at or
+    above the same sim.fight.temper line shoves back — one exchange,
+    never a loop (running away already exists — the Combat threat
+    feeds the engine's danger-awareness, the victim Flees when Safety
+    is their most urgent need). Field fix (ADR-0031): the first test
+    showed fight waves — the same pair fought 141 times in one
+    session because the once-per-day gate lived in fading memory
+    (a weight-1.0 Combat event erases itself in 4.5s under the
+    default fade), so the gate re-armed mid-day. The gate is now a
+    durable adapter-owned map (ConflictGates.h — pair → { last day
+    rowed, last day fought }), day-scoped, O(1), and co-saved (record
+    v7); rows and fights are once-a-day again. Honest note: the punch
+    is the knockback, not a combat state — the base game has no
+    playable shove idle (the punches are paired kill-cams and the
+    crowd shove is a sandbox behavior), so a full combat/paired-idle
+    scene is a later polish item
 [ ] 0.8.0 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
     component (adapter-owned, co-save additive — the engine's locked
     hold-then-recover shape, answered as fact-plus-tick, not a new

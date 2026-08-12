@@ -11,6 +11,25 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — the once-per-day gate is a day-scoped map (2026-08-12)
+
+The first 0.7.5 test in a restored 610-mind world showed fights firing in
+waves — the same pair came to blows 141 times in one session (445 fights
+total), everyone shoved repeatedly, both sides falling over. The once-per-day
+gates (rows and fights) gated on the pair's Wronged/Combat memory, but
+memory fades (sim.memory.fade 0.2/s, forget at 0.1): a weight-1.0 event
+erases itself in 4.5 seconds, so the gate re-armed mid-day and the pair
+re-rowed and re-fought every ~10s forever. The gate now lives in a durable
+adapter-owned map — ordered pair → { last day rowed, last day fought } —
+day-scoped, O(1), and co-saved (record v7) so save/load never double-rows or
+double-fights. The regression test erases the pair's memories mid-day and
+asserts the gate still holds.
+
+The fight also answers back now: a victim whose temper is at or above
+sim.fight.temper shoves the aggressor back — one exchange, never a loop.
+Running away already existed (the Combat threat feeds the engine's
+danger-awareness; the victim flees when Safety is their most urgent need).
+
 ### 0.7.5 Fights — the feud turns physical (2026-08-12)
 
 The verbal altercation (0.7.2 Rows) gets its physical escalation: when an
