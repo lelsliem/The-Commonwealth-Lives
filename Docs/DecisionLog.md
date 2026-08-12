@@ -1490,3 +1490,17 @@ back` for the answer, and the range line when either waits.
 **Decision:** New beats are collected in a local `std::vector<PendingShove> additions` and appended with `std::move` after the loop terminates. The other member-vector loops (deaths, stall keepers, bonds, walks) only `erase` — which returns the next valid iterator — so they were audited and left as-is.
 
 **Consequences:** The scuffle's full chain (flinch → fall → counter-flinch → counter-fall → walk-off) runs without invalidating the queue. The assertion is gone.
+## ADR-0045 — The paired push (the visible shove)
+
+The crowd mod's push is the VANILLA paired idles: `PairedFrontPushKick`
+(0x47FC3, attacker lead) + `PairedFrontPushKick_Human` (0x6571F,
+victim half), both on `MeleeBehavior.hkx`, played via
+`AIProcess::PlayIdle(actor, idle, target)`. Its ESP ships no animation
+files — it only re-exposes these records unconditionally. So the shove
+plays the vanilla pair directly: attacker kicks, victim's half syncs,
+the engine aligns the two. No ESP, no dependency.
+
+Also: the shove gate tightens 400u → 150u (a table-scene needs the pair
+within reach) and a fight booked at range now walks the thrower to the
+victim first, so the next beat lands face to face instead of a ghost
+push across the square.

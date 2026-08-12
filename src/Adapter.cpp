@@ -32,6 +32,7 @@
 #include <RE/B/BSContainer.h>
 #include <RE/D/DamageImpactData.h>
 #include <RE/H/HitData.h>      // the melee hit-reaction — the standing shove
+#include <RE/T/TESIdleForm.h>   // the paired push — the game's real shove animation
 #include <RE/S/STAGGER_MAGNITUDE.h>
 #include <RE/C/Calendar.h>
 #include <RE/N/NiAVObject.h>
@@ -135,6 +136,52 @@ namespace TLC
 
             a_victim->DoHitMe(hit);
             std::free(hit);
+        }
+
+        //-------------------------------------------------------------------------
+        // The paired shove (ADR-0045): the game's real push animation.
+        // The crowd mod's visible push is the vanilla paired idles —
+        // PairedFrontPushKick (0x47FC3) on the attacker, its _Human
+        // half (0x6571F) on the victim — both on the game's
+        // MeleeBehavior.hkx paired-attack sync (the same records the
+        // game's own shove/kill-move system plays). The crowd mod's
+        // ESP ships no animation files; it merely re-exposes these
+        // records unconditionally. We play the vanilla pairs directly:
+        // PlayIdle with the other actor as target, and the engine
+        // aligns and syncs the two. Best-effort: a missing form, a
+        // missing process, or a failed record condition returns false
+        // and the caller falls back to the melee flinch — the fight is
+        // booked either way (never crash, never teleport).
+        //-------------------------------------------------------------------------
+        bool FirePairedPush(
+            RE::Actor* a_attacker,
+            RE::Actor* a_victim)
+        {
+            if (a_attacker == nullptr || a_victim == nullptr
+                || a_attacker->currentProcess == nullptr
+                || a_victim->currentProcess == nullptr)
+            {
+                return false;
+            }
+
+            auto* lead = RE::TESForm::GetFormByID<RE::TESIdleForm>(
+                0x00047FC3);   // PairedFrontPushKick — the shove's lead
+            auto* human = RE::TESForm::GetFormByID<RE::TESIdleForm>(
+                0x0006571F);   // PairedFrontPushKick_Human — the victim's half
+
+            if (lead == nullptr || human == nullptr)
+            {
+                return false;
+            }
+
+            // Both halves, cross-targeted: the engine's paired-attack
+            // sync snaps the pair into the push and plays the kick.
+            const auto leadPlayed = a_attacker->currentProcess->PlayIdle(
+                *a_attacker, lead, a_victim);
+            const auto humanPlayed = a_victim->currentProcess->PlayIdle(
+                *a_victim, human, a_attacker);
+
+            return leadPlayed && humanPlayed;
         }
 
         //-------------------------------------------------------------------------
@@ -2836,13 +2883,23 @@ namespace TLC
                         - victimActor->GetPosition())
                         .Length();
 
-                if (scene > 400.0f)
+                // The bench is a table-scene: a shove needs the pair
+                // near enough to touch (about a body apart — the same
+                // spacing the paired-push animation syncs). Past that
+                // the shove is deferred and the thrower walks over to
+                // settle it (the walk-out at the end of this block).
+                if (scene > 150.0f)
                 {
                     REX::INFO(
-                        "LCE: {} and {} brawl at range ({:.0f} u) — the shove waits for the bench.",
+                        "LCE: {} and {} brawl at range ({:.0f} u) — {} walks over to settle it.",
                         MindLabelForm(m_Translator.FormFor(a_aggressor)),
                         MindLabelForm(m_Translator.FormFor(a_victim)),
-                        scene);
+                        scene,
+                        MindLabelForm(m_Translator.FormFor(a_aggressor)));
+
+                    // The approach: the thrower walks to the victim's
+                    // spot so the next beat lands face to face.
+                    Movement::WalkTo(aggressorActor, victimActor);
                 }
                 else
                 {
@@ -2855,29 +2912,39 @@ namespace TLC
                         0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f)));
                     const auto force = m_Settings.FightPush * pushJitter;
 
-                    // The standing shove (ADR-0042/0043): play the
-                    // melee hit-reaction — the victim's stagger — as the
-                    // punch lands, and SCHEDULE the knock-down a beat
-                    // later. A same-frame knock overrides the stagger
-                    // animation before it is visible (that is the
-                    // "falls with no push" the force tests kept
-                    // showing); the flinch must play, then the fall
-                    // lands as its consequence.
-                    FireHitReaction(
-                        victimActor, aggressorActor,
-                        m_Settings.FightStagger,
-                        m_Settings.FightPushBack);
+                    // The standing shove (ADR-0042/0043/0045): play the
+                    // game's real push — the vanilla paired-push
+                    // animation (attacker's kick + victim's half, synced
+                    // by MeleeBehavior) — and SCHEDULE the knock-down a
+                    // beat later. The flinch is the fallback if the
+                    // paired push cannot play (missing form, failed
+                    // condition); a same-frame knock overrides the
+                    // stagger before it is visible (that is the "falls
+                    // with no push" the force tests kept showing); the
+                    // push must play, then the fall lands as its
+                    // consequence.
+                    const auto pushed = FirePairedPush(
+                        aggressorActor, victimActor);
+                    if (!pushed)
+                    {
+                        FireHitReaction(
+                            victimActor, aggressorActor,
+                            m_Settings.FightStagger,
+                            m_Settings.FightPushBack);
+                    }
 
                     // The shove's receipt (0.7.5): every punch logs who
-                    // and how close, and the fall logs its force when
-                    // it lands — so a fall can always be matched to its
-                    // punch, or proven not to be one.
+                    // and how close, which animation played, and the
+                    // fall logs its force when it lands — so a fall can
+                    // always be matched to its punch, or proven not to
+                    // be one. The paired push is the real shove
+                    // (ADR-0045); "flinch" in the receipt means the
+                    // fallback played instead.
                     REX::INFO(
-                        "LCE: shove: {} staggered by {} — flinch {} / push-back {:.0f} at {:.0f} u (fall in {:.1f}s).",
+                        "LCE: shove: {} pushed by {} — {} at {:.0f} u (fall in {:.1f}s).",
                         MindLabelForm(m_Translator.FormFor(a_victim)),
                         MindLabelForm(m_Translator.FormFor(a_aggressor)),
-                        m_Settings.FightStagger,
-                        m_Settings.FightPushBack,
+                        pushed ? "paired push" : "flinch fallback",
                         scene,
                         m_Settings.FightFallDelay);
 
@@ -3053,7 +3120,9 @@ namespace TLC
                     - victimActor->GetPosition())
                     .Length();
 
-            if (scene > 400.0f)
+            // Same table-scene as the shove itself: the beats need the
+            // pair within reach, or they die — no phantom falls.
+            if (scene > 150.0f)
             {
                 continue;   // they parted — no beat at range
             }
@@ -3086,14 +3155,19 @@ namespace TLC
             case ShoveBeat::kRetaliation:
             {
                 // The answer (0.7.5): the victim answers the punch
-                // after the get-up window — its own flinch now, its
-                // fall a beat later, and the loser walks off after
+                // after the get-up window — its own paired push now,
+                // its fall a beat later, and the loser walks off after
                 // that. (victim = the one who answers, thrower = the
                 // one who threw first and now takes the counter.)
-                FireHitReaction(
-                    throwerActor, victimActor,
-                    m_Settings.FightStagger,
-                    m_Settings.FightPushBack);
+                const auto answered = FirePairedPush(
+                    victimActor, throwerActor);
+                if (!answered)
+                {
+                    FireHitReaction(
+                        throwerActor, victimActor,
+                        m_Settings.FightStagger,
+                        m_Settings.FightPushBack);
+                }
 
                 REX::INFO(
                     "LCE: {} shoves {} back — flinch {}, hot heads, both.",
