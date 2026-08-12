@@ -1315,3 +1315,32 @@ shape, "friends with enemy is fine."
 in): `companion: <name> is a companion — friends and feuds, never
 romance.` No sweetheart or spouse line ever names a companion, in the
 log or on the radio.
+
+### ADR-0036 — Every shove lands a little differently (2026-08-12)
+
+**Context.** The fight test proved the once-per-day gate (ADR-0031),
+the KnockExplosion shove (the "Get Out Of My Face" knockback), and the
+retaliation all work — but a fight at `sim.fight.push = 3` is always
+the same 3, and a settlement that sees the same pair brawl every few
+days starts to notice the identical shove. Polish pass.
+
+**The change.** The shove force is now the base `sim.fight.push`
+scaled by a deterministic ±25% jitter derived from the *victim's*
+entity id (the same FNV-1a IdJitter the needs variance uses — same
+pair, same brawl; new victim, new feel). The retaliation shove jitters
+off the *aggressor's* id, so the two halves of a scuffle read
+differently too. No RNG, no state: a restored fight (co-save) shoves
+exactly the way the original did.
+
+**Frequency.** `sim.fight.chance = 0.1` stays the default — the
+"rare and earned" rule (with the temper line at 1.0, only the churlish
+half of the world is even eligible, so roughly one in twenty enemy
+crossings turns to blows). The INI now documents the feel and the
+presets so the user can dial without a rebuild: 3 = shove, 5-6 =
+solid stagger, 10+ = ragdoll; chance 0.1 = drama, 0.25 = lively,
+1.0 = the test knob.
+
+**The session proof.** The gate-holds verification is a log check:
+`come to blows` lines, pair-canonicalized, must show each pair at most
+once per session — the old build showed Harley/Gizmo 141 times in one
+session, the fixed build showed it once.

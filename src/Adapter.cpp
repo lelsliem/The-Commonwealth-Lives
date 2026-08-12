@@ -2705,10 +2705,14 @@ namespace TLC
         // missing actor or process skips the shove; the fight is
         // booked either way, and sim.fight.push = 0 turns it off.
         //
-        // The retaliation (0.7.5): the punch is a scuffle, not a
-        // mugging — a victim hot-headed enough to have thrown the first
-        // punch (their temper at or above the same sim.fight.temper
-        // line) shoves back. One exchange, never an endless loop: the
+        // The force is the base sim.fight.push with a deterministic
+        // per-victim jitter (0.7.5 polish): ±25% off the victim's
+        // entity id, so every shove lands a little differently — the
+        // same pair's brawl reads the same, a new victim reads new.
+        // The retaliation: a victim hot-headed enough to have thrown
+        // the first punch (their temper at or above the same
+        // sim.fight.temper line) shoves back, its own jitter off the
+        // aggressor's id. One exchange, never an endless loop: the
         // aggressor took the first swing, the victim answers once, and
         // the day-gate holds the pair to a single scene today.
         if (m_Settings.FightPush > 0.0f)
@@ -2723,15 +2727,21 @@ namespace TLC
                 && aggressorActor != nullptr
                 && aggressorActor->currentProcess != nullptr)
             {
+                const auto pushJitter =
+                    0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f));
+
                 victimActor->currentProcess->KnockExplosion(
                     victimActor, aggressorActor->GetPosition(),
-                    m_Settings.FightPush);
+                    m_Settings.FightPush * pushJitter);
 
                 if (TemperOf(a_victim) >= m_Settings.FightTemper)
                 {
+                    const auto backJitter =
+                        0.75f + 0.5f * (0.5f + IdJitter(a_aggressor, 0.5f));
+
                     aggressorActor->currentProcess->KnockExplosion(
                         aggressorActor, victimActor->GetPosition(),
-                        m_Settings.FightPush);
+                        m_Settings.FightPush * backJitter);
 
                     REX::INFO(
                         "LCE: {} shoves {} back — hot heads, both.",

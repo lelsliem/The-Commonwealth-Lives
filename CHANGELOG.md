@@ -11,6 +11,19 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 polish — every shove lands a little differently (2026-08-12)
+
+The fight's shove force is now the base sim.fight.push scaled by a
+deterministic ±25% jitter off the victim's id (and the retaliation off
+the aggressor's) — the same pair's brawl reads the same, a new victim
+reads new, and a restored fight shoves exactly as the original did. The
+frequency default stays sim.fight.chance = 0.1 — rare and earned (the
+temper line at 1.0 means only the churlish half is eligible, so roughly
+one in twenty enemy crossings turns to blows). The INI documents the
+feel (3 = shove, 5-6 = solid stagger, 10+ = ragdoll) and the presets
+(0.1 drama, 0.25 lively, 1.0 test knob) so it can be dialed without a
+rebuild.
+
 ### 0.7.5 fix — the companion's dating pool is closed (2026-08-12)
 
 A companion dismissed to a settlement becomes a mind — trading, naming,
