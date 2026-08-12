@@ -211,6 +211,16 @@ namespace TLC::Tuning
         // mind forgives (the stall was just shut — no one to blame).
         float SlightTemper = 1.0f;
 
+        // The fight's escalation (0.7.5 Fights): when an enemy pair
+        // rows (or a slighted mind faces an enemy keeper), the physical
+        // roll. Chance is the coin — 0.1 keeps fights rare (verbal-first
+        // is the rule), 1.0 forces every eligible escalation (the test
+        // knob). Temper is the aggressor's line, the same JitteredTraits
+        // shape as the slight's: at or above it, the churlish throw the
+        // punch; below it, they swallow the insult.
+        float FightChance = 0.1f;
+        float FightTemper = 1.0f;
+
         // The player window (0.7.0 Stone 3): the news feed. Events go
         // on-screen as HUD notifications, throttled by NewsCooldown
         // seconds — a flood of lines is noise, not news. The feed is the
@@ -289,6 +299,11 @@ namespace TLC::Tuning
             read("sim.arc.grief.decay", settings.GriefDecay);
         settings.SlightTemper =
             read("sim.slight.temper", settings.SlightTemper);
+
+        settings.FightChance =
+            read("sim.fight.chance", settings.FightChance);
+        settings.FightTemper =
+            read("sim.fight.temper", settings.FightTemper);
 
         settings.NewsCooldown =
             read("sim.news.cooldown", settings.NewsCooldown);

@@ -1057,3 +1057,45 @@ real decisions (a walk's target, an arrival) still print instantly; only
 the per-frame flip-flop is throttled. The core's tie-break jitter is
 flagged for the engine handoff — a settled mind should rest, not
 re-roll — but the adapter no longer amplifies it into a file-I/O flood.
+
+### ADR-0030 — A fight is a Combat wrong, booked, not an animation (2026-08-12)
+
+**Context.** 0.7.5 Fights needs the feud's physical escalation: an enemy
+pair's row can turn to blows. The design (RealEvents.md) said "real
+combat or a scripted scene", with pex deferred. Two questions: what the
+fight IS in the sim, and how the game shows it.
+
+**What the fight is.** The row (0.7.2) books Wronged both ways (an
+unprompted wrong, −0.25). A fight is the same shape with the heavier
+kind: the engine's Combat channel — the decided unprompted-wrong
+channel, −0.25 each way — so the feud deepens on both sides, the
+crossing publishes RelationshipChangedEvent the instant it happens, and
+the victim's Combat memory feeds the engine's danger-awareness
+(FindThreat names the strongest remembered fight as a thing to flee), so
+the feud's victim starts avoiding the aggressor — the fight's visible
+aftermath is emergent, not scripted. Once per pair per day, gated by a
+Combat memory stamped today (co-saved — save/load never double-fights),
+mirroring the row's per-day gate.
+
+**Who fights.** Three gates in Fights::RollFight, all must pass: the
+pair is Enemy (rivals stay verbal — the verbal-first rule), the
+aggressor's temper is at or above sim.fight.temper (the same
+JitteredTraits shape as the slight's — the churlish throw the punch),
+and the world's coin lands under sim.fight.chance (0.1 default; 1.0
+forces every eligible escalation — the test knob). Two trigger sites:
+the bench row, and the shut-stall slight against an enemy keeper (the
+reliable test path — force the market shut and the slight fires at an
+enemy who catches a fist).
+
+**What the game shows.** v1 books the fight with ZERO new game calls —
+the words (fight pool), the news, and the emergent avoidance. The
+punch/shove animation is the polish step, and the research is honest:
+the base game has no playable shove idle (the punches are paired
+kill-cams — PairedKillTacklePunchToDeath etc.; the crowd shove is a
+sandbox behavior, not a form), and StartCombat is not exposed by
+CommonLibF4, not in the runtime address library, and not safely
+pinnable without a debugger. So the animation is either a paired-idle
+or a byte-verified combat pin, decided after the in-game verification
+of the fight's substance. A wrong pin never teleports (the Movement
+rule) — a best-effort animation can fail to the sim fight, never the
+reverse.

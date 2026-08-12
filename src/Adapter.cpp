@@ -14,6 +14,7 @@
 #include "Birth.h"
 #include "Components.h"
 #include "Gossip.h"
+#include "Fights.h"
 #include "Rows.h"
 #include "Market.h"
 #include "Tuning.h"
@@ -2338,6 +2339,51 @@ namespace TLC
         m_News.Add(MindLabelForm(speakerForm) + ": \"" + line + "\"");
     }
 
+    void Adapter::EscalateToFight(
+        LCE::Simulation::EntityId a_aggressor,
+        LCE::Simulation::EntityId a_victim,
+        std::uint64_t a_day)
+    {
+        // Three gates, all must pass (Fights::RollFight): the pair is
+        // an enemy feud (rivals stay verbal — the verbal-first rule),
+        // the aggressor's temper is at or above sim.fight.temper (the
+        // churlish throw the punch), and the world's coin lands under
+        // sim.fight.chance (1.0 forces every eligible escalation — the
+        // test knob). The once-per-day gate lives in BookFight (a
+        // Combat memory stamped today, co-saved).
+        const auto kind = Bonds::CurrentKind(m_Bonds, a_aggressor, a_victim);
+        const float roll = m_Rng.NextFloat(0.0f, 1.0f);
+
+        if (!Fights::RollFight(
+                kind, TemperOf(a_aggressor),
+                m_Settings.FightTemper, m_Settings.FightChance, roll))
+        {
+            return;
+        }
+
+        if (!Fights::BookFight(
+                m_Registry, m_Bonds, a_aggressor, a_victim,
+                a_day, m_CoreTuning, &m_Bus))
+        {
+            return;
+        }
+
+        // The words before the blows (0.7.1 Talk's fight pool — "Come
+        // on then!", "Put 'em up"): speech rides the news feed, so the
+        // radio reads the fight as a caption too.
+        Say(a_aggressor, a_victim, Dialogue::Pool::Fight);
+
+        const auto a = MindLabelForm(m_Translator.FormFor(a_aggressor));
+        const auto b = MindLabelForm(m_Translator.FormFor(a_victim));
+
+        PushNews(a + " and " + b
+            + " come to blows — the feud turns physical.");
+
+        REX::INFO(
+            "LCE: {} and {} come to blows — the feud turns physical.",
+            a, b);
+    }
+
     void Adapter::RadioCaptions()
     {
         if (!m_Settings.NewsEnabled)
@@ -2861,6 +2907,13 @@ namespace TLC
                         "LCE: {} and {} row at the market — words first.",
                         MindLabelForm(formId),
                         MindLabelForm(m_Translator.FormFor(a_other)));
+
+                    // The physical escalation (0.7.5 Fights): a row
+                    // between enemies can turn to blows — the temper
+                    // and chance rolls decide; the punch lands (Combat
+                    // both ways), the feud deepens, and the victim
+                    // carries a threat. Rivals stay verbal.
+                    EscalateToFight(a_entity, a_other, day);
                 }
             };
 
@@ -2940,6 +2993,15 @@ namespace TLC
                     m_Registry, a_entity, keeper, CurrentDay()))
             {
                 Say(a_entity, keeper, Dialogue::Pool::Row);
+            }
+
+            // The feud turns physical (0.7.5 Fights): a slighted mind
+            // facing an enemy keeper throws the punch instead of just
+            // the words — the reliable test path (force the market
+            // shut, the slight fires, the enemy keeper catches a fist).
+            if (slighted && keeper.IsValid())
+            {
+                EscalateToFight(a_entity, keeper, CurrentDay());
             }
 
             return;

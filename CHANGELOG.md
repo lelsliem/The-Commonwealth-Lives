@@ -11,6 +11,19 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 Fights — the feud turns physical (2026-08-12)
+
+The verbal altercation (0.7.2 Rows) gets its physical escalation: when an
+enemy pair rows at the bench (or a slighted mind faces an enemy keeper),
+the temper line and the chance coin decide whether blows land. The fight
+books the engine's Combat wrong on both sides — the feud deepens, the
+victim carries a threat and starts avoiding the aggressor (the engine's
+danger-awareness), the settlement hears it (gossip), the fight pool
+speaks, and the radio carries it. sim.fight.chance (0.1; 1.0 forces every
+eligible escalation — the test knob) and sim.fight.temper (1.0). v1
+books the fight with zero new game calls; the punch animation is the
+polish step after verification.
+
 ### 0.7.4 fix (0.8.1 field finding) — decisions log: stable minds go silent
 
 The 1s decisions cadence (previous fix) fired for every mind, so a restored

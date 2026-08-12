@@ -5,15 +5,21 @@
 `Dialogue.h` + `Say` on the trade/family/slight sites, and the verbal
 altercation: rivals and enemies crossing at the same bench row
 (`src/Rows.h`, pure) — Wronged memories both ways (engine −0.25),
-gossip spread, the row can push a pair over the feud line. 21/21
-suites green. In-game verification (2026-08-12) found and fixed two
+gossip spread, the row can push a pair over the feud line. In-game
+verification (2026-08-12) found and fixed two
 real seams: the row scan now crosses the stall-keeper directly (she
 stands at the bench, so she never enters the walker attendance book),
 and the workshop's props are no longer minds (turrets and spotlights
 hold the settler faction and were seeding as Human — Deacon was found
-feuding with four missile turrets). Pillar 3 (fights, the
-physical escalation) and 0.8.0 (trade with anyone) still PLANNED —
-design written, no code.
+feuding with four missile turrets). 0.7.4 Trade with anyone built and
+verified in-game (2026-08-12). Pillar 3 (fights) BUILT (0.7.5,
+2026-08-12) — `src/Fights.h` (pure): the physical escalation at the
+row and the shut-stall slight — enemy pairs, the temper line and the
+chance coin (sim.fight.chance, sim.fight.temper), the engine's Combat
+wrong on both sides (the feud deepens; the victim carries a threat and
+may flee the aggressor), gossip, the fight pool's words, and the news
+("come to blows"). In-game verification pending; the punch/shove
+animation is the polish step after verification.
 Written before any code; the author's vision, grounded in the seams
 the 0.5.0–0.7.0 stones already cut.
 **Related:** Trade.md (the stall-keeper), SettlementMarkets.md (per-

@@ -636,9 +636,25 @@ STATUS: PLANNED — design docs written, no code.
     fallback when no seller is remembered. Pure `NearestVendor` in
     Market.h, tested. 21/21 harness suites green; in-game verification
     pending
-[ ] 0.7.5 — Fights: physical escalation via real combat (the game's
-    own punch/shove anims — no pex needed); feedback into bonds and
-    news
+[x] 0.7.5 — Fights: the physical escalation. When an enemy pair
+    rows at the bench (or a slighted mind faces an enemy keeper), the
+    temper and chance decide whether blows land (Fights.h, pure,
+    tested). The fight books the engine's Combat wrong on both sides
+    (the feud deepens −0.25; the victim carries a threat memory — the
+    engine's danger-awareness names the fight as a thing to flee, so
+    the victim starts avoiding the aggressor), the settlement hears
+    the blows (gossip), the fight pool speaks ("Come on then!"), and
+    the radio carries it ("X and Y come to blows — the feud turns
+    physical"). Tunable: sim.fight.chance (0.1 — verbal-first is the
+    rule; 1.0 forces every eligible escalation, the test knob) and
+    sim.fight.temper (1.0, the aggressor's line). Built 2026-08-12 —
+    22/22 harness suites green (FightsTest). In-game verification
+    pending. Honest note: v1 books the fight with zero new game
+    calls; the punch/shove animation is the polish step after
+    verification (the base game has no playable shove idle — the
+    punches are paired kill-cams and the crowd shove is a sandbox
+    behavior, so the animation is either a paired-idle or a
+    byte-verified combat pin, decided after the test)
 [ ] 0.8.0 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
     component (adapter-owned, co-save additive — the engine's locked
     hold-then-recover shape, answered as fact-plus-tick, not a new

@@ -658,6 +658,17 @@ namespace TLC
             LCE::Simulation::EntityId a_listener,
             Dialogue::Pool a_pool);
 
+        // The physical escalation (0.7.5 Fights): when a feud's words
+        // fail — an enemy pair's row, or a slighted mind facing an
+        // enemy keeper — the temper and chance rolls decide whether
+        // blows land. Books the Combat on both sides (the feud deepens;
+        // the victim carries a threat and may flee), says the fight
+        // line, and carries the news.
+        void EscalateToFight(
+            LCE::Simulation::EntityId a_aggressor,
+            LCE::Simulation::EntityId a_victim,
+            std::uint64_t a_day);
+
         // The news feed (0.7.0 Stone 3): the world's paper, capped and
         // rotated — the settlement radio reads it as captions. Session
         // state (the log file keeps the full record); cleared on

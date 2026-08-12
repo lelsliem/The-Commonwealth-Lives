@@ -19,6 +19,7 @@
 #include "Market.h"
 #include "Names.h"
 #include "News.h"
+#include "Fights.h"
 #include "Rows.h"
 #include "Serialization.h"
 #include "Translator.h"
@@ -70,6 +71,7 @@ namespace TLC::Tests
     bool NamesTest();
     bool DialogueTest();
     bool RowsTest();
+    bool FightsTest();
     bool SocietyTest();
     bool CoSaveV6Test();
 }
@@ -120,6 +122,7 @@ int main()
     Run("NamesTest", TLC::Tests::NamesTest);
     Run("DialogueTest", TLC::Tests::DialogueTest);
     Run("RowsTest", TLC::Tests::RowsTest);
+    Run("FightsTest", TLC::Tests::FightsTest);
     Run("SocietyTest", TLC::Tests::SocietyTest);
     Run("CoSaveV6Test", TLC::Tests::CoSaveV6Test);
 
@@ -3756,6 +3759,164 @@ namespace TLC::Tests
         }
 
         return true;
+    }
+
+    bool FightsTest()
+    {
+        using namespace LCE::Simulation;
+        using namespace TLC::Bonds;
+
+        // 0.7.5 Fights — the physical escalation: an enemy pair's row
+        // can turn to blows. RollFight is three gates — the feud line
+        // (enemies only; rivals stay verbal — the verbal-first rule),
+        // the aggressor's temper line (the churlish throw the punch),
+        // and the chance coin (1.0 forces). BookFight lands the Combat
+        // on both sides (the engine's unprompted-wrong channel, −0.25),
+        // the settlement hears the blows (gossip), and blows happen
+        // once a day per pair.
+
+        // RollFight: a rival stays verbal — even hot-headed, even
+        // forced.
+        if (TLC::Fights::RollFight(BondKind::Rival, 1.5f, 1.0f, 1.0f, 0.0f))
+        {
+            return false;
+        }
+
+        // An enemy with a calm temper below the line swallows it.
+        if (TLC::Fights::RollFight(BondKind::Enemy, 0.9f, 1.0f, 1.0f, 0.0f))
+        {
+            return false;
+        }
+
+        // Enemy, hot temper, the coin lands under the chance — blows.
+        if (!TLC::Fights::RollFight(BondKind::Enemy, 1.0f, 1.0f, 0.1f, 0.05f))
+        {
+            return false;
+        }
+
+        // The coin respects the chance strictly: at or above it, no
+        // fight.
+        if (TLC::Fights::RollFight(BondKind::Enemy, 1.2f, 1.0f, 0.1f, 0.1f))
+        {
+            return false;
+        }
+
+        // 1.0 forces even a near-miss roll — the test knob.
+        if (!TLC::Fights::RollFight(BondKind::Enemy, 1.0f, 1.0f, 1.0f, 0.999f))
+        {
+            return false;
+        }
+
+        // BookFight: an enemy pair — both remember the Combat, today,
+        // and the disposition cools further (the feud deepens).
+        EntityRegistry registry;
+
+        const auto a = registry.CreateEntity();
+        const auto b = registry.CreateEntity();
+        const auto c = registry.CreateEntity();   // the settlement
+
+        registry.AddComponent<Memory>(a, Memory{});
+        registry.AddComponent<Memory>(b, Memory{});
+        registry.AddComponent<Memory>(c, Memory{});
+
+        registry.AddComponent<Relationships>(a, Relationships{});
+        registry.AddComponent<Relationships>(b, Relationships{});
+
+        auto& ra = *registry.GetComponent<Relationships>(a);
+        auto& rb = *registry.GetComponent<Relationships>(b);
+        ra.ByEntity[b] = Relationship{};
+        rb.ByEntity[a] = Relationship{};
+        ra.ByEntity[b].Disposition = -0.8f;
+        rb.ByEntity[a].Disposition = -0.8f;
+
+        BondMap bonds;
+        bonds[PairKey(a, b)] = PairBond{ BondKind::Enemy, 10 };
+
+        if (!TLC::Fights::BookFight(registry, bonds, a, b, 42, {}, nullptr))
+        {
+            return false;
+        }
+
+        // Both remember the other's blows, stamped today.
+        for (const auto& who : { a, b })
+        {
+            const auto other = who == a ? b : a;
+            const auto memory = registry.GetComponent<Memory>(who);
+            bool saw = false;
+
+            for (const auto& event : memory->Events)
+            {
+                if (event.Kind == InteractionKind::Combat
+                    && event.Other == other && event.Day == 42)
+                {
+                    saw = true;
+                }
+            }
+
+            if (!saw)
+            {
+                return false;
+            }
+        }
+
+        // The feud deepens: the Combat wrong costs −0.25 each way.
+        if (std::fabs(ra.ByEntity[b].Disposition - (-1.05f)) > 0.0001f
+            || std::fabs(rb.ByEntity[a].Disposition - (-1.05f)) > 0.0001f)
+        {
+            return false;
+        }
+
+        // Blows once a day: the same pair again today — no.
+        if (TLC::Fights::BookFight(registry, bonds, a, b, 42, {}, nullptr))
+        {
+            return false;
+        }
+
+        // The gate is per-day: tomorrow they can fight again.
+        if (!TLC::Fights::BookFight(registry, bonds, a, b, 43, {}, nullptr))
+        {
+            return false;
+        }
+
+        // A rival pair never books — words stay words.
+        EntityRegistry quiet;
+
+        const auto f1 = quiet.CreateEntity();
+        const auto f2 = quiet.CreateEntity();
+        quiet.AddComponent<Memory>(f1, Memory{});
+        quiet.AddComponent<Memory>(f2, Memory{});
+
+        BondMap rivalBonds;
+        rivalBonds[PairKey(f1, f2)] = PairBond{ BondKind::Rival, 3 };
+
+        if (TLC::Fights::BookFight(quiet, rivalBonds, f1, f2, 1, {}, nullptr))
+        {
+            return false;
+        }
+
+        const auto m1 = quiet.GetComponent<Memory>(f1);
+
+        for (const auto& event : m1->Events)
+        {
+            if (event.Kind == InteractionKind::Combat)
+            {
+                return false;
+            }
+        }
+
+        // The settlement hears the blows: the third mind knows both
+        // faces through the gossip channel.
+        const auto memoryC = registry.GetComponent<Memory>(c);
+        bool knowsA = false;
+        bool knowsB = false;
+
+        for (const auto& event : memoryC->Events)
+        {
+            knowsA = knowsA || event.Other == a;
+            knowsB = knowsB || event.Other == b;
+        }
+
+        return knowsA && knowsB;
     }
 
     bool SocietyTest()
