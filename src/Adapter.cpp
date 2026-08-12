@@ -2752,7 +2752,8 @@ namespace TLC
     void Adapter::Say(
         LCE::Simulation::EntityId a_speaker,
         LCE::Simulation::EntityId a_listener,
-        Dialogue::Pool a_pool)
+        Dialogue::Pool a_pool,
+        bool a_loud)
     {
         // One line, deterministic per mind and day — the same mind says
         // the same line all day and a different one tomorrow (Pick). An
@@ -2777,8 +2778,19 @@ namespace TLC
         // The radio channel: the same feed the settlement radio reads as
         // on-screen captions, so a conversation line pops while the
         // player is near. (PushNews would also pop a HUD notification;
-        // speech is quieter — the feed alone is the radio's story.)
-        m_News.Add(MindLabelForm(speakerForm) + ": \"" + line + "\"");
+        // speech is quieter — the feed alone is the radio's story.) A
+        // loud line is the exception: it rides the same throttled HUD
+        // pop as news, so the fight's threats land on screen before the
+        // blows (0.7.5 field: the words were log-and-feed only, and the
+        // on-screen beat was just "come to blows").
+        const auto lineLabel =
+            MindLabelForm(speakerForm) + ": \"" + line + "\"";
+        m_News.Add(lineLabel);
+
+        if (a_loud)
+        {
+            PushNews(lineLabel);
+        }
     }
 
     void Adapter::EscalateToFight(
@@ -2983,8 +2995,10 @@ namespace TLC
 
         // The words before the blows (0.7.1 Talk's fight pool — "Come
         // on then!", "Put 'em up"): speech rides the news feed, so the
-        // radio reads the fight as a caption too.
-        Say(a_aggressor, a_victim, Dialogue::Pool::Fight);
+        // radio reads the fight as a caption too — and loud (0.7.5
+        // field), so the threat pops on screen before the shove lands,
+        // not just in the log.
+        Say(a_aggressor, a_victim, Dialogue::Pool::Fight, true);
 
         const auto a = MindLabelForm(m_Translator.FormFor(a_aggressor));
         const auto b = MindLabelForm(m_Translator.FormFor(a_victim));

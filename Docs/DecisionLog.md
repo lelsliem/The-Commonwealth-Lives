@@ -1513,3 +1513,11 @@ ground). The beats now read as a sequence: kick, fall, get up, PAUSE,
 answer, fall, get up, slink off. Two keys: sim.fight.retaliation.delay
 (4 → 7s, so the get-up finishes before the answer) and the new
 sim.fight.part.delay (3s between the counter-fall and the walk-off).
+## ADR-0047 — Loud fight lines (the threats reach the screen)
+
+Say() deliberately never popped the HUD — speech was feed-and-log only
+("speech is quieter"). But the fight's threats ("Come on then!", "Put
+'em up") are the words before the blows, and the on-screen beat was
+just the "come to blows" news. Say now takes a_loud: the fight pool
+rides the same throttled HUD pop as news, so the threat lands on
+screen before the shove. Ordinary conversation stays quiet.

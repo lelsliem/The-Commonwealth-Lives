@@ -722,11 +722,17 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // settlement radio reads it as a caption. Speech is a
         // presentation layer — the sim decides *when*, this decides
         // *what*, and silence is a safe default (an empty pool says
-        // nothing).
+        // nothing). a_loud (0.7.5 field): a loud line also pops the
+        // on-screen HUD notification (throttled by the news cooldown,
+        // like any news) — the fight's threats before the blows, so the
+        // words land on screen, not just in the log and the feed.
+        // Ordinary conversation stays quiet: the feed alone is the
+        // radio's story.
         void Say(
             LCE::Simulation::EntityId a_speaker,
             LCE::Simulation::EntityId a_listener,
-            Dialogue::Pool a_pool);
+            Dialogue::Pool a_pool,
+            bool a_loud = false);
 
         // The physical escalation (0.7.5 Fights): when a feud's words
         // fail — an enemy pair's row, or a slighted mind facing an
