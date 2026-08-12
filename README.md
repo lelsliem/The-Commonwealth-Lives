@@ -4,7 +4,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.7.0-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.7.5-emerald.svg)](Docs/Roadmap.md)
 
 The settlers aren't on quest scripts — they're **hungry**, they **remember**
 where to trade, they walk to **their own settlement's market** when they're
@@ -22,10 +22,11 @@ survives save/load.
 ## Roadmap
 
 Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
-through **0.7.0** is in and verified in-game (2026-08-11). The staged run
-to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.7.1 Talk →
-0.7.2 Rows → 0.7.3 Fights → 0.8.0 Trade with anyone → 0.9.0 the release
-gate → 1.0.0 freeze and ship. The milestone stones so far:
+through **0.7.5** is in and verified in-game (2026-08-12). The staged run
+to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.7.6 Fight bugs →
+0.7.7 Babies → 0.7.8 Baby & kid items → 0.7.9 bugs & polish → 0.8.0
+Illness & Medicine → 0.9.0 the release gate → 1.0.0 freeze and ship. The
+milestone stones so far:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -69,11 +70,25 @@ gate → 1.0.0 freeze and ship. The milestone stones so far:
   stones ride the death and birth paths (a death bequeaths its
   memories and leaves its name as a legacy; a child inherits the
   parents' memories of the people). Record **v6**.
+- **0.7.1–0.7.5** the world talks, trades with anyone, and fights —
+  conversation pools (the good greet/gossip/family, the bad
+  trade/row, the ugly grief/fight/feud — a seeded picker, one line
+  per mind per day), **names for everyone** (role titles gain the
+  person: "Provisioner Daisy"; game names win), **trade with anyone
+  who sells** (the vendor census — a hungry walk resolves to a
+  person, not only the bench), and the **physical feud**: temper +
+  chance book a fight (once per day, co-saved), the victim takes the
+  game's own paired-push kick, the exchange runs on beats (kick →
+  fall → get-up → retaliation → slink-off), and the threats ride the
+  game's own subtitle queue as bottom-of-screen subtitles only when
+  the player is close enough to hear (`sim.subtitle.radius`). Record
+  **v7**.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
 releases published: `0.5.0-beta`, **`0.6.0`**, and **`0.7.0`**
-(2026-08-11, notes in [RELEASE_NOTES.md](RELEASE_NOTES.md)). Nexus
-comes later.
+(2026-08-11, notes in [RELEASE_NOTES.md](RELEASE_NOTES.md)). The
+0.7.x run ships **local only** — no release package until **0.8.0**.
+Nexus comes later.
 
 ## What this is
 
@@ -142,8 +157,8 @@ Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
    prove which build ran:
 
    ```
-   The Living Commonwealth v0.5.0.0
-   The Living Commonwealth v0.5.0.0 loaded (build 43c4e4f).   ← the git short hash
+   The Living Commonwealth v0.7.5.0
+   The Living Commonwealth v0.7.5.0 loaded (build 973b713).   ← the git short hash
    ```
 
    Then the world wakes and the sim lives:
@@ -199,10 +214,11 @@ xmake run TheLivingCommonwealth.Tests
 ```
 
 Runs the adapter's harness (translator tables, seeding, snapshot and
-co-save round-trips — including the v3 stall-keepers section and the
+co-save round-trips — including the stall-keepers section, the
 migration paths, plan builder, market decision, species rules, pouch
-economy, tuning, lifecycle, bonds, households, sleep cycle) — links
-LCE.Core only, no game required. **16/16 suites green.**
+economy, tuning, lifecycle, bonds, households, sleep cycle, names,
+rows, fights, dialogue, and the co-save v7 record) — links LCE.Core
+only, no game required. **23/23 suites green.**
 
 ## License
 

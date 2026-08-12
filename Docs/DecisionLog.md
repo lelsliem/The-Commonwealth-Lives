@@ -1522,7 +1522,10 @@ just the "come to blows" news. Say now takes a_loud: the fight pool
 rides the same throttled HUD pop as news, so the threat lands on
 screen before the shove. Ordinary conversation stays quiet.
 
-## ADR-0046 — the loud line's home is the game's subtitle queue (0.7.5)
+> Superseded on the same day by ADR-0048: the loud line's home became
+> the game's own subtitle queue, not a top-left news pop.
+
+## ADR-0048 — the loud line's home is the game's subtitle queue (0.7.5)
 
 The 0.7.5 fight threats were log-and-feed only, then a top-left news pop.
 The player asked for dialogue-style lines: bottom of the screen, only
@@ -1536,7 +1539,7 @@ the `"who: \"line\""` prefix keeps the box self-contained. New key
 loud, a cross-settlement squabble is not. The feed still carries every
 line for the radio's story; the top-left news pop is retired for speech.
 
-## ADR-0047 — subtitles read clean (0.7.5)
+## ADR-0049 — subtitles read clean (0.7.5)
 
 The first subtitle pass embedded the log's label, which carries the form
 id beside the name ("Jun Long [FF01A4D7]") for the verify channel. On

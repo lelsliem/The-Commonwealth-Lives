@@ -12,42 +12,31 @@ Project Roadmap
 
 Status
 
-Current Version : 0.7.0 — complete, verified in-game, and shipped
-                   (tag `0.7.0`, release live 2026-08-11; 0.6.0
-                   shipped as tag `0.6.0` 2026-08-11, 0.5.0 as
+Current Version : 0.7.5 — Fights feature-complete, verified in-game
+                   2026-08-12. The 0.7.x run ships local only — no
+                   release package until 0.8.0 (0.7.0 shipped as tag
+                   `0.7.0` 2026-08-11, 0.6.0 as `0.6.0`, 0.5.0 as
                    `0.5.0-beta`)
 
-Current Stage   : Identity & the Player Window — every 0.7.0 stone
-                   built, 19/19 harness suites green, and verified
-                   in-game (2026-08-11). Settlers are **named on the
-                   actors themselves** (Mara Price, not "Settler" —
-                   written via SetOverrideName, the same mechanism as
-                   the console's SetDisplayName; game actors keep
-                   their real names after the base-form fix, pets get
-                   unique names, provisioners keep the role); the
-                   world has a **conflict source** — a hungry arrival
-                   at a closed market is a slight, and the feud arc
-                   was proven end-to-end in-game: `the stall … is
-                   shut — X went hungry and blames the keeper` → rival
-                   bonds → `X is feuding with Y` → gossip → mediation
-                   (`arcs: Titus Pratt cooled the feud between …`)
-                   with the engine's desperate-hunger gate and two
-                   adapter fixes (the feud headline on any enemy
-                   crossing; feud-start gossip + immediate mediation —
-                   gossip fades in ~4.5 s at sim.memory.fade 0.2, so
-                   the once-per-day pass could never find a mediator);
-                   the player window works — throttled HUD
-                   notifications for bonds/feuds/births/deaths and
-                   settlement-radio captions on screen (audio after
-                   0.9.0); the co-save round-trips the whole world
-                   (673 minds, 78+ bonds, 10 stall-keepers, 4
-                   children restored across every load). MCM's UI
-                   page stays honestly deferred (the INI already
-                   delivers the tuning; the page needs MCM + the CK).
+Current Stage   : Fights & the player window — 0.7.5's stone is built
+                   and verified in-game: the feud turns physical (the
+                   vanilla paired-push shove → fall → get-up →
+                   retaliation → slink-off on separate beats, the
+                   once-per-day gate co-saved), fight lines ride the
+                   game's own subtitle queue as bottom-of-screen
+                   subtitles gated by sim.subtitle.radius, the species
+                   and kin splits keep the brawl human and the
+                   families safe, and the 23/23 harness stays green.
+                   Known fight-feel bugs (the ghost-slide, the
+                   both-fall look) are parked in 0.7.6.
 
-Next Milestone  : 0.7.3 — Names for everyone, then the staged run to
-                   1.0.0 (Docs/Design/ReleasePlan.md): 0.7.3 Names →
-                   0.7.4 Trade with anyone → 0.7.5 Fights → 0.8.0
+Next Milestone  : 0.7.6 — the fight-feel bug pass, then the staged
+                   run to 1.0.0 (Docs/Design/ReleasePlan.md):
+                   0.7.6 Fight bugs → 0.7.7 Babies (the sim's birth
+                   lifecycle) → 0.7.8 Baby & kid items (bottles and
+                   the things babies and children need, via the
+                   external baby mod — usable now, editable once
+                   permission lands) → 0.7.9 bugs & polish → 0.8.0
                    Illness & Medicine → 0.9.0 the release gate
                    (scale verified, docs) → 1.0.0 freeze and ship
 
@@ -579,7 +568,10 @@ STATUS: PLANNED — design docs written, no code.
     wired into the paid trade, the family meal, and the shut-stall
     slight (the first words of a feud); speech rides the news feed
     so the settlement radio reads it. 20/20 harness suites green
-    (DialogueTest). In-game verification pending (needs a session).
+    (DialogueTest). Verified in-game through the 0.7.4/0.7.5 field
+    sessions — trade, row, and fight lines fire live ("LCE: Jun
+    Long to Sturges: \"…\"") and the fight threats reached the
+    screen as subtitles (ADR-0048/0049).
 [x] 0.7.2 — Rows: the verbal altercation — rivals and enemies who
     cross paths at the same bench row: each remembers the other wronged
     them (engine Wronged, −0.25), the settlement hears the shouting
@@ -634,8 +626,8 @@ STATUS: PLANNED — design docs written, no code.
     (the existing person-target path). Idempotent; self-excluding (a
     vendor never shops at their own stall); the bench stays the
     fallback when no seller is remembered. Pure `NearestVendor` in
-    Market.h, tested. 21/21 harness suites green; in-game verification
-    pending
+    Market.h, tested. 21/21 harness suites green; in-game verified —
+    the player met a named trader ("Chloe") and bought direct
 [x] 0.7.5 — Fights: the physical escalation. When an enemy pair
     rows at the bench (or a slighted mind faces an enemy keeper), the
     temper and chance decide whether blows land (Fights.h, pure,
@@ -663,11 +655,14 @@ STATUS: PLANNED — design docs written, no code.
     default fade), so the gate re-armed mid-day. The gate is now a
     durable adapter-owned map (ConflictGates.h — pair → { last day
     rowed, last day fought }), day-scoped, O(1), and co-saved (record
-    v7); rows and fights are once-a-day again. Honest note: the punch
-    is the knockback, not a combat state — the base game has no
-    playable shove idle (the punches are paired kill-cams and the
-    crowd shove is a sandbox behavior), so a full combat/paired-idle
-    scene is a later polish item. Field fix (ADR-0032): the species
+    v7); rows and fights are once-a-day again. Honest note
+    (superseded same-day, ADR-0045): the punch was the knockback, not
+    a combat state — then the crowd mod's mechanism was decoded: its
+    push is the vanilla paired idles re-exposed unconditionally
+    (PairedFrontPushKick + _Human on MeleeBehavior.hkx), so the shove
+    now plays the real pair, no ESP. The knock force remains the
+    fall's impulse; a full combat state stays a later polish item.
+    Field fix (ADR-0032): the species
     split is enforced — the behemoth race gap fixed (they were Human:
     brawling at the market), a restored mind's species re-derived from
     its actor's race, animals gated out of the bond book, the bench
@@ -688,6 +683,28 @@ STATUS: PLANNED — design docs written, no code.
     pre-fix save's mistake on the first pass. Actual children are
     already gated by species. On load: `kin: N family pairs gated
     from romance`
+[x] 0.7.6 — Fight-feel bug pass (planned 2026-08-12, not yet built):
+    the known presentation bugs from the 0.7.5 field tests — the
+    ghost-push slide (the fall's knock impulse dragging the victim
+    along the ground after the kick), the both-fall look when the
+    retaliation lands, and any shove the log's receipts still flag as
+    off. The paired push works; the scene around it needs the feel
+    pass before the stone is truly done. No engine change expected
+[ ] 0.7.7 — Babies: the sim's birth lifecycle made whole — a child is
+    born to a bonded pair, is counted at wake, carries a name and a
+    species, and grows; the death/birth news and the co-save record
+    already exist, so this is the sim-side journey (pregnancy
+    window, birth event, child mind) — not the visible-actor half
+    (that waits on the external baby mod in 0.7.8). No engine
+    change expected
+[ ] 0.7.8 — Baby & kid items: the things babies and children need —
+    bottles, cribs, the visible child actors — via the external baby
+    mod (Nexus 100934 et al.) as a requirement. The mod is usable
+    now; editing/requiring it waits on the author's permission, and
+    the sim can still use what it provides meanwhile
+[ ] 0.7.9 — Bugs & polish: the final pass before Illness — every
+    stone's field feedback folded in, the docs and INI comments
+    reconciled, perf sanity at scale
 [ ] 0.8.0 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
     component (adapter-owned, co-save additive — the engine's locked
     hold-then-recover shape, answered as fact-plus-tick, not a new
