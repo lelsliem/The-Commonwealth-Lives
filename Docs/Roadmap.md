@@ -674,7 +674,20 @@ STATUS: PLANNED — design docs written, no code.
     crossing, and stall-keeping (fed, never feuding — owned animals
     keep names, strays stay nameless), "Worker" work crews named like
     any person, and spouses capped at one per mind (a second would-be
-    marriage caps at sweetheart; existing marriages stand)
+    marriage caps at sweetheart; existing marriages stand). Field
+    fix (ADR-0033): the kin gate — the sim derives sweethearts and
+    spouses from dispositions, but the seeded world already contains
+    families, and a father and daughter must never cross the
+    sweetheart line. Kin.h curates the vanilla families' parent-child
+    lines (Abernathy — Lucy with Blake and Connie; Finch — Daniel
+    with Abraham and Abigail; the Longs and Warwicks are married
+    couples and stay eligible, lore-correct); RebuildKin indexes
+    loaded actors' base forms and folds curated pairs into a kin set
+    both bond channels feed into ApplyPair, which caps a kin pair at
+    Friend — family can be friends, never lovers — and heals a
+    pre-fix save's mistake on the first pass. Actual children are
+    already gated by species. On load: `kin: N family pairs gated
+    from romance`
 [ ] 0.8.0 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
     component (adapter-owned, co-save additive — the engine's locked
     hold-then-recover shape, answered as fact-plus-tick, not a new

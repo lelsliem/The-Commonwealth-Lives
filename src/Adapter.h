@@ -12,6 +12,7 @@
 #include "Bonds.h"
 #include "CoSave.h"
 #include "ConflictGates.h"
+#include "Kin.h"
 #include "Dialogue.h"
 #include "Executor.h"
 #include "Households.h"
@@ -439,6 +440,14 @@ namespace TLC
         // may name an animal Human. An animal never carries a pouch.
         void ReclassifyLoadedMinds();
 
+        // Rebuilds m_Kin from the loaded actors' base forms (0.7.5
+        // field fix): the vanilla families never romance. Derived, never
+        // persisted (like the settlement groups) — a kin pair only
+        // matters when both are loaded, and the bond gates read this
+        // set each second, so a pre-fix save's mistake heals the moment
+        // both actors are in.
+        void RebuildKin();
+
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // remembers its market as a Trade-kind event whose Other is the
         // workshop entity — this walks the memories and gives each mind
@@ -492,6 +501,19 @@ namespace TLC
         // day-scoped truth lives here. Persisted in the co-save (v7)
         // and restored by form ids; cleared on EndWorld.
         ConflictGates::Map m_ConflictGates;
+
+        // The family gate (0.7.5 field find): every entity pair the
+        // world knows is kin — the vanilla families' parent-child lines
+        // (Kin.h), discovered from the loaded actors' base forms.
+        // Adapter state, derived each second, never persisted; the
+        // bond gates refuse a romantic bond for a pair in this set.
+        Kin::KinSet m_Kin;
+
+        // The reverse index behind RebuildKin: base form id → the minds
+        // whose actors carry it. Rebuilt alongside m_Kin each second.
+        std::unordered_map<
+            std::uint32_t, std::vector<LCE::Simulation::EntityId>>
+            m_BaseToMinds;
 
         // The typed bond lines (Bonds.h), parsed from the core's
         // watch-list once at tuning load — the same values the core is

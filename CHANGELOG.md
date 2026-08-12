@@ -11,6 +11,26 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — family is off the menu: the kin gate (2026-08-12)
+
+The sim forms sweethearts and spouses from dispositions — but the world it
+seeds already contains families, and a father and daughter whose warmth grows
+over shared meals must never cross the sweetheart line. The bond book now
+knows who is kin. A curated table (Kin.h) names the vanilla families'
+parent-child lines, verified against the Fallout wiki: the Abernathys (Lucy
+with Blake and Connie) and the Finches (Daniel with Abraham and Abigail). The
+Longs and Warwicks are deliberately excluded — they are married couples, and
+the sim marrying them is lore-correct.
+
+Every actual child — game-born or sim-born — is Child species and already
+refused romance; the table exists for the adult relatives who would otherwise
+be eligible. RebuildKin indexes loaded actors' base forms (low 24 bits,
+stable whatever the load order) and folds curated pairs into a kin set that
+both bond channels — the reconcile pass and the event handler — feed into
+ApplyPair. A kin pair caps at Friend, never Sweetheart or Spouse, and the
+gate heals a pre-fix save's mistake on the first pass. On load the log reads
+`kin: N family pairs gated from romance`.
+
 ### 0.7.5 fix — the species split is enforced, not hoped (2026-08-12)
 
 The fight test exposed a real gap: behemoths (Gizmo, Harley) were brawling at

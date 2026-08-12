@@ -1193,3 +1193,52 @@ caps a would-be spouse bond at sweetheart when either side already
 holds a spouse bond elsewhere; an existing marriage is never broken by
 the cap (only new ones are refused), so a heart can warm twice without
 a second marriage forming.
+
+### ADR-0033 — Family is off the menu: the kin gate keeps vanilla families platonic (2026-08-12)
+
+**Context.** The sim derives friends, sweethearts, and spouses from
+dispositions — but the world it seeds already contains families. A
+father and daughter whose dispositions warm over shared meals must
+never cross the sweetheart line. The bond book had no idea who is kin.
+The user's spec, verbatim: *"scan for pre existing characters that are
+hinted at already being family make sure that pool is fixed unless a
+future quest breaks it things like child husband wife brother sister
+dont want to accidentally add nasty stuff."*
+
+**The problem with surname rules.** The obvious approach — block any
+pair sharing a surname — is wrong twice: it blocks nothing (most
+named families don't share a visible surname in-game, and sim-assigned
+names collide by design), and it wrongly blocks Jun and Marcy Long, who
+*are* married and whose marriage is lore-correct. A surname is a false
+signal; the family lines must be named.
+
+**The curated kin table (Kin.h).** The vanilla settler families'
+parent-child lines, verified against the Fallout wiki (2026-08-12):
+- Abernathy Farm — Lucy (0006B4D2) is Blake's (0006B4D3) and Connie's
+  (0006B4D1) daughter.
+- Finch Farm — Daniel (0003F22B) is Abraham's (0003F22D) and Abigail's
+  (0003F22C) son.
+The Longs and the Warwicks are *married couples* — the sim marrying
+them is lore-correct, so they are deliberately not in the table. A
+future quest or mod that adds a family adds its base pair here.
+
+**The species layer covers every actual child.** A child — game-born or
+sim-born — is Child species, and Reconcile refuses any romantic bond
+with a Child on either side; the kin table exists for the adult
+relatives who would otherwise be eligible. Both layers feed one flag.
+
+**Mechanics.** RebuildKin (per-second sweep, alongside RebuildOwners)
+indexes every loaded actor's base form id (low 24 bits — stable
+whatever the load order) and folds the curated pairs' entities into
+m_Kin as ordered key pairs. The bond gates — Reconcile's pass and the
+RelationshipChangedEvent channel — share the same `kin` flag into
+ApplyPair, which refuses Sweetheart and Spouse for a kin pair, capping
+at Friend. The gate applies to the *current* bond too, so a pre-fix
+save's mistake heals on the first pass. Derived, never persisted: a kin
+pair only matters while both actors are loaded, and the heal is
+self-evident.
+
+**What the user sees.** On load, `kin: N family pairs gated from
+romance` in the log; the Abernathy and Finch households never romance
+each other, whatever the meals do to their dispositions; and the log's
+bond lines never name a family pair as sweethearts or spouses.

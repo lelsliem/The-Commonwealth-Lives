@@ -866,7 +866,8 @@ namespace TLC
                 std::uint64_t a_sinceDay)
             {
                 OnBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
-            });
+            },
+            m_Kin);
 
         // The household invariant (0.6.0 Stone 3): one pouch per married
         // pair, one per unmarried human. The loud events fire in
@@ -907,6 +908,16 @@ namespace TLC
         const auto dToOther = DispositionOf(a_event.Subject, a_event.Other);
         const auto dOtherToMe = DispositionOf(a_event.Other, a_event.Subject);
 
+        // The family gate (0.7.5 field find), the same rule the
+        // reconcile pass applies: a child never romances anyone (kin by
+        // species), and a curated kin pair (the vanilla families) never
+        // romances either — family can be friends, never lovers.
+        const bool kin =
+            eventTagA->Value == Species::Child
+            || eventTagB->Value == Species::Child
+            || m_Kin.contains(
+                Bonds::PairKey(a_event.Subject, a_event.Other));
+
         Bonds::ApplyPair(
             m_Bonds,
             Bonds::PairKey(a_event.Subject, a_event.Other),
@@ -921,7 +932,8 @@ namespace TLC
                 std::uint64_t a_sinceDay)
             {
                 OnBondChange(a_entityA, a_entityB, a_old, a_new, a_sinceDay);
-            });
+            },
+            kin);
     }
 
     float Adapter::DispositionOf(
@@ -2345,6 +2357,71 @@ namespace TLC
                      actor->extraList->SetOverrideName(name->Full.c_str());
                  }
              });
+     }
+
+     void Adapter::RebuildKin()
+     {
+         // The family gate (0.7.5 field find): the vanilla families
+         // never romance. Every loaded actor's base form is indexed
+         // once, and each curated kin pair (Kin.h — Blake with Lucy,
+         // Abraham with Daniel, ...) folds its members' entities into
+         // m_Kin. Derived, never persisted: a kin pair only matters
+         // when both actors are loaded (they cannot interact across
+         // cells), and the bond gates read this set each second, so a
+         // pre-fix save's mistake heals the moment both actors are in.
+         m_BaseToMinds.clear();
+         m_Kin.clear();
+
+         ForEachLoadedActor(
+             [this](const RE::Actor* a_actor)
+             {
+                 const auto entity =
+                     m_Translator.EntityFor(a_actor->GetFormID());
+
+                 if (!entity.IsValid())
+                 {
+                     return;
+                 }
+
+                 const auto* base = a_actor->GetObjectReference();
+
+                 if (base == nullptr)
+                 {
+                     return;
+                 }
+
+                 m_BaseToMinds[base->GetFormID() & 0x00FFFFFF]
+                     .push_back(entity);
+             });
+
+         for (const auto& pair : Kin::kKinPairs)
+         {
+             const auto itA = m_BaseToMinds.find(
+                 pair.BaseA & 0x00FFFFFF);
+             const auto itB = m_BaseToMinds.find(
+                 pair.BaseB & 0x00FFFFFF);
+
+             if (itA == m_BaseToMinds.end()
+                 || itB == m_BaseToMinds.end())
+             {
+                 continue;
+             }
+
+             for (const auto a : itA->second)
+             {
+                 for (const auto b : itB->second)
+                 {
+                     m_Kin.insert(Bonds::PairKey(a, b));
+                 }
+             }
+         }
+
+         if (!m_Kin.empty())
+         {
+             REX::INFO(
+                 "kin: {} family {} gated from romance — the world's families stay family.",
+                 m_Kin.size(), m_Kin.size() == 1 ? "pair" : "pairs");
+         }
      }
 
      void Adapter::ReclassifyLoadedMinds()
@@ -4032,6 +4109,11 @@ namespace TLC
             // is corrected — the restore pass caught the loaded ones;
             // this catches the rest as they stream in.
             ReclassifyLoadedMinds();
+
+            // The family gate (0.7.5 field find): rebuild the kin set
+            // BEFORE the bond pass so a freshly-loaded family pair is
+            // already gated when their dispositions reconcile.
+            RebuildKin();
 
             // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
             // event channel is instant; this pass is complete — quiet

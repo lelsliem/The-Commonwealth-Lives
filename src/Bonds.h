@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Components.h"
+#include "Kin.h"
 
 #include "LCE/Simulation/Entity/EntityId.h"
 #include "LCE/Simulation/Entity/EntityRegistry.h"
@@ -359,7 +360,10 @@ namespace TLC::Bonds
     // from the map; a_onChanged fires only when the bond CHANGED this
     // call (formation, dissolve, upgrade, family flip — resting is
     // silent), with the old and new kinds and the since-day (0 when the
-    // bond dissolved).
+    // bond dissolved). a_kin names a pair the world knows is family
+    // (Kin.h — a shared parent, a child): family can be friends, never
+    // lovers, so a romantic kind is refused — including one already on
+    // the books, so a pre-fix save's mistake heals on the next pass.
     //-------------------------------------------------------------------------
     inline void ApplyPair(
         BondMap& a_bonds,
@@ -369,11 +373,25 @@ namespace TLC::Bonds
         const BondThresholds& a_t,
         std::uint64_t a_day,
         const std::function<void(
-            EntityId, EntityId, BondKind, BondKind, std::uint64_t)>& a_onChanged)
+            EntityId, EntityId, BondKind, BondKind, std::uint64_t)>& a_onChanged,
+        bool a_kin = false)
     {
         auto& current = a_bonds[a_key];
         const auto old = current.Kind;
         auto fresh = Derive(a_dToOther, a_dOtherToMe, a_t, old);
+
+        // The family gate (0.7.5 field find): kin never romance. A pair
+        // the sim knows is family — a child, or a curated kin pair — can
+        // be friends, never sweethearts or spouses. Applies to the
+        // CURRENT bond too: a pre-fix romance is downgraded to
+        // friendship the first pass it is seen, and an old save heals
+        // itself.
+        if (a_kin
+            && (old == BondKind::Sweetheart || old == BondKind::Spouse
+                || fresh == BondKind::Sweetheart || fresh == BondKind::Spouse))
+        {
+            fresh = BondKind::Friend;
+        }
 
         // The monogamy cap (0.7.5 field find): a pair that would cross
         // the spouse line while either side already holds a spouse bond
@@ -431,7 +449,8 @@ namespace TLC::Bonds
         BondMap& a_bonds,
         std::uint64_t a_day,
         const std::function<void(
-            EntityId, EntityId, BondKind, BondKind, std::uint64_t)>& a_onChanged)
+            EntityId, EntityId, BondKind, BondKind, std::uint64_t)>& a_onChanged,
+        const Kin::KinSet& a_kin = {})
     {
         std::set<BondKey> visited;
 
@@ -473,6 +492,14 @@ namespace TLC::Bonds
                         continue;
                     }
 
+                    // The family gate: a child never romances anyone
+                    // (kin by species), and a curated kin pair (the
+                    // vanilla families) never romances either.
+                    const bool kin =
+                        tagA->Value == Species::Child
+                        || tagB->Value == Species::Child
+                        || a_kin.contains(key);
+
                     float dOtherToMe = 0.0f;
 
                     if (const auto reverse =
@@ -489,7 +516,7 @@ namespace TLC::Bonds
                     ApplyPair(
                         a_bonds, key,
                         relationship.Disposition, dOtherToMe,
-                        a_t, a_day, a_onChanged);
+                        a_t, a_day, a_onChanged, kin);
                 }
             });
     }

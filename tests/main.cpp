@@ -15,6 +15,7 @@
 #include "Executor.h"
 #include "Gossip.h"
 #include "Households.h"
+#include "Kin.h"
 #include "Lifecycle.h"
 #include "Market.h"
 #include "Names.h"
@@ -73,6 +74,7 @@ namespace TLC::Tests
     bool RowsTest();
     bool FightsTest();
     bool SocietyTest();
+    bool KinTest();
     bool CoSaveV7Test();
 }
 
@@ -124,6 +126,7 @@ int main()
     Run("RowsTest", TLC::Tests::RowsTest);
     Run("FightsTest", TLC::Tests::FightsTest);
     Run("SocietyTest", TLC::Tests::SocietyTest);
+    Run("KinTest", TLC::Tests::KinTest);
     Run("CoSaveV7Test", TLC::Tests::CoSaveV7Test);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
@@ -4233,6 +4236,92 @@ namespace TLC::Tests
         if (isolated.GetComponent<Relationships>(b) != nullptr)
         {
             return false;
+        }
+
+        return true;
+    }
+
+    bool KinTest()
+    {
+        // The family gate (0.7.5 field find): the vanilla families
+        // never romance. The curated pairs match regardless of order
+        // and on their low 24 bits (stable whatever the load order),
+        // and the bond book refuses a romantic kind for a kin pair —
+        // family can be friends, never lovers.
+        using namespace TLC::Bonds;
+
+        // IsKinBasePair: order-insensitive, low-24-bit matching.
+        if (!Kin::IsKinBasePair(0x0006B4D3, 0x0006B4D2)
+            || !Kin::IsKinBasePair(0x0006B4D2, 0x0006B4D3))
+        {
+            return false;   // Blake x Lucy, both orders
+        }
+
+        if (!Kin::IsKinBasePair(0x0003F22C, 0x0003F22B))
+        {
+            return false;   // Abigail x Daniel
+        }
+
+        if (Kin::IsKinBasePair(0x0006B4D3, 0x0006B4D1))
+        {
+            return false;   // Blake x Connie are MARRIED, not kin
+        }
+
+        if (Kin::IsKinBasePair(0x0001A4D7, 0x000250FE))
+        {
+            return false;   // unrelated pair is not kin
+        }
+
+        // ApplyPair with the kin flag: a sweetheart-grade warmth forms
+        // only friendship for kin; a non-kin pair forms normally.
+        BondMap bonds;
+        BondThresholds thresholds;
+        bool changed = false;
+        const auto onChanged = [&changed](
+            EntityId, EntityId, BondKind, BondKind, std::uint64_t)
+        {
+            changed = true;
+        };
+
+        const auto a = EntityId{ 1001 };
+        const auto b = EntityId{ 1002 };
+
+        // Kin pair, sweetheart-grade shared disposition: caps at Friend.
+        Bonds::ApplyPair(
+            bonds, Bonds::PairKey(a, b),
+            0.9f, 0.9f, thresholds, 42, onChanged, true);
+
+        if (!changed
+            || bonds.at(Bonds::PairKey(a, b)).Kind != BondKind::Friend)
+        {
+            return false;   // family never crosses the sweetheart line
+        }
+
+        // The same warmth on a non-kin pair: spouses.
+        const auto c = EntityId{ 1003 };
+        const auto d = EntityId{ 1004 };
+
+        Bonds::ApplyPair(
+            bonds, Bonds::PairKey(c, d),
+            0.9f, 0.9f, thresholds, 42, onChanged, false);
+
+        if (bonds.at(Bonds::PairKey(c, d)).Kind != BondKind::Spouse)
+        {
+            return false;
+        }
+
+        // A pre-fix save's mistake heals: a kin pair already on the
+        // books as spouses is downgraded to friends on the next pass.
+        BondMap stale;
+        stale[Bonds::PairKey(a, b)] = { BondKind::Spouse, 10 };
+
+        Bonds::ApplyPair(
+            stale, Bonds::PairKey(a, b),
+            0.9f, 0.9f, thresholds, 42, onChanged, true);
+
+        if (stale.at(Bonds::PairKey(a, b)).Kind != BondKind::Friend)
+        {
+            return false;   // the stale romance dissolves to family
         }
 
         return true;
