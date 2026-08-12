@@ -13,12 +13,12 @@
 #include "Bonds.h"
 #include "Components.h"
 
-#include "LCE/Simulation/Behaviour.h"
-#include "LCE/Simulation/EntityId.h"
-#include "LCE/Simulation/Goals.h"
-#include "LCE/Simulation/Memory.h"
-#include "LCE/Simulation/Needs.h"
-#include "LCE/Simulation/Relationships.h"
+#include "LCE/Simulation/Decision/Behaviour.h"
+#include "LCE/Simulation/Entity/EntityId.h"
+#include "LCE/Simulation/Mind/Goals.h"
+#include "LCE/Simulation/Mind/Memory.h"
+#include "LCE/Simulation/Mind/Needs.h"
+#include "LCE/Simulation/Mind/Relationships.h"
 
 #include <array>
 #include <cstddef>

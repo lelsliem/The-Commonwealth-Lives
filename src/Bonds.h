@@ -11,9 +11,9 @@
 
 #include "Components.h"
 
-#include "LCE/Simulation/EntityId.h"
-#include "LCE/Simulation/EntityRegistry.h"
-#include "LCE/Simulation/Relationships.h"
+#include "LCE/Simulation/Entity/EntityId.h"
+#include "LCE/Simulation/Entity/EntityRegistry.h"
+#include "LCE/Simulation/Mind/Relationships.h"
 #include "LCE/Simulation/Simulation.h"
 
 #include <algorithm>

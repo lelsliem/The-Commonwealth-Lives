@@ -25,19 +25,19 @@
 #include "Tuning.h"
 #include "WorldFacts.h"
 
-#include "LCE/Simulation/Groups.h"
+#include "LCE/Simulation/Society/Groups.h"
 
 #include "LCE/Config/Configuration.h"
 #include "LCE/Events/EventBus.h"
-#include "LCE/Simulation/Behaviour.h"
-#include "LCE/Simulation/EntityRegistry.h"
-#include "LCE/Simulation/Goals.h"
-#include "LCE/Simulation/Memory.h"
-#include "LCE/Simulation/Needs.h"
-#include "LCE/Simulation/Relationships.h"
+#include "LCE/Simulation/Decision/Behaviour.h"
+#include "LCE/Simulation/Entity/EntityRegistry.h"
+#include "LCE/Simulation/Mind/Goals.h"
+#include "LCE/Simulation/Mind/Memory.h"
+#include "LCE/Simulation/Mind/Needs.h"
+#include "LCE/Simulation/Mind/Relationships.h"
 #include "LCE/Simulation/Simulation.h"
 #include "LCE/Simulation/SimulationEvents.h"
-#include "LCE/Simulation/WorldTime.h"
+#include "LCE/Simulation/Substrate/WorldTime.h"
 
 #include <cstddef>
 #include <cstdint>

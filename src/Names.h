@@ -13,7 +13,7 @@
 #include "Behaviour.h"  // Species — the generic-name rule is species-aware
 
 #include "LCE/Config/Configuration.h"
-#include "LCE/Simulation/EntityId.h"
+#include "LCE/Simulation/Entity/EntityId.h"
 
 #include <array>
 #include <cctype>

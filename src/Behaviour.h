@@ -9,12 +9,12 @@
 
 #pragma once
 
-#include "LCE/Simulation/Goals.h"
-#include "LCE/Simulation/Memory.h"   // InteractionKind, MemoryEvent
-#include "LCE/Simulation/Needs.h"
-#include "LCE/Simulation/Outcome.h"
-#include "LCE/Simulation/Relationships.h"
-#include "LCE/Simulation/Traits.h"   // JitteredTraits — the temperament
+#include "LCE/Simulation/Mind/Goals.h"
+#include "LCE/Simulation/Mind/Memory.h"   // InteractionKind, MemoryEvent
+#include "LCE/Simulation/Mind/Needs.h"
+#include "LCE/Simulation/Decision/Outcome.h"
+#include "LCE/Simulation/Mind/Relationships.h"
+#include "LCE/Simulation/Society/Traits.h"   // JitteredTraits — the temperament
 
 #include <algorithm>
 #include <cstdint>

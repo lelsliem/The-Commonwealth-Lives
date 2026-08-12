@@ -22,9 +22,9 @@
 #include "WorldFacts.h"
 
 #include "LCE/Events/EventBus.h"
-#include "LCE/Simulation/EntityRegistry.h"
-#include "LCE/Simulation/RegistrySnapshot.h"
-#include "LCE/Simulation/Rng.h"
+#include "LCE/Simulation/Entity/EntityRegistry.h"
+#include "LCE/Simulation/Entity/RegistrySnapshot.h"
+#include "LCE/Simulation/Substrate/Rng.h"
 #include "LCE/Simulation/Simulation.h"
 #include "LCE/Simulation/SimulationEvents.h"
 

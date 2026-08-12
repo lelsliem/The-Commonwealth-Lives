@@ -9,8 +9,8 @@
 
 #pragma once
 
-#include "LCE/Simulation/EntityId.h"
-#include "LCE/Simulation/Memory.h"
+#include "LCE/Simulation/Entity/EntityId.h"
+#include "LCE/Simulation/Mind/Memory.h"
 
 #include <algorithm>
 #include <cstdint>

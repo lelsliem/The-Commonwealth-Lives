@@ -12,8 +12,8 @@
 #include "Bonds.h"
 #include "Components.h"
 
-#include "LCE/Simulation/EntityId.h"
-#include "LCE/Simulation/EntityRegistry.h"
+#include "LCE/Simulation/Entity/EntityId.h"
+#include "LCE/Simulation/Entity/EntityRegistry.h"
 
 #include <cstdint>
 #include <unordered_set>

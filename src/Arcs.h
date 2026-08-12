@@ -12,10 +12,10 @@
 #include "Bonds.h"
 #include "Gossip.h"
 
-#include "LCE/Simulation/EntityRegistry.h"
-#include "LCE/Simulation/Memory.h"
-#include "LCE/Simulation/Needs.h"
-#include "LCE/Simulation/Rng.h"
+#include "LCE/Simulation/Entity/EntityRegistry.h"
+#include "LCE/Simulation/Mind/Memory.h"
+#include "LCE/Simulation/Mind/Needs.h"
+#include "LCE/Simulation/Substrate/Rng.h"
 #include "LCE/Simulation/Simulation.h"
 
 #include <cstdint>

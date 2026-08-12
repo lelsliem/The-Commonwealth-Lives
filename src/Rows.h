@@ -13,7 +13,7 @@
 #include "Gossip.h"
 #include "WorldFacts.h"
 
-#include "LCE/Simulation/Memory.h"
+#include "LCE/Simulation/Mind/Memory.h"
 #include "LCE/Simulation/Simulation.h"
 
 namespace TLC::Rows

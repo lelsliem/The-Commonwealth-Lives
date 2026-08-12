@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "LCE/Simulation/EntityId.h"
+#include "LCE/Simulation/Entity/EntityId.h"
 
 #include <cstdint>
 #include <unordered_map>

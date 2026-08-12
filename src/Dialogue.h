@@ -12,7 +12,7 @@
 #include "Names.h"  // ParseList — the pools split the same way
 
 #include "LCE/Config/Configuration.h"
-#include "LCE/Simulation/EntityId.h"
+#include "LCE/Simulation/Entity/EntityId.h"
 
 #include <array>
 #include <cstdint>

@@ -11,8 +11,8 @@
 
 #include "WorldFacts.h"
 
-#include "LCE/Simulation/EntityRegistry.h"
-#include "LCE/Simulation/Memory.h"
+#include "LCE/Simulation/Entity/EntityRegistry.h"
+#include "LCE/Simulation/Mind/Memory.h"
 #include "LCE/Simulation/Simulation.h"
 
 namespace TLC

@@ -46,11 +46,11 @@
 
 #include <LCE/Logging/Logger.h>
 
-#include "LCE/Simulation/Behaviour.h"
-#include "LCE/Simulation/Groups.h"
-#include "LCE/Simulation/Legacy.h"
-#include "LCE/Simulation/Memory.h"
-#include "LCE/Simulation/Relationships.h"
+#include "LCE/Simulation/Decision/Behaviour.h"
+#include "LCE/Simulation/Society/Groups.h"
+#include "LCE/Simulation/Decision/Legacy.h"
+#include "LCE/Simulation/Mind/Memory.h"
+#include "LCE/Simulation/Mind/Relationships.h"
 #include "LCE/Simulation/Simulation.h"
 
 #include <REX/LOG.h>

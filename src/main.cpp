@@ -16,7 +16,7 @@
 #include <F4SE/F4SE.h>
 
 #include <LCE/Logging/Logger.h>
-#include <LCE/Simulation/RegistrySnapshot.h>
+#include <LCE/Simulation/Entity/RegistrySnapshot.h>
 
 #include <cstddef>
 #include <string_view>
