@@ -3009,6 +3009,13 @@ namespace TLC
         // dies — no ghost punches, no phantom falls.
         const auto now = std::chrono::steady_clock::now();
 
+        // New beats (the counter-fall, the walk-off) are collected here
+        // and appended AFTER the loop: push_back while iterating can
+        // reallocate the vector and invalidate the loop iterator — the
+        // debug STL's "vector iterators incompatible" assertion the
+        // first sequenced build hit.
+        std::vector<PendingShove> additions;
+
         for (auto it = m_PendingShoves.begin();
              it != m_PendingShoves.end();)
         {
@@ -3099,10 +3106,10 @@ namespace TLC
                         static_cast<int>(
                             m_Settings.FightFallDelay * 1000.0f));
 
-                m_PendingShoves.push_back(
+                additions.push_back(
                     PendingShove{
                         ShoveBeat::kCounterFall, thrower, victim, beat });
-                m_PendingShoves.push_back(
+                additions.push_back(
                     PendingShove{
                         ShoveBeat::kWalkOff, thrower, victim, beat });
                 break;
@@ -3119,6 +3126,11 @@ namespace TLC
                 break;
             }
             }
+        }
+
+        for (auto& addition : additions)
+        {
+            m_PendingShoves.push_back(std::move(addition));
         }
     }
 

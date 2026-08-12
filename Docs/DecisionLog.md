@@ -1480,3 +1480,13 @@ back` for the answer, and the range line when either waits.
 **Decision:** Every physical beat of a scuffle is now scheduled, never fired in the same frame as the one before it. The flinch fires at the punch; the fall is queued `sim.fight.fall.delay` (default 0.9s) later; the hot-headed victim's answer (or a forced test pair's) fires after the get-up window with its own flinch, its own fall a beat after, and the loser walks off last. The pending-retaliation queue became a general `PendingShove` queue with four beats (fall, retaliation, counter-fall, walk-off); every beat re-checks the pair is still at the scene (parted → the beat dies, no ghost punches or phantom falls). The chain: flinch → fall → get up → counter-flinch → counter-fall → slink off.
 
 **Consequences:** The stagger finally plays before the fall, so the punch reads as a shove. Each beat logs its own receipt (`shove:` for the flinch, `fall:` for the knock-down), so a visual mismatch can always be matched to which beat did or did not fire.
+
+## ADR-0044 — the shove queue never mutates while iterating
+
+**Status:** Accepted (0.7.5).
+
+**Context:** The first sequenced build (ADR-0043) hit a debug STL assertion at runtime — "vector iterators incompatible" at the MSVC `vector` header. The cause: `ProcessPendingShoves` iterated `m_PendingShoves` and, in the retaliation case, `push_back`'d the counter-fall and walk-off beats while the loop held an iterator; the reallocation invalidated it, and the next iteration dereferenced a dangling iterator. In debug builds the STL asserts; in release it is silent corruption.
+
+**Decision:** New beats are collected in a local `std::vector<PendingShove> additions` and appended with `std::move` after the loop terminates. The other member-vector loops (deaths, stall keepers, bonds, walks) only `erase` — which returns the next valid iterator — so they were audited and left as-is.
+
+**Consequences:** The scuffle's full chain (flinch → fall → counter-flinch → counter-fall → walk-off) runs without invalidating the queue. The assertion is gone.
