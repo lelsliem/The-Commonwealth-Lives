@@ -167,6 +167,60 @@ namespace TLC
                 return false;
             }
 
+            // The kick (0.7.6, ADR-0051): our own unconditional copy of
+            // the vanilla paired kick — the crowd mod's decoded recipe
+            // (MeleeBehavior.hkx + dyn_Activation + the vanilla
+            // PairedFrontPushKick_AttackerLead animation, no CTDA
+            // conditions). The vanilla PairedFrontPushKick records carry
+            // conditions and RaiderRootBehavior, so PlayIdle refuses them
+            // outside combat — that is why every receipt read "flinch
+            // fallback" and the "kick" was really the flinch. The ESP
+            // ships as data/TheLivingCommonwealthAnims.esp; LookupFormID
+            // resolves it load-order independent, and a missing plugin
+            // falls through to the vanilla pair, then the flinch.
+            auto* kick = []() -> RE::TESIdleForm*
+            {
+                static RE::TESIdleForm* resolved = nullptr;
+                static bool tried = false;
+
+                if (!tried)
+                {
+                    tried = true;
+
+                    if (auto* handler =
+                            RE::TESDataHandler::GetSingleton();
+                        handler != nullptr)
+                    {
+                        const auto formId = handler->LookupFormID(
+                            0x00000800, "TheLivingCommonwealthAnims.esp");
+
+                        if (formId != 0)
+                        {
+                            resolved =
+                                RE::TESForm::GetFormByID<RE::TESIdleForm>(
+                                    formId);
+                        }
+                    }
+                }
+
+                return resolved;
+            }();
+
+            if (kick != nullptr)
+            {
+                const auto played = a_attacker->currentProcess->PlayIdle(
+                    *a_attacker, kick, a_victim);
+
+                if (played)
+                {
+                    return true;
+                }
+            }
+
+            // Fallback: the vanilla paired halves, cross-targeted — the
+            // engine's paired-attack sync. Usually refused outside
+            // combat (the CTDA conditions); kept so the old path still
+            // exists when our ESP is absent.
             auto* lead = RE::TESForm::GetFormByID<RE::TESIdleForm>(
                 0x00047FC3);   // PairedFrontPushKick — the shove's lead
             auto* human = RE::TESForm::GetFormByID<RE::TESIdleForm>(
@@ -177,8 +231,6 @@ namespace TLC
                 return false;
             }
 
-            // Both halves, cross-targeted: the engine's paired-attack
-            // sync snaps the pair into the push and plays the kick.
             const auto leadPlayed = a_attacker->currentProcess->PlayIdle(
                 *a_attacker, lead, a_victim);
             const auto humanPlayed = a_victim->currentProcess->PlayIdle(
