@@ -1099,3 +1099,14 @@ or a byte-verified combat pin, decided after the in-game verification
 of the fight's substance. A wrong pin never teleports (the Movement
 rule) — a best-effort animation can fail to the sim fight, never the
 reverse.
+
+**Addendum (same day).** The punch found a home before the first test:
+the user's "Get Out Of My Face" mod (Nexus 20353) confirmed the game's
+knockback is the shove — its Papyrus perk pushes via the game's own
+physics. CommonLibF4 exposes that machinery as AIProcess::KnockExplosion
+(REL::ID; the user's Address Library is version-1-11-221-0 — the exact
+runtime, so the lookup is safe). The fight now shoves the victim back
+from the aggressor (sim.fight.push, default 3 units — a stagger, not a
+ragdoll; 0 turns it off), so the punch is visible in-game while the
+sim booking stays the deliverable. Still best-effort: a missing actor
+or process skips the shove; the fight is booked either way.

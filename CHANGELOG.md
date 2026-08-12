@@ -21,8 +21,10 @@ victim carries a threat and starts avoiding the aggressor (the engine's
 danger-awareness), the settlement hears it (gossip), the fight pool
 speaks, and the radio carries it. sim.fight.chance (0.1; 1.0 forces every
 eligible escalation — the test knob) and sim.fight.temper (1.0). v1
-books the fight with zero new game calls; the punch animation is the
-polish step after verification.
+books the fight with zero new game calls; the punch is visible too —
+the victim is shoved back from the aggressor via the game's own
+knockback (AIProcess::KnockExplosion, the same physical push the "Get
+Out Of My Face" mod uses), sim.fight.push (default 3; 0 off).
 
 ### 0.7.4 fix (0.8.1 field finding) — decisions log: stable minds go silent
 
