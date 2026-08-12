@@ -33,7 +33,19 @@ already resolves a Trade memory to a person.
 - The arrival already traded directly with a person target and
   `RecordSale` warmed the seller — the exchange is unchanged, only who
   is remembered widened. Pure `NearestVendor` (Market.h) tested; 21/21
-  harness suites green; in-game verification pending.
+  harness suites green.
+
+  **Verification fix (same day):** the live test showed 6,634
+  person-targeted walks — settlers walking to Kessler, Deb, the
+  caravan guards — but zero trades: the closed-market slight gate
+  fired for *every* human arrival, person targets included (it never
+  checked `atBench`), so a settler reaching a vendor while the
+  settlement market was shut hit the "stall is shut, went hungry"
+  branch and returned. The stall is the bench's geography: a walk to a
+  *person* is at the seller's own market, so the gate now applies to
+  bench arrivals only — person trades land whatever the hour (the
+  world-facts gate still stops new walks after hours; only walks
+  already in flight arrive).
 
 ## 0.7.3 verification — the road's people (2026-08-12)
 

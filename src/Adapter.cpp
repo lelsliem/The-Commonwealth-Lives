@@ -2883,12 +2883,19 @@ namespace TLC
         // shut-stall let-downs cross the rival line, and the 0.6.0 feud
         // arc — gossip, mediation, the settlement's inherited cold
         // shoulder — takes it from there.
+        //
+        // Bench only (0.7.4 fix): the stall is the bench's geography.
+        // A human who walked to a PERSON — the remembered seller — is
+        // at the seller's market, not the settlement's; the seller is
+        // there, so the trade lands whatever the hour. (The world-facts
+        // gate still stops new walks after hours; only walks already in
+        // flight arrive, so night trades are the desperate ones.)
         const bool closed = WorldFacts::IsMarketClosed(
             CurrentGameHour(),
             m_Settings.MarketOpenHour, m_Settings.MarketCloseHour);
 
         if (closed && species == Species::Human
-            && !keeperHome && !familyHome)
+            && atBench && !keeperHome && !familyHome)
         {
             const auto keeperIterator = m_StallKeepers.find(target);
             const auto keeper = keeperIterator != m_StallKeepers.end()
