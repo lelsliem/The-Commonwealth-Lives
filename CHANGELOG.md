@@ -11,6 +11,25 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — blows are people's business: children row, never fight (2026-08-12)
+
+The safety audit after the kin gate found one more gap: the fight
+escalation had no species gate, and a child with an enemy (the bond book
+gates animals, not children) could throw and take punches at the market.
+Rows stay open to everyone — words are natural — but both fight
+participants must be Human. The gate lives in EscalateToFight, the single
+chokepoint both entry points share (the bench crossing and the shut-stall
+slight), so a future fight source cannot forget it.
+
+The audit confirmed safe: the player is excluded from seeding and walks;
+companions are never seeded (settler-faction/role/vendor gate); robots,
+turrets, and spotlights are device-gated; animals are fed, never feuding;
+children are fed at the bench but never trade, run stalls, or romance
+(Child species + no aging — siblings can never become eligible); fights
+book a sim Combat memory, not hostile game state, so no quest-essential
+actor is ever forced into combat; a married couple dissolving into
+rivals/enemies is drama, not a bug (the pouch splits on dissolve).
+
 ### 0.7.5 fix — family is off the menu: the kin gate (2026-08-12)
 
 The sim forms sweethearts and spouses from dispositions — but the world it

@@ -1242,3 +1242,38 @@ self-evident.
 romance` in the log; the Abernathy and Finch households never romance
 each other, whatever the meals do to their dispositions; and the log's
 bond lines never name a family pair as sweethearts or spouses.
+
+### ADR-0034 — Blows are people's business: children row, never fight (2026-08-12)
+
+**Context.** The safety audit after the kin gate asked what else could
+trip the sim up. The species belts were thorough — animals are gated
+out of the bond book, the bench crossing, trade, and stall-keeping —
+but one gap surfaced: the fight escalation (EscalateToFight, entered
+from both the bench crossing and the shut-stall slight) had no species
+gate. Children pass the row gate (animals are blocked at the cross;
+children are not), and a Child with an enemy — possible: the bond book
+gates animals, not children, and only *romance* is refused for a child
+— could throw and take punches, get shoved back by the KnockExplosion,
+and carry a threat memory. A child being physically shoved at the
+market is wrong on every level.
+
+**The rule.** Rows are words — a child arguing with an enemy at the
+bench is natural, the feud's audible half stays open. Blows are
+people's business: both fight participants must be Human species. The
+gate lives inside EscalateToFight, the single chokepoint both entry
+points share, so a future fight source cannot forget it — the same
+belt-and-suspenders pattern the animal gates use.
+
+**What the audit confirmed safe.** Player excluded from seeding and
+walks; companions not seeded (settler-faction/role/vendor gate);
+robots, turrets, and spotlights device-gated; animals fed, never
+feuding; children fed at the bench (the non-Human arrival path),
+never trading, never running stalls, never romancing (Child species +
+no aging — a sim-born child is a child forever, so siblings can never
+become eligible); fights book a sim Combat memory, not game combat
+state, so no quest-essential actor is ever forced into a hostile game
+state (the future real-combat polish must respect essential flags —
+noted for 0.8.x); married couples can dissolve into rivals/enemies
+(the family-flip rule) and the household pouch splits — drama, not a
+bug; kin pairs can feud (a father-son row is drama) — only romance is
+kin-gated.

@@ -2615,6 +2615,25 @@ namespace TLC
         // sim.fight.chance (1.0 forces every eligible escalation — the
         // test knob). The once-per-day gate lives in BookFight (a
         // Combat memory stamped today, co-saved).
+        //
+        // The species belt (0.7.5 field find): blows are people's
+        // business — a feud needs two adults. A child can argue (the
+        // row already landed), but never throws or takes a punch; an
+        // animal never even rows (the cross gate). The belt guards
+        // BOTH fight entry points (the bench crossing and the
+        // shut-stall slight), whatever the bond book says.
+        const auto fightTagA =
+            m_Registry.GetComponent<SpeciesTag>(a_aggressor);
+        const auto fightTagB =
+            m_Registry.GetComponent<SpeciesTag>(a_victim);
+
+        if (!fightTagA || !fightTagB
+            || fightTagA->Value != Species::Human
+            || fightTagB->Value != Species::Human)
+        {
+            return;
+        }
+
         const auto kind = Bonds::CurrentKind(m_Bonds, a_aggressor, a_victim);
         const float roll = m_Rng.NextFloat(0.0f, 1.0f);
 
