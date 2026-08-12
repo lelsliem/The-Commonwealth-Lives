@@ -226,6 +226,16 @@ namespace TLC::Tuning
         // verification before it is trusted (the verify ritual); the key
         // exists so a wrong pin is a config line, never a rebuild.
         std::uint32_t RadioBaseFormId = 0x0001A17D;
+
+        // The decision log cadence (0.7.4 verification fix): a mind's
+        // "decides X" line is logged when its intent changes, or at most
+        // once per this many seconds while it flip-flops between near-tied
+        // intents (Rest/Explore tie-breaks re-roll every frame). The
+        // verify channel stays readable — one line per mind per second at
+        // most — instead of a 150-line-per-second file-I/O flood on the
+        // game thread (the 22k-line session that preceded the silent
+        // freeze).
+        float LogDecisionEvery = 1.0f;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -286,6 +296,9 @@ namespace TLC::Tuning
             read("sim.radio.caption.every", settings.RadioCaptionEvery);
         settings.RadioRadius =
             read("sim.radio.radius", settings.RadioRadius);
+
+        settings.LogDecisionEvery =
+            read("sim.log.decisions.every", settings.LogDecisionEvery);
 
         // The arc/birth/news toggles are bools, not rates — parse them
         // separately: "1", "true", "yes", "on" mean on; anything else

@@ -1042,3 +1042,18 @@ bench remains the fallback. The engine stays untouched; this is game
 knowledge at the edge (ADR-0024), the pure `NearestVendor` rule tested
 in the harness.
 
+
+### ADR-0029 — The verify channel is load, not free: decisions log on change or cadence (2026-08-12)
+
+The per-frame decision lines were the adapter's own drag: a mind with
+near-tied Rest/Explore scores re-rolls its intent every frame (the
+core's decide adds per-call jitter), and the key-based dedupe let each
+re-roll write a synchronous file line on the game thread — 22,478
+"decides" lines in under three minutes of one session, 75% of the log,
+growing the frame hang the player reported as "longer the more we add."
+`LogPlanEntry` now logs on intent change or once per
+`sim.log.decisions.every` seconds (default 1.0), whichever comes first:
+real decisions (a walk's target, an arrival) still print instantly; only
+the per-frame flip-flop is throttled. The core's tie-break jitter is
+flagged for the engine handoff — a settled mind should rest, not
+re-roll — but the adapter no longer amplifies it into a file-I/O flood.

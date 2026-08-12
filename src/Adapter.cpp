@@ -4137,14 +4137,29 @@ namespace TLC
         std::string a_message,
         const LogKey& a_key)
     {
+        // Two gates, and either may let a line through:
+        //   1. The intent changed (the old key-based dedupe) — a real
+        //      decision is news the moment it happens.
+        //   2. LogDecisionEvery seconds passed — a mind flip-flopping
+        //      between near-tied intents (Rest/Explore re-roll every
+        //      frame: the engine's decide adds per-call jitter, and a tie
+        //      re-picks) would otherwise write one line per frame per
+        //      mind — 22k lines in under three minutes of synchronous
+        //      file I/O on the game thread, the drag behind the growing
+        //      frame hang. One line per mind per second keeps the verify
+        //      channel readable without the flood.
+        const auto now = std::chrono::steady_clock::now();
         const auto it = m_LastLogged.find(a_entity);
 
-        if (it != m_LastLogged.end() && it->second == a_key)
+        if (it != m_LastLogged.end()
+            && it->second.first == a_key
+            && now - it->second.second
+                < std::chrono::duration<float>(m_Settings.LogDecisionEvery))
         {
-            return;   // unchanged — no per-frame spam
+            return;   // same intent, recently logged — quiet
         }
 
-        m_LastLogged[a_entity] = a_key;
+        m_LastLogged[a_entity] = { a_key, now };
         REX::INFO("{}", a_message);
     }
 

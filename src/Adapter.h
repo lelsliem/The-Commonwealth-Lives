@@ -579,7 +579,16 @@ namespace TLC
         // alive; cleared on EndWorld.
         std::unordered_set<std::uint32_t> m_SeenAlive;
 
-        std::unordered_map<LCE::Simulation::EntityId, LogKey> m_LastLogged;
+        // The last thing an entity was logged as doing, and when — so
+        // intents are logged when they change, or at most once per
+        // LogDecisionEvery seconds while a mind flip-flops between
+        // near-tied intents (the Rest/Explore re-roll). Both halves matter:
+        // the key alone let a per-frame alternation write 22k lines in
+        // under three minutes — synchronous file I/O on the game thread.
+        std::unordered_map<
+            LCE::Simulation::EntityId,
+            std::pair<LogKey, std::chrono::steady_clock::time_point>>
+            m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
 
         // When each mind last arrived, and where (target form id + time).
