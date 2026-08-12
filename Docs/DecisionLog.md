@@ -1547,3 +1547,21 @@ screen that hex reads as noise. The subtitle now uses a name-only label
 (`MindNameOnly`): just "Jun Long" — or the bare species label for an
 unclaimed stray. The id-bearing label stays in the log, the feed, and
 the receipt; only the screen shows the clean line.
+
+## ADR-0050 — the fall tips, the beats wait (0.7.6)
+
+Two fight-feel bugs from the 0.7.5 field tests. (1) The ghost-push
+slide: after the paired push carried the victim back, the fall's
+KnockExplosion fired at force 6–9 (sim.fight.push 8 ± jitter) — near
+the ragdoll zone — and the horizontal impulse dragged the lying victim
+along the ground. The paired push IS the shove now, so the knock only
+has to put them DOWN: sim.fight.push default drops 8 → 3, the tip-over
+zone measured in the loop tests (2.6–3.5 with jitter), a fall in place
+with no slide. (2) The both-fall look: a beat could fire while the
+other actor was still mid-knock (down, getting up, a knock queued).
+New standing guard `IsDown` (Actor's knockState vs KNOCK_STATE_ENUM:
+anything but kNormal is not on its feet): a fall that finds its victim
+down — or a retaliation that finds either actor down — waits 500ms and
+re-checks instead of firing into the state. The receipts print the
+wait ("fall waits — X still on the ground"), so the log proves the
+guard fired.

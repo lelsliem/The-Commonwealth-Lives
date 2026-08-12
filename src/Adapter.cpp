@@ -33,6 +33,7 @@
 #include <RE/B/BSSpinLock.h>     // BSAutoWriteLock — the subtitle queue's lock
 #include <RE/D/DamageImpactData.h>
 #include <RE/H/HitData.h>      // the melee hit-reaction — the standing shove
+#include <RE/K/KNOCK_STATE_ENUM.h>   // the standing guard — a beat never fires into a down actor
 #include <RE/T/TESIdleForm.h>   // the paired push — the game's real shove animation
 #include <RE/S/STAGGER_MAGNITUDE.h>
 #include <RE/C/Calendar.h>
@@ -184,6 +185,22 @@ namespace TLC
                 *a_victim, human, a_attacker);
 
             return leadPlayed && humanPlayed;
+        }
+
+        //-------------------------------------------------------------------------
+        // The standing guard (0.7.6, ADR-0050): an actor mid-knock —
+        // exploding, out, down, getting up, or with a knock queued — is
+        // not available for the next beat. The both-fall look happened
+        // because a beat could fire while the other actor was still on
+        // the ground, and a fall could re-fire into a victim already
+        // down (the ground-slide). A beat that finds its actor down
+        // waits a beat and re-checks instead of firing into the state.
+        //-------------------------------------------------------------------------
+        bool IsDown(RE::Actor* a_actor)
+        {
+            return a_actor != nullptr
+                && static_cast<RE::KNOCK_STATE_ENUM>(a_actor->knockState)
+                    != RE::KNOCK_STATE_ENUM::kNormal;
         }
 
         //-------------------------------------------------------------------------
@@ -3228,10 +3245,29 @@ namespace TLC
             case ShoveBeat::kFall:
             case ShoveBeat::kCounterFall:
             {
+                // The standing guard (0.7.6, ADR-0050): if the victim
+                // is still mid-knock — down, getting up, a knock
+                // queued — the fall would land on top of it, the
+                // ground-slide and the double-down looks. Wait a beat
+                // and re-check instead of firing into the down state.
+                if (IsDown(victimActor))
+                {
+                    additions.push_back(PendingShove{
+                        kind, victim, thrower,
+                        std::chrono::steady_clock::now()
+                            + std::chrono::milliseconds(500) });
+                    REX::INFO(
+                        "LCE: fall waits — {} still on the ground.",
+                        MindLabelForm(m_Translator.FormFor(victim)));
+                    break;
+                }
+
                 // The fall (ADR-0043): the knock-down lands a beat
                 // after the flinch so the stagger actually plays.
                 // Force jitters off the victim, capped at 1.15× so a
-                // strong draw never launches.
+                // strong draw never launches (0.7.6: the base is the
+                // tip-over zone now — the push carries the travel, the
+                // fall only has to put them down).
                 const auto fallJitter = std::min(
                     1.15f,
                     0.75f + 0.5f * (0.5f + IdJitter(victim, 0.5f)));
@@ -3250,6 +3286,22 @@ namespace TLC
 
             case ShoveBeat::kRetaliation:
             {
+                // The standing guard (0.7.6, ADR-0050): the answer
+                // must land on its feet — if either is still down or
+                // getting up, the counter plays into the get-up and
+                // both end up on the floor. Wait a beat and re-check.
+                if (IsDown(victimActor) || IsDown(throwerActor))
+                {
+                    additions.push_back(PendingShove{
+                        kind, victim, thrower,
+                        std::chrono::steady_clock::now()
+                            + std::chrono::milliseconds(500) });
+                    REX::INFO(
+                        "LCE: answer waits — {} not on their feet.",
+                        MindLabelForm(m_Translator.FormFor(victim)));
+                    break;
+                }
+
                 // The answer (0.7.5): the victim answers the punch
                 // after the get-up window — its own paired push now,
                 // its fall a beat later, and the loser walks off after

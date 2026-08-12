@@ -222,19 +222,16 @@ namespace TLC::Tuning
         float FightTemper = 1.0f;
 
         // The punch's shove (0.7.5 polish): the victim is knocked back
-        // from the aggressor — the game's own knockback plays the
-        // stagger (the same physical push the "Get Out Of My Face"
-        // crowd mod uses; the engine's function is AIProcess::
-        // KnockExplosion, REL::ID-resolved against the installed
-        // Address Library). Magnitude in game units — the crowd mod's
-        // default was 5 and "anything above 10 is pretty insane"; 8 is
-        // the scuffle's default: a knock that VISIBLY moves the victim
-        // (3–5 read as a tip-over in the loop tests — the force that
-        // mattered was the INI override, which the user's file kept at
-        // 3), and the jitter (capped at 1.15× so a strong draw never
-        // hits the insane 10 zone) spreads it 6–9. 0 turns the shove
-        // off (the fight books without the animation).
-        float FightPush = 8.0f;
+        // The fall's force (0.7.6, ADR-0050): the paired push IS the
+        // shove — the victim is carried by the animation, so this
+        // force only has to put them DOWN. 3 is the tip-over zone the
+        // loop tests measured: it knocks the victim over in place
+        // without the ground-slide that force 6–9 dragged (the
+        // "ghost push" the field tests saw after the kick). Magnitude
+        // in game units; above 10 is the ragdoll launch zone. The
+        // jitter (capped at 1.15×) spreads it 2.6–3.5. 0 turns the
+        // fight's physics off (the fight books without the fall).
+        float FightPush = 3.0f;
 
         // The standing shove's flinch (0.7.5 polish): the game's melee
         // hit-reaction — the same stagger that plays when a punch
