@@ -2257,6 +2257,27 @@ namespace TLC
             + " [" + FormatHex8(formId) + "]";
     }
 
+    std::string Adapter::MindNameOnly(std::uint32_t a_formId) const
+    {
+        const auto entity = m_Translator.EntityFor(a_formId);
+
+        if (entity.IsValid())
+        {
+            if (const auto name = m_Registry.GetComponent<Name>(entity))
+            {
+                return name->Full;
+            }
+
+            return std::string(SpeciesLabel(
+                m_Registry.GetComponent<SpeciesTag>(entity).get()));
+        }
+
+        // Not a mind — a workshop or a form the sim does not know.
+        // No name worth subtitling; the caller falls back to the bare
+        // line.
+        return {};
+    }
+
     std::string Adapter::MindLabelForm(std::uint32_t a_formId) const
     {
         const auto entity = m_Translator.EntityFor(a_formId);
@@ -2800,7 +2821,15 @@ namespace TLC
                 && player->GetPosition().GetDistance(speaker->GetPosition())
                     <= m_Settings.SubtitleRadius)
             {
-                ShowSubtitle(speaker, lineLabel);
+                // The on-screen line is clean — the log's id-bearing
+                // label stays in the feed and the receipt. The subtitle
+                // reads "Jun Long: \"...\"", never the hex.
+                const auto speakerName = MindNameOnly(speakerForm);
+
+                ShowSubtitle(
+                    speaker,
+                    (speakerName.empty() ? line
+                                         : speakerName + ": \"" + line + "\""));
             }
         }
     }

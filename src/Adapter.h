@@ -415,6 +415,13 @@ namespace TLC
         [[nodiscard]] std::string MindLabel(
             LCE::Simulation::EntityId a_entity) const;
         [[nodiscard]] std::string MindLabelForm(std::uint32_t a_formId) const;
+
+        // The on-screen half of the label (0.7.5 Fights): the log's
+        // labels carry the form id beside the name for the verify
+        // channel, but a subtitle reads "Jun Long", not
+        // "Jun Long [FF01A4D7]". No id, no brackets — just the name
+        // (or the species label when nobody claimed it yet).
+        [[nodiscard]] std::string MindNameOnly(std::uint32_t a_formId) const;
         [[nodiscard]] std::string MarketLabel(std::uint32_t a_formId) const;
 
         // The identity stone's visible half (0.7.0 Stone 1): write a

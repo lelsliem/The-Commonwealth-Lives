@@ -1535,3 +1535,12 @@ the `"who: \"line\""` prefix keeps the box self-contained. New key
 `sim.subtitle.radius = 500` (game units) gates it: a nearby brawl is
 loud, a cross-settlement squabble is not. The feed still carries every
 line for the radio's story; the top-left news pop is retired for speech.
+
+## ADR-0047 — subtitles read clean (0.7.5)
+
+The first subtitle pass embedded the log's label, which carries the form
+id beside the name ("Jun Long [FF01A4D7]") for the verify channel. On
+screen that hex reads as noise. The subtitle now uses a name-only label
+(`MindNameOnly`): just "Jun Long" — or the bare species label for an
+unclaimed stray. The id-bearing label stays in the log, the feed, and
+the receipt; only the screen shows the clean line.
