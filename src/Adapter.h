@@ -462,7 +462,7 @@ namespace TLC
         // then walks the one who threw first away from the one who
         // answered (the loser slinks off — the flee's first visible
         // beat while the engine's Flee action is still a stub).
-        void ProcessPendingRetaliations();
+        void ProcessPendingShoves();
 
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // remembers its market as a Trade-kind event whose Other is the
@@ -813,17 +813,31 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         std::chrono::steady_clock::time_point m_LastForceFight{};
         std::uint64_t m_ForceFightCount = 0;
 
-        // The scuffle's queued second beat (0.7.5): who answers whom,
-        // and when — the counter-shove fires a beat after the first
-        // punch so the exchange reads as a sequence, not a double-fall.
-        struct PendingRetaliation
+        // The scuffle's queued beats (0.7.5): every physical beat of a
+        // fight is scheduled, never fired in the same frame — the
+        // flinch plays, then the fall lands a beat later (a same-frame
+        // knock overrides the stagger before it is ever visible,
+        // ADR-0043), the counter-shove fires after the get-up window,
+        // its own fall after that, and the loser walks off last. The
+        // chain: flinch → fall → get up → counter-flinch → counter-fall
+        // → slink off.
+        enum class ShoveBeat
         {
-            LCE::Simulation::EntityId Retaliator;
-            LCE::Simulation::EntityId Target;
+            kFall,          // the victim falls after the punch's flinch
+            kRetaliation,   // the answer: flinch now, then its fall
+            kCounterFall,   // the answer's own fall
+            kWalkOff,       // the loser slinks off
+        };
+
+        struct PendingShove
+        {
+            ShoveBeat Kind;
+            LCE::Simulation::EntityId Victim;   // the one who takes the hit
+            LCE::Simulation::EntityId Thrower;  // the one who threw it
             std::chrono::steady_clock::time_point Due;
         };
 
-        std::vector<PendingRetaliation> m_PendingRetaliations;
+        std::vector<PendingShove> m_PendingShoves;
 
         // Whether the current load's completion event was already handled.
         // F4SE can fire both kPostLoadGame and kGameLoaded for one load —

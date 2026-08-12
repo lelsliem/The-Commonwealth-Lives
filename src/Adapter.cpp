@@ -2855,52 +2855,60 @@ namespace TLC
                         0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f)));
                     const auto force = m_Settings.FightPush * pushJitter;
 
-                    // The standing shove (ADR-0042): play the melee
-                    // hit-reaction first — the victim's stagger — so
-                    // the punch reads as a shove, then the knock fall
-                    // as its consequence. Force alone never read as a
-                    // push in the loop tests; the flinch is the push.
+                    // The standing shove (ADR-0042/0043): play the
+                    // melee hit-reaction — the victim's stagger — as the
+                    // punch lands, and SCHEDULE the knock-down a beat
+                    // later. A same-frame knock overrides the stagger
+                    // animation before it is visible (that is the
+                    // "falls with no push" the force tests kept
+                    // showing); the flinch must play, then the fall
+                    // lands as its consequence.
                     FireHitReaction(
                         victimActor, aggressorActor,
                         m_Settings.FightStagger,
                         m_Settings.FightPushBack);
 
-                    victimActor->currentProcess->KnockExplosion(
-                        victimActor, aggressorActor->GetPosition(),
-                        force);
-
-                    // The shove's receipt (0.7.5): every physical punch
-                    // logs who, how hard, and how close — so a fall can
-                    // always be matched to its push, or proven not to
-                    // be one (the test loop's double-fall question).
+                    // The shove's receipt (0.7.5): every punch logs who
+                    // and how close, and the fall logs its force when
+                    // it lands — so a fall can always be matched to its
+                    // punch, or proven not to be one.
                     REX::INFO(
-                        "LCE: shove: {} staggered by {} — flinch {} / push-back {:.0f} / fall {:.1f} force at {:.0f} u.",
+                        "LCE: shove: {} staggered by {} — flinch {} / push-back {:.0f} at {:.0f} u (fall in {:.1f}s).",
                         MindLabelForm(m_Translator.FormFor(a_victim)),
                         MindLabelForm(m_Translator.FormFor(a_aggressor)),
                         m_Settings.FightStagger,
                         m_Settings.FightPushBack,
-                        force, scene);
+                        scene,
+                        m_Settings.FightFallDelay);
+
+                    const auto now = std::chrono::steady_clock::now();
+
+                    m_PendingShoves.push_back(
+                        PendingShove{
+                            ShoveBeat::kFall, a_victim, a_aggressor,
+                            now + std::chrono::milliseconds(
+                                static_cast<int>(
+                                    m_Settings.FightFallDelay * 1000.0f)) });
 
                     // The scuffle's second beat (0.7.5): a hot-headed
                     // victim answers the punch — but after a beat, not
-                    // in the same instant (both shoves in one frame
-                    // read as a double-fall). The forced loop's test
-                    // pair answers always, so the full chain — push,
-                    // fall, get up, push back, slink off — is watchable
-                    // on demand.
+                    // in the same instant. The forced loop's test pair
+                    // answers always, so the full chain — flinch, fall,
+                    // get up, answer, counter-fall, slink off — is
+                    // watchable on demand.
                     const bool answers =
                         a_force
                         || TemperOf(a_victim) >= m_Settings.FightTemper;
 
                     if (answers)
                     {
-                        m_PendingRetaliations.push_back(
-                            PendingRetaliation{
+                        m_PendingShoves.push_back(
+                            PendingShove{
+                                ShoveBeat::kRetaliation,
                                 a_victim, a_aggressor,
-                                std::chrono::steady_clock::now()
-                                    + std::chrono::seconds(
-                                        static_cast<int>(
-                                            m_Settings.RetaliationDelay)) });
+                                now + std::chrono::seconds(
+                                    static_cast<int>(
+                                        m_Settings.RetaliationDelay)) });
                     }
                 }
             }
@@ -2989,19 +2997,20 @@ namespace TLC
         m_LastForceFight = now;
     }
 
-    void Adapter::ProcessPendingRetaliations()
+    void Adapter::ProcessPendingShoves()
     {
-        // The scuffle's second beat (0.7.5): a hot-headed victim (or a
-        // forced test pair) answers the punch a beat later, once they
-        // are back on their feet. The counter-shove lands from the
-        // retaliator's position, only if the pair is still at the
-        // scene (they parted — no ghost punch), and then the one who
-        // threw first slinks off — the flee's first visible beat while
-        // the engine's Flee action is still a table stub.
+        // The scuffle's queued beats (0.7.5): every physical beat of a
+        // fight fires on its own schedule — the flinch plays first
+        // (fired at the punch), the fall lands a beat later so the
+        // stagger is visible (ADR-0043), the hot-headed victim (or
+        // forced test pair) answers after the get-up window with its
+        // own flinch, its fall follows, and the loser slinks off last.
+        // Every beat re-checks the scene: if the pair parted, the beat
+        // dies — no ghost punches, no phantom falls.
         const auto now = std::chrono::steady_clock::now();
 
-        for (auto it = m_PendingRetaliations.begin();
-             it != m_PendingRetaliations.end();)
+        for (auto it = m_PendingShoves.begin();
+             it != m_PendingShoves.end();)
         {
             if (now < it->Due)
             {
@@ -3009,63 +3018,107 @@ namespace TLC
                 continue;
             }
 
-            const auto retaliator = it->Retaliator;
-            const auto target = it->Target;
-            it = m_PendingRetaliations.erase(it);
+            const auto kind = it->Kind;
+            const auto victim = it->Victim;    // takes the hit
+            const auto thrower = it->Thrower;  // threw it
+            it = m_PendingShoves.erase(it);
 
             if (m_Settings.FightPush <= 0.0f)
             {
                 continue;
             }
 
-            auto* targetActor = RE::TESForm::GetFormByID<RE::Actor>(
-                m_Translator.FormFor(target));
-            auto* retaliatorActor = RE::TESForm::GetFormByID<RE::Actor>(
-                m_Translator.FormFor(retaliator));
+            auto* victimActor = RE::TESForm::GetFormByID<RE::Actor>(
+                m_Translator.FormFor(victim));
+            auto* throwerActor = RE::TESForm::GetFormByID<RE::Actor>(
+                m_Translator.FormFor(thrower));
 
-            if (targetActor == nullptr
-                || targetActor->currentProcess == nullptr
-                || retaliatorActor == nullptr
-                || retaliatorActor->currentProcess == nullptr)
+            if (victimActor == nullptr
+                || victimActor->currentProcess == nullptr
+                || throwerActor == nullptr
+                || throwerActor->currentProcess == nullptr)
             {
-                continue;
+                continue;   // died or unloaded — the beat dies with them
             }
 
             const auto scene =
-                (retaliatorActor->GetPosition()
-                    - targetActor->GetPosition())
+                (throwerActor->GetPosition()
+                    - victimActor->GetPosition())
                     .Length();
 
             if (scene > 400.0f)
             {
-                continue;   // they parted — no counter-punch at range
+                continue;   // they parted — no beat at range
             }
 
-            const auto backJitter = std::min(
-                1.15f,
-                0.75f + 0.5f * (0.5f + IdJitter(retaliator, 0.5f)));
+            switch (kind)
+            {
+            case ShoveBeat::kFall:
+            case ShoveBeat::kCounterFall:
+            {
+                // The fall (ADR-0043): the knock-down lands a beat
+                // after the flinch so the stagger actually plays.
+                // Force jitters off the victim, capped at 1.15× so a
+                // strong draw never launches.
+                const auto fallJitter = std::min(
+                    1.15f,
+                    0.75f + 0.5f * (0.5f + IdJitter(victim, 0.5f)));
+                const auto force = m_Settings.FightPush * fallJitter;
 
-            // The answer carries its own flinch (ADR-0042): the
-            // counter-punch staggers too, then knocks over.
-            FireHitReaction(
-                targetActor, retaliatorActor,
-                m_Settings.FightStagger,
-                m_Settings.FightPushBack);
+                victimActor->currentProcess->KnockExplosion(
+                    victimActor, throwerActor->GetPosition(), force);
 
-            targetActor->currentProcess->KnockExplosion(
-                targetActor, retaliatorActor->GetPosition(),
-                m_Settings.FightPush * backJitter);
+                REX::INFO(
+                    "LCE: fall: {} knocked down by {}'s shove — {:.1f} force at {:.0f} u.",
+                    MindLabelForm(m_Translator.FormFor(victim)),
+                    MindLabelForm(m_Translator.FormFor(thrower)),
+                    force, scene);
+                break;
+            }
 
-            REX::INFO(
-                "LCE: {} shoves {} back — flinch {}, hot heads, both.",
-                MindLabelForm(m_Translator.FormFor(retaliator)),
-                MindLabelForm(m_Translator.FormFor(target)),
-                m_Settings.FightStagger);
+            case ShoveBeat::kRetaliation:
+            {
+                // The answer (0.7.5): the victim answers the punch
+                // after the get-up window — its own flinch now, its
+                // fall a beat later, and the loser walks off after
+                // that. (victim = the one who answers, thrower = the
+                // one who threw first and now takes the counter.)
+                FireHitReaction(
+                    throwerActor, victimActor,
+                    m_Settings.FightStagger,
+                    m_Settings.FightPushBack);
 
-            // The loser slinks off: the one who threw first walks to
-            // the far side of the scene from the one who answered.
-            Movement::WalkAwayFrom(
-                targetActor, retaliatorActor->GetPosition());
+                REX::INFO(
+                    "LCE: {} shoves {} back — flinch {}, hot heads, both.",
+                    MindLabelForm(m_Translator.FormFor(victim)),
+                    MindLabelForm(m_Translator.FormFor(thrower)),
+                    m_Settings.FightStagger);
+
+                const auto beat = std::chrono::steady_clock::now()
+                    + std::chrono::milliseconds(
+                        static_cast<int>(
+                            m_Settings.FightFallDelay * 1000.0f));
+
+                m_PendingShoves.push_back(
+                    PendingShove{
+                        ShoveBeat::kCounterFall, thrower, victim, beat });
+                m_PendingShoves.push_back(
+                    PendingShove{
+                        ShoveBeat::kWalkOff, thrower, victim, beat });
+                break;
+            }
+
+            case ShoveBeat::kWalkOff:
+            {
+                // The loser slinks off: the one who threw first walks
+                // to the far side of the scene from the one who
+                // answered — the flee's first visible beat while the
+                // engine's Flee action is still a table stub.
+                Movement::WalkAwayFrom(
+                    victimActor, throwerActor->GetPosition());
+                break;
+            }
+            }
         }
     }
 
@@ -4499,7 +4552,7 @@ namespace TLC
             // The scuffle's second beat (0.7.5): due counter-shoves
             // fire, then the one who threw first walks off — the
             // exchange reads as a sequence, not a double-fall.
-            ProcessPendingRetaliations();
+            ProcessPendingShoves();
 
             // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
             // event channel is instant; this pass is complete — quiet

@@ -1470,3 +1470,13 @@ back` for the answer, and the range line when either waits.
 **Decision:** Before the knock fall, play the melee hit-reaction on the victim: a zero-damage `HitData` (built on zeroed raw storage — HitData has no default ctor, and the game's own explosion-stagger path uses exactly this shape: weapon null, zero damage, a stagger magnitude, a push-back) carrying `stagger` (sim.fight.stagger, default 2 = medium) and `pushBack` (sim.fight.pushback, default 25). Nothing is flagged as an attack — the scuffle stays a scuffle, no combat escalation, no damage. Then the existing KnockExplosion fall fires, so the sequence reads: punch → stagger back → fall → get up → answer → slink off. The retaliation beat carries its own flinch.
 
 **Consequences:** The push animation finally shows in-game. `sim.fight.stagger = 0` turns the flinch off (fall only); the magnitude is 1–4 (small → extra-large). One vendored-commonlib quirk surfaced: `BSPointerHandle`'s pointer constructors are broken in this build (they call a `get_handle(Y*)` that exists nowhere), so the handles are built through the game's own `BSPointerHandleManagerInterface<T>::GetHandle` wrapper instead.
+
+## ADR-0043 — the fall is sequenced after the flinch, never same-frame
+
+**Status:** Accepted (0.7.5).
+
+**Context:** ADR-0042 made the punch fire the game's melee hit-reaction (the standing stagger), but in-game it still read as a plain collapse — "one falls, the other falls, no animation." The cause was not the flinch failing to fire (the receipts proved it did): the knock-down (`KnockExplosion`) landed in the same frame, and a same-frame knock overrides the stagger animation before it is ever visible. The flinch was playing — underneath the fall.
+
+**Decision:** Every physical beat of a scuffle is now scheduled, never fired in the same frame as the one before it. The flinch fires at the punch; the fall is queued `sim.fight.fall.delay` (default 0.9s) later; the hot-headed victim's answer (or a forced test pair's) fires after the get-up window with its own flinch, its own fall a beat after, and the loser walks off last. The pending-retaliation queue became a general `PendingShove` queue with four beats (fall, retaliation, counter-fall, walk-off); every beat re-checks the pair is still at the scene (parted → the beat dies, no ghost punches or phantom falls). The chain: flinch → fall → get up → counter-flinch → counter-fall → slink off.
+
+**Consequences:** The stagger finally plays before the fall, so the punch reads as a shove. Each beat logs its own receipt (`shove:` for the flinch, `fall:` for the knock-down), so a visual mismatch can always be matched to which beat did or did not fire.

@@ -253,6 +253,14 @@ namespace TLC::Tuning
         // never launches. 0 = flinch in place.
         float FightPushBack = 25.0f;
 
+        // The fall's beat (0.7.5 polish): seconds between the flinch
+        // and the knock-down. The flinch and the fall MUST NOT land in
+        // the same frame — the knock overrides the stagger animation
+        // before it is visible, and the punch reads as a silent
+        // collapse (ADR-0043). A short beat lets the stagger play,
+        // then the fall lands as its consequence.
+        float FightFallDelay = 0.9f;
+
         // The scuffle's beat (0.7.5): a hot-headed victim answers the
         // punch after a beat, not in the same instant — push, fall, get
         // up, push back. Seconds between the two shoves.
@@ -360,6 +368,8 @@ namespace TLC::Tuning
                 static_cast<float>(settings.FightStagger)));
         settings.FightPushBack =
             read("sim.fight.pushback", settings.FightPushBack);
+        settings.FightFallDelay =
+            read("sim.fight.fall.delay", settings.FightFallDelay);
 
         settings.RetaliationDelay = read(
             "sim.fight.retaliation.delay", settings.RetaliationDelay);
