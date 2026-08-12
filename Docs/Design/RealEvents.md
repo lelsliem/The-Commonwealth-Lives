@@ -6,7 +6,12 @@
 altercation: rivals and enemies crossing at the same bench row
 (`src/Rows.h`, pure) — Wronged memories both ways (engine −0.25),
 gossip spread, the row can push a pair over the feud line. 21/21
-suites green; in-game verification pending. Pillar 3 (fights, the
+suites green. In-game verification (2026-08-12) found and fixed two
+real seams: the row scan now crosses the stall-keeper directly (she
+stands at the bench, so she never enters the walker attendance book),
+and the workshop's props are no longer minds (turrets and spotlights
+hold the settler faction and were seeding as Human — Deacon was found
+feuding with four missile turrets). Pillar 3 (fights, the
 physical escalation) and 0.8.0 (trade with anyone) still PLANNED —
 design written, no code.
 Written before any code; the author's vision, grounded in the seams

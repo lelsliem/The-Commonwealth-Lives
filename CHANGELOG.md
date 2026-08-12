@@ -9,6 +9,35 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.7.2 Rows — in-game verification fixes (2026-08-12)
+
+0.7.1's speech and 0.7.2's rows verified live in a 673-mind restored
+world: named dialogue fired on shut-stall slights exactly as designed.
+Verification exposed two real seams, both fixed edge-only (no engine
+change):
+
+- **The feud's geography includes the keeper.** The row scan read
+  only the attendance book (who walked here today) — a keeper
+  planted or restored at her own bench never walks, so she never
+  entered it and could never row with the very minds every shut-
+  stall slight aimed at her. The scan now crosses the stall-keeper
+  directly at each arrival; the once-per-day Wronged gate keeps a
+  keeper who did arrive today a harmless double-scan.
+- **The workshop's props are not minds.** Turrets and spotlights hold
+  the settler faction and were seeding as Human — needs, walks (434
+  active walks in the test session), stall slights, and feuds
+  (`Deacon is feuding with Missile Turret` ×4). `IsSimRelevant` now
+  excludes device/robot races (the three turret races, robots,
+  LibertyPrime) and any actor with no NPC base record; a polluted
+  co-save self-heals via `PruneDeviceMinds` on restore (one summary
+  line, before pouches/names/bonds rebuild), and a fresh world never
+  seeds them. The species table's "robots are deliberately absent"
+  note is finally honored; synths stay Human.
+
+21/21 harness suites green; build clean. ADR-0026.
+
+---
+
 ## 0.7.0 — Identity & the Player Window (2026-08-11)
 
 Settlers have **names**, relationships can go **bad**, and the player

@@ -109,8 +109,23 @@ namespace TLC
         // and the translation. A death (a_isDeath) writes the death fact
         // — every surviving mind remembers { the dead, Death, weight,
         // day } — the groundwork grief reads in Stone 2; a departure is
-        // a goodbye line, no fact (they chose to go).
-        void RemoveMind(std::uint32_t a_formId, bool a_isDeath);
+        // a goodbye line, no fact (they chose to go). The quiet flag
+        // (the device prune) suppresses the per-mind farewell line —
+        // dozens of turrets "leaving" at restore is noise; the prune
+        // says it once.
+        void RemoveMind(
+            std::uint32_t a_formId, bool a_isDeath,
+            bool a_quiet = false);
+
+        // The device prune (0.7.2 fix): a polluted co-save holds the
+        // workshop's props as minds (they hold the settler faction, and
+        // before the exclusion they seeded as Human). A fresh world
+        // never seeds them (IsSimRelevant); a restored one self-heals
+        // here — quietly, one summary line, before pouches, names, or
+        // bonds are rebuilt, so a prop never carries a wallet, a name,
+        // or a feud. Actors still streaming in are caught by the census
+        // as departures the moment they load.
+        void PruneDeviceMinds();
 
         // The world day (the weather stone reads it inline; this is the
         // same read, named for the bookkeeping). 0 before the calendar

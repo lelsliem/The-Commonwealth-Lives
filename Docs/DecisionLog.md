@@ -926,3 +926,16 @@ own, what to borrow. Three decisions:
    (the audio path, later) are noted as optional companion mods and
    idea sources. The only dependency pursued: Baby Sim, permission
    pending.
+
+---
+
+### ADR-0026 — The feud's geography includes the keeper; the workshop's props are not minds (2026-08-12)
+
+**Context:** In-game verification of 0.7.1/0.7.2 (the 09:47 session, 673-mind restored world) showed 0.7.1's speech firing perfectly on shut-stall slights but zero formal rows — and the feud headlines that did land were `Deacon is feuding with Missile Turret` (×4) and `Spotlight - Wall-Mounted` (×2). Two real seams:
+
+1. The row crossing scan reads the attendance book ("who walked here today"), so a stall-keeper planted or restored at her own bench never enters it — the very mind every shut-stall slight is aimed at could never row back.
+2. The workshop's props (turrets, spotlights) hold the WorkshopNPCFaction — the sim-relevance gate — and ClassifySpecies defaults their races to Human, so they seed as minds: needs, walks (434 active walks in the test session), stall slights, and feuds.
+
+**Decision:** (a) The row scan crosses the stall-keeper directly at each arrival, alongside the day's walkers; the once-per-day Wronged gate makes a keeper who did arrive today a harmless double-scan. (b) `IsSimRelevant` excludes device/robot races (the three turret races, robots, LibertyPrime) and any actor with no NPC base record; `ApplyRestore` runs `PruneDeviceMinds()` after the translator rebuild — before pouches, names, or bonds — so a polluted co-save self-heals quietly (one summary line) and a fresh world never seeds props. Stragglers still streaming in at restore are caught by the census as departures when they load.
+
+**Consequences:** No engine change (edge-only: game knowledge at the edge, ADR-0024). The species table's "robots are deliberately absent — a robot is its own species for a later stone" note is finally honored. Synths stay Human (a synth settler is a person).

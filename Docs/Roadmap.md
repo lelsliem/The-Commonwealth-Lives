@@ -585,7 +585,14 @@ STATUS: PLANNED — design docs written, no code.
     them (engine Wronged, −0.25), the settlement hears the shouting
     (gossip), and the row can push a pair over the feud line. The
     crossing is `src/Rows.h` (pure), wired at arrival; the shut-stall
-    slight keeps its −0.1 channel; physical escalation stays 0.7.3
+    slight keeps its −0.1 channel; physical escalation stays 0.7.3.
+    In-game verification (2026-08-12) found the feud's geography
+    missing its keeper — the scan only saw walkers, and a planted or
+    restored keeper never walks — so the keeper is now scanned
+    directly at each arrival. Same session exposed the workshop's
+    props as minds (turrets, spotlights hold the settler faction and
+    seeded as Human): device/robot races are now excluded from
+    sim-relevance and a polluted co-save self-heals via the prune.
 [ ] 0.7.3 — Fights: physical escalation via real combat (the game's
     own punch/shove anims — no pex needed); feedback into bonds and
     news

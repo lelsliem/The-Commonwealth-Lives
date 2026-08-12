@@ -1148,6 +1148,12 @@ namespace TLC
                 m_Translator.Add(a_formRef.FormId, a_entity);
             });
 
+        // The device prune (0.7.2 fix): a polluted co-save holds the
+        // workshop's props as minds. Runs now — the translator is up, but
+        // pouches, names, and bonds are not rebuilt yet, so a pruned
+        // prop never carries a wallet, a name, or a feud.
+        PruneDeviceMinds();
+
         // The economy stone: a restored human without a pouch predates
         // the economy — the record had no caps to carry. Back-fill the
         // seed so a pre-economy save wakes into a living market instead of
@@ -1639,7 +1645,52 @@ namespace TLC
         }
     }
 
-    void Adapter::RemoveMind(std::uint32_t a_formId, bool a_isDeath)
+    void Adapter::PruneDeviceMinds()
+    {
+        // A polluted co-save holds the workshop's props as minds (they
+        // hold the settler faction, and before the exclusion they seeded
+        // as Human — needs, walks, feuds). The prune runs on restore:
+        // a fresh world never seeds them (IsSimRelevant now excludes
+        // device/robot races), and the polluted world self-heals here —
+        // quietly, one summary line, before pouches, names, or bonds
+        // are rebuilt.
+        std::vector<std::uint32_t> pruned;
+
+        m_Registry.ForEachWithComponent<FormRef>(
+            [&](LCE::Simulation::EntityId a_entity, FormRef& a_form)
+            {
+                // Targets (workshops) carry a FormRef but no SpeciesTag
+                // — they are places to walk to, never minds.
+                if (m_Registry.GetComponent<SpeciesTag>(a_entity) == nullptr)
+                {
+                    return;
+                }
+
+                auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(a_form.FormId);
+
+                if (actor != nullptr && !IsSimRelevant(actor))
+                {
+                    pruned.push_back(a_form.FormId);
+                }
+            });
+
+        for (const auto formId : pruned)
+        {
+            RemoveMind(formId, false, true);
+        }
+
+        if (!pruned.empty())
+        {
+            REX::INFO(
+                "sim: {} workshop device{} pruned — turrets, spotlights, "
+                "and robots are not minds.",
+                pruned.size(), pruned.size() == 1 ? "" : "s");
+        }
+    }
+
+    void Adapter::RemoveMind(
+        std::uint32_t a_formId, bool a_isDeath, bool a_quiet)
     {
         using namespace LCE::Simulation;
 
@@ -1767,9 +1818,12 @@ namespace TLC
         m_Registry.DestroyEntity(entity);
         m_Translator.Remove(a_formId);
 
-        REX::INFO(
-            "lifecycle: {} {} — the world keeps its books.",
-            goneLabel, a_isDeath ? "died" : "left the settlement");
+        if (!a_quiet)
+        {
+            REX::INFO(
+                "lifecycle: {} {} — the world keeps its books.",
+                goneLabel, a_isDeath ? "died" : "left the settlement");
+        }
     }
 
     std::uint64_t Adapter::CurrentDay() const
@@ -2542,30 +2596,53 @@ namespace TLC
                     }),
                 attendees.end());
 
-            for (const auto& [other, otherDay] : attendees)
+            // The keeper stands at the bench — the feud's geography is
+            // the stall. The attendance book only sees walkers ("who
+            // walked here today"), so a keeper planted or restored at
+            // her own bench never enters it: the very mind every
+            // shut-stall slight is aimed at could never row back. Scan
+            // her directly alongside today's walkers; the once-per-day
+            // Wronged gate makes a keeper who did arrive today a
+            // harmless double-scan.
+            const auto keeperIt = m_StallKeepers.find(target);
+            const auto keeper = keeperIt != m_StallKeepers.end()
+                ? keeperIt->second
+                : LCE::Simulation::EntityId{};
+
+            const auto cross = [&](LCE::Simulation::EntityId a_other)
             {
-                if (otherDay != day || other == a_entity)
+                if (!a_other.IsValid() || a_other == a_entity)
                 {
-                    continue;
+                    return;
                 }
 
                 if (Rows::Exchange(
                         m_Registry, m_Bonds,
-                        a_entity, other, day, m_CoreTuning, &m_Bus))
+                        a_entity, a_other, day, m_CoreTuning, &m_Bus))
                 {
                     // The exchange itself: each says a line to the
                     // other — two voices, the shouting the settlement
                     // hears. Speech rides the news feed, so the radio
                     // reads the row as a caption.
-                    Say(a_entity, other, Dialogue::Pool::Row);
-                    Say(other, a_entity, Dialogue::Pool::Row);
+                    Say(a_entity, a_other, Dialogue::Pool::Row);
+                    Say(a_other, a_entity, Dialogue::Pool::Row);
 
                     REX::INFO(
                         "LCE: {} and {} row at the market — words first.",
                         MindLabelForm(formId),
-                        MindLabelForm(m_Translator.FormFor(other)));
+                        MindLabelForm(m_Translator.FormFor(a_other)));
+                }
+            };
+
+            for (const auto& [other, otherDay] : attendees)
+            {
+                if (otherDay == day)
+                {
+                    cross(other);
                 }
             }
+
+            cross(keeper);
 
             attendees.emplace_back(a_entity, day);
         }
