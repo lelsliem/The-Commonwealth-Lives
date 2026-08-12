@@ -11,6 +11,29 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — the species split is enforced, not hoped (2026-08-12)
+
+The fight test exposed a real gap: behemoths (Gizmo, Harley) were brawling at
+the market — trading, feuding, shoving each other. SupermutantBehemothRace was
+missing from the animal table, so every behemoth defaulted to Human: a pouch,
+a name, enemy bonds, a feud. The animal table grew, and a restored mind's
+stored species is no longer trusted — it is re-derived from the actor's race
+the moment the actor loads (ReclassifyLoadedMinds), so a behemoth saved as
+Human before the fix is corrected in place, pouch dropped.
+
+The behavior gates, three layers so an animal can never leak into people's
+business even if a table misses a race: the bond book (Reconcile + the event
+channel) refuses a pair where either side is an animal (no friend, rival,
+enemy, or spouse — a dog has no feud to row); the bench crossing skips an
+animal outright; and restore prunes an old save's animal bonds and animal
+stall-keepers, so a pre-fix world heals itself. Owned animals keep their
+names; unowned strays stay nameless.
+
+Also fixed: the game's 'Worker' work crews showed no name (added to the
+generic-name list — a Worker gets a real name like any other person), and
+the bond book now caps spouses at one per mind — a would-be second spouse
+bond caps at sweetheart, and an existing marriage is never broken.
+
 ### 0.7.5 fix — the once-per-day gate is a day-scoped map (2026-08-12)
 
 The first 0.7.5 test in a restored 610-mind world showed fights firing in

@@ -130,6 +130,12 @@ namespace TLC
             case 0x000A0F2F:   // YaoGuaiRace
             case 0x000A563A:   // EyeBotRace
             case 0x000A96BF:   // FeralGhoulGlowingRace
+            case 0x000BB7D9:   // SupermutantBehemothRace — an animal,
+                               // not a person: fed at the settlement,
+                               // never bartering, feuding, or fighting
+                               // (the 0.7.5 field find — the missing
+                               // race let behemoths default to Human
+                               // and brawl at the market)
             case 0x000B7F91:   // MirelurkKingRace
             case 0x000C9ACF:   // CatRace
             case 0x000D77E3:   // VertibirdRace
@@ -192,6 +198,12 @@ namespace TLC
             case 0x000A0F2F:   // YaoGuaiRace
             case 0x000A563A:   // EyeBotRace
             case 0x000A96BF:   // FeralGhoulGlowingRace
+            case 0x000BB7D9:   // SupermutantBehemothRace — an animal,
+                               // not a person: fed at the settlement,
+                               // never bartering, feuding, or fighting
+                               // (the 0.7.5 field find — the missing
+                               // race let behemoths default to Human
+                               // and brawl at the market)
             case 0x000B7F91:   // MirelurkKingRace
             case 0x000C9ACF:   // CatRace
             case 0x000D77E3:   // VertibirdRace
@@ -664,6 +676,19 @@ namespace TLC
                 continue;
             }
 
+            // An animal cannot run a stall (the election is human-only
+            // too) — a keeper saved before the species fix is skipped
+            // and the stall re-derives under a person on the first
+            // arrival.
+            const auto keeperTag =
+                m_Registry.GetComponent<SpeciesTag>(keeper);
+
+            if (keeperTag
+                && keeperTag->Value == Species::Animal)
+            {
+                continue;
+            }
+
             m_StallKeepers[market] = keeper;
 
             REX::INFO(
@@ -791,6 +816,22 @@ namespace TLC
                 continue;
             }
 
+            // The animal gate: a bond saved before the species fix may
+            // name an animal — a behemoth's old feud. It is not
+            // restored; the 1-second reconcile never re-forms it (the
+            // same gate), so old animal bonds dissolve quietly out of
+            // the world instead of persisting as stale feuds.
+            const auto speciesA =
+                m_Registry.GetComponent<SpeciesTag>(a);
+            const auto speciesB =
+                m_Registry.GetComponent<SpeciesTag>(b);
+
+            if ((speciesA && speciesA->Value == Species::Animal)
+                || (speciesB && speciesB->Value == Species::Animal))
+            {
+                continue;
+            }
+
             m_Bonds[Bonds::PairKey(a, b)] =
                 Bonds::PairBond{
                     static_cast<Bonds::BondKind>(bond.Kind),
@@ -848,9 +889,17 @@ namespace TLC
         }
 
         // Both must be minds — a workshop is a target, never a bond
-        // partner (the same gate the reconcile pass applies).
-        if (!m_Registry.GetComponent<SpeciesTag>(a_event.Subject)
-            || !m_Registry.GetComponent<SpeciesTag>(a_event.Other))
+        // partner (the same gate the reconcile pass applies) — and both
+        // must be people (the animal gate, same pass): an animal is
+        // fed, not bonded.
+        const auto eventTagA =
+            m_Registry.GetComponent<SpeciesTag>(a_event.Subject);
+        const auto eventTagB =
+            m_Registry.GetComponent<SpeciesTag>(a_event.Other);
+
+        if (!eventTagA || !eventTagB
+            || eventTagA->Value == Species::Animal
+            || eventTagB->Value == Species::Animal)
         {
             return;
         }
@@ -1282,6 +1331,14 @@ namespace TLC
         // pouches, names, and bonds are not rebuilt yet, so a pruned
         // prop never carries a wallet, a name, or a feud.
         PruneDeviceMinds();
+
+        // The species is game truth (ADR-0024): a mind whose stored tag
+        // disagrees with its actor's race — a behemoth saved as Human
+        // before the 0.7.5 classification fix — is corrected now, before
+        // pouches, keepers, and bonds restore. The fix's point: a
+        // restored behemoth is fed, not feuding. Actors that load later
+        // are corrected by the per-second sweep.
+        ReclassifyLoadedMinds();
 
         // The economy stone: a restored human without a pouch predates
         // the economy — the record had no caps to carry. Back-fill the
@@ -2282,15 +2339,72 @@ namespace TLC
 
                         return;
                     }
-                }
+                }                 if (!actor->extraList->HasType(
+                         RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                 {
+                     actor->extraList->SetOverrideName(name->Full.c_str());
+                 }
+             });
+     }
 
-                if (!actor->extraList->HasType(
-                        RE::EXTRA_DATA_TYPE::kTextDisplayData))
-                {
-                    actor->extraList->SetOverrideName(name->Full.c_str());
-                }
-            });
-    }
+     void Adapter::ReclassifyLoadedMinds()
+     {
+         // The species is game truth (ADR-0024): a mind whose stored
+         // tag disagrees with its actor's race — a behemoth saved as
+         // Human before the 0.7.5 classification fix — is corrected the
+         // moment the actor loads. The fix's point: a restored behemoth
+         // is fed, not feuding. An animal never carries a pouch (it
+         // never bartered); the restore gates that read the corrected
+         // tag prune its stall row and its bonds, and the 1-second
+         // reconcile never re-forms them.
+         ForEachLoadedActor(
+             [this](const RE::Actor* a_actor)
+             {
+                 const auto formId = a_actor->GetFormID();
+                 const auto entity = m_Translator.EntityFor(formId);
+
+                 if (!entity.IsValid())
+                 {
+                     return;
+                 }
+
+                 const auto tag = m_Registry.GetComponent<SpeciesTag>(entity);
+
+                 if (!tag)
+                 {
+                     return;
+                 }
+
+                 const auto fresh = ClassifySpecies(a_actor->race);
+
+                 if (fresh == tag->Value)
+                 {
+                     return;
+                 }
+
+                 const auto oldLabel =
+                     tag->Value == Species::Animal ? "Animal"
+                     : tag->Value == Species::Child ? "Child"
+                                                    : "Human";
+                 const auto newLabel =
+                     fresh == Species::Animal ? "Animal"
+                     : fresh == Species::Child ? "Child"
+                                               : "Human";
+
+                 REX::INFO(
+                     "species: {} re-classified {} -> {} (the race table grew).",
+                     MindLabel(entity), oldLabel, newLabel);
+
+                 tag->Value = fresh;
+
+                 // An animal never carries a pouch — drop it so the
+                 // world's money stays in people's hands.
+                 if (fresh != Species::Human)
+                 {
+                     m_Registry.RemoveComponent<CapPouch>(entity);
+                 }
+             });
+     }
 
     void Adapter::AssignSettlementGroups()
     {
@@ -3007,6 +3121,24 @@ namespace TLC
             const auto cross = [&](LCE::Simulation::EntityId a_other)
             {
                 if (!a_other.IsValid() || a_other == a_entity)
+                {
+                    return;
+                }
+
+                // The species gate (0.7.5 field find): a feud needs two
+                // people. An animal at the bench is here to be fed, not
+                // to row — whatever the bond book says (the book's own
+                // gate keeps animals out, this is the belt).
+                if (species == Species::Animal)
+                {
+                    return;
+                }
+
+                const auto crossTag =
+                    m_Registry.GetComponent<SpeciesTag>(a_other);
+
+                if (crossTag
+                    && crossTag->Value == Species::Animal)
                 {
                     return;
                 }
@@ -3894,6 +4026,12 @@ namespace TLC
             // time it appears (idempotent; fresh arrivals were already
             // named at seed).
             ApplyLoadedActorNames();
+
+            // The species sweep (0.7.5 field fix): a mind whose actor
+            // just loaded and whose race disagrees with the stored tag
+            // is corrected — the restore pass caught the loaded ones;
+            // this catches the rest as they stream in.
+            ReclassifyLoadedMinds();
 
             // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
             // event channel is instant; this pass is complete — quiet

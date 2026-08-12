@@ -2184,6 +2184,104 @@ namespace TLC::Tests
         }
 
         //-------------------------------------------------------------------------
+        // 5b. The monogamy cap (0.7.5 field find): one spouse each. A
+        //     pair that would cross the spouse line while either side
+        //     already holds a spouse bond with someone else caps at
+        //     sweetheart; an existing marriage is never broken.
+        //-------------------------------------------------------------------------
+        {
+            const auto a2 = EntityId{ 201 };
+            const auto b2 = EntityId{ 202 };
+            const auto c2 = EntityId{ 203 };
+            const auto d2 = EntityId{ 204 };
+
+            BondMap bonds;
+
+            // a and b marry.
+            ApplyPair(
+                bonds, PairKey(a2, b2), 0.9f, 0.9f, t, 1, nullptr);
+
+            if (bonds[PairKey(a2, b2)].Kind != BondKind::Spouse)
+            {
+                return false;
+            }
+
+            // a's heart warms to c — but a is already married: capped.
+            ApplyPair(
+                bonds, PairKey(a2, c2), 0.9f, 0.9f, t, 2, nullptr);
+
+            if (bonds[PairKey(a2, c2)].Kind != BondKind::Sweetheart)
+            {
+                return false;
+            }
+
+            // b's heart warms to c too — same cap, b is married.
+            ApplyPair(
+                bonds, PairKey(b2, c2), 0.9f, 0.9f, t, 3, nullptr);
+
+            if (bonds[PairKey(b2, c2)].Kind != BondKind::Sweetheart)
+            {
+                return false;
+            }
+
+            // The marriage stands.
+            if (bonds[PairKey(a2, b2)].Kind != BondKind::Spouse)
+            {
+                return false;
+            }
+
+            // And a fresh heart CAN marry: d has no spouse.
+            ApplyPair(
+                bonds, PairKey(c2, d2), 0.9f, 0.9f, t, 4, nullptr);
+
+            if (bonds[PairKey(c2, d2)].Kind != BondKind::Spouse)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 5c. The animal gate (0.7.5 field find): an animal is fed, not
+        //     bonded. The reconcile pass skips a pair where either side
+        //     is an animal — whatever the dispositions say, a dog never
+        //     rows, feuds, or fights.
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry registry;
+
+            const auto person = registry.CreateEntity();
+            const auto dog = registry.CreateEntity();
+
+            registry.AddComponent<SpeciesTag>(
+                person, SpeciesTag{ Species::Human });
+            registry.AddComponent<SpeciesTag>(
+                dog, SpeciesTag{ Species::Animal });
+
+            registry.AddComponent<Relationships>(person, Relationships{
+                { { dog, Relationship{ -0.9f, 0.0f } } } });
+            registry.AddComponent<Relationships>(dog, Relationships{
+                { { person, Relationship{ -0.9f, 0.0f } } } });
+
+            BondMap bonds;
+            std::size_t changes = 0;
+
+            Reconcile(
+                registry, t, bonds, 12,
+                [&](EntityId, EntityId, BondKind, BondKind,
+                    std::uint64_t)
+                {
+                    ++changes;
+                });
+
+            // A deep mutual dislike — and nothing forms: no feud, no
+            // row, no fight. The pair is simply not a pair.
+            if (!bonds.empty() || changes != 0)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
         // 6. The event channel — the full wiring: a configured line, an
         //    experience that crosses it, the RelationshipChangedEvent on
         //    the bus, and the adapter's handler folding the pair into the

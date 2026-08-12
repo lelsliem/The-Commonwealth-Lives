@@ -667,7 +667,14 @@ STATUS: PLANNED — design docs written, no code.
     is the knockback, not a combat state — the base game has no
     playable shove idle (the punches are paired kill-cams and the
     crowd shove is a sandbox behavior), so a full combat/paired-idle
-    scene is a later polish item
+    scene is a later polish item. Field fix (ADR-0032): the species
+    split is enforced — the behemoth race gap fixed (they were Human:
+    brawling at the market), a restored mind's species re-derived from
+    its actor's race, animals gated out of the bond book, the bench
+    crossing, and stall-keeping (fed, never feuding — owned animals
+    keep names, strays stay nameless), "Worker" work crews named like
+    any person, and spouses capped at one per mind (a second would-be
+    marriage caps at sweetheart; existing marriages stand)
 [ ] 0.8.0 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
     component (adapter-owned, co-save additive — the engine's locked
     hold-then-recover shape, answered as fact-plus-tick, not a new

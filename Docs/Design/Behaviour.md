@@ -10,6 +10,22 @@ sim-only minds).
 `Decide` reasons over needs and memory, never game facts); ADR-0024
 (game knowledge at the edge).
 
+**0.7.5 field find (ADR-0032):** the split is now *enforced*, not
+hoped. The fight test showed behemoths brawling at the market —
+SupermutantBehemothRace was missing from the animal table, so every
+behemoth defaulted to Human: a pouch, a name, enemy bonds, a feud.
+The table grew, and a restored mind's stored species is no longer
+trusted — it is re-derived from the actor's race the moment the actor
+loads (ReclassifyLoadedMinds), pouch dropped, bonds and stall rows
+pruned. The bond book now refuses any pair with an animal on either
+side (no friend, rival, enemy, or spouse — a dog has no feud to row),
+the bench crossing skips animals outright, and restore heals a
+pre-fix save. Owned animals keep their names; unowned strays stay
+nameless. People (Human and Child) own the feud: rows, fights, trades,
+friends, and one spouse each (the monogamy cap — a would-be second
+spouse bond caps at sweetheart, and an existing marriage is never
+broken).
+
 The problem this stone solves, in the user's words: the junkyard dog
 and the brahmin walked to the market — and they should, they're minds —
 but a dog must not *trade, buy, or talk*. The core cannot know that; the

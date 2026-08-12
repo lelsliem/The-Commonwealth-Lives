@@ -433,6 +433,12 @@ namespace TLC
         // an actor with no mind. Runs inside the per-second block.
         void ApplyLoadedActorNames();
 
+        // Re-derives a mind's species from its actor's race whenever
+        // they disagree (0.7.5 field fix — the behemoth table gap): the
+        // species is game truth, and a stored tag from before the fix
+        // may name an animal Human. An animal never carries a pouch.
+        void ReclassifyLoadedMinds();
+
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // remembers its market as a Trade-kind event whose Other is the
         // workshop entity — this walks the memories and gives each mind

@@ -1147,3 +1147,49 @@ sim.fight.temper line shoves the aggressor back — one exchange, never
 a loop (the aggressor threw the first punch, the victim answers once,
 and the day-gate holds the pair to a single scene). The temper line is
 the knob: raise it and fewer victims answer.
+
+### ADR-0032 — The species split is enforced, not hoped: animals are fed, people feud (2026-08-12)
+
+**Context.** The fight test showed behemoths (Gizmo, Harley) brawling at
+the market bench — trading, feuding, shoving each other. The user's
+spec is clear: an animal's whole life at the settlement is "get fed at
+the workbench, then continue its game routines." Trading, arguing,
+fighting, buying, befriending, and marrying are people's business.
+Also: the world's unnamed work crews ("Worker" NPCs) showed no name,
+and nothing capped how many spouses a mind could hold.
+
+**The behemoth gap.** ClassifySpecies's animal table was missing
+SupermutantBehemothRace (0x000BB7D9) — the default fallback is Human,
+so every behemoth was seeded as a person: a pouch, a name, enemy
+bonds, a feud. The table grew (both the classification and the
+known-organic complement), and — the deep fix — **a restored mind's
+stored species is no longer trusted**: it is re-derived from the
+actor's race the moment the actor loads (ReclassifyLoadedMinds, at
+restore and in the per-second sweep), so a behemoth saved as Human
+before the fix is corrected in place — pouch dropped — and never
+barters again.
+
+**The behavior gates.** Three layers, so an animal can never leak into
+people's business even if a table misses a race:
+1. The bond book (Reconcile + the event channel) refuses a pair where
+   either side is an animal — no friend, no rival, no enemy, no spouse.
+   A dog has no feud to row, no fight to throw.
+2. The bench crossing skips an animal outright (belt on top of the
+   book).
+3. Restore prunes an old save's animal bonds and animal stall-keepers
+   (the same gates read the corrected tag), so a pre-fix world heals
+   itself instead of carrying stale behemoth feuds.
+Owned animals keep their names (the owner rule stood); unowned strays
+stay nameless — the spec's exact shape.
+
+**The Worker gap.** The game names Sanctuary's work crews "Worker" —
+IsGenericName knew "Settler" and "Workshop Worker" but not "Worker",
+so the sim kept the bare label. Added; a Worker gets a real name like
+any other person.
+
+**The monogamy cap.** The bond book had no limit — the same warm heart
+could cross the spouse line with more than one person. ApplyPair now
+caps a would-be spouse bond at sweetheart when either side already
+holds a spouse bond elsewhere; an existing marriage is never broken by
+the cap (only new ones are refused), so a heart can warm twice without
+a second marriage forming.

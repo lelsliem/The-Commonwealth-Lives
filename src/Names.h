@@ -323,7 +323,10 @@ namespace TLC::Names
             return false;
         }
 
-        return equals("Settler") || equals("Workshop Worker");
+        return equals("Settler") || equals("Workshop Worker")
+            || equals("Worker");   // the Sanctuary work crews — the
+                                   // game names them "Worker"; a person
+                                   // gets a real name
     }
 
     //-------------------------------------------------------------------------

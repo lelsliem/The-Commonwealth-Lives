@@ -327,6 +327,34 @@ namespace TLC::Bonds
     }
 
     //-------------------------------------------------------------------------
+    // HasSpouseElsewhere — the monogamy cap (0.7.5 field find): does
+    // this mind already hold a spouse bond with someone other than the
+    // pair being considered? The heart can warm twice; the marriage is
+    // one. Pure scan of the book.
+    //-------------------------------------------------------------------------
+    inline bool HasSpouseElsewhere(
+        const BondMap& a_bonds, EntityId a_entity,
+        BondKey a_exclude) noexcept
+    {
+        const auto value = a_entity.Value();
+
+        for (const auto& [key, bond] : a_bonds)
+        {
+            if (bond.Kind != BondKind::Spouse || key == a_exclude)
+            {
+                continue;
+            }
+
+            if (key.first == value || key.second == value)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    //-------------------------------------------------------------------------
     // ApplyPair — derive one pair and fold it into the map. Pure aside
     // from the map; a_onChanged fires only when the bond CHANGED this
     // call (formation, dissolve, upgrade, family flip — resting is
@@ -345,7 +373,25 @@ namespace TLC::Bonds
     {
         auto& current = a_bonds[a_key];
         const auto old = current.Kind;
-        const auto fresh = Derive(a_dToOther, a_dOtherToMe, a_t, old);
+        auto fresh = Derive(a_dToOther, a_dOtherToMe, a_t, old);
+
+        // The monogamy cap (0.7.5 field find): a pair that would cross
+        // the spouse line while either side already holds a spouse bond
+        // with someone else caps at sweetheart. An existing marriage is
+        // never broken by the cap — only new ones are refused, so a
+        // married pair stays married and a heart can warm twice without
+        // a second marriage forming.
+        if (fresh == BondKind::Spouse && old != BondKind::Spouse)
+        {
+            const auto a = EntityId{ a_key.first };
+            const auto b = EntityId{ a_key.second };
+
+            if (HasSpouseElsewhere(a_bonds, a, a_key)
+                || HasSpouseElsewhere(a_bonds, b, a_key))
+            {
+                fresh = BondKind::Sweetheart;
+            }
+        }
 
         if (fresh == old)
         {
@@ -410,10 +456,19 @@ namespace TLC::Bonds
                         continue;   // the other side of the pair walked it
                     }
 
-                    // Both must be minds: a workshop is a target, never a
-                    // bond partner.
-                    if (!a_registry.GetComponent<SpeciesTag>(a_entity)
-                        || !a_registry.GetComponent<SpeciesTag>(other))
+                    // Both must be minds — a workshop is a target, never
+                    // a bond partner — and both must be people (0.7.5
+                    // field find): an animal is fed, not bonded. The
+                    // feud needs two humanoids; a dog never rows, feuds,
+                    // or fights, whatever its dispositions.
+                    const auto tagA =
+                        a_registry.GetComponent<SpeciesTag>(a_entity);
+                    const auto tagB =
+                        a_registry.GetComponent<SpeciesTag>(other);
+
+                    if (!tagA || !tagB
+                        || tagA->Value == Species::Animal
+                        || tagB->Value == Species::Animal)
                     {
                         continue;
                     }
