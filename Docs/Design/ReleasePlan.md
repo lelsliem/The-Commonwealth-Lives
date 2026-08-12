@@ -42,9 +42,10 @@ serves the show.
 |---|---|---|
 | **0.7.1 — Talk** | The drafted dialogue pools (greet/gossip/family) speak on the social interactions the sim already makes; captions via the radio channel | Two settlers chatting at the bench is the first "it's alive" moment |
 | **0.7.2 — Rows** | Verbal altercations: `dialogue.row` lines, Wronged outcomes, gossip spread | Feuds stop being log lines and become *heard* shouting |
-| **0.7.3 — Fights** | Physical escalation via real combat (the game's own punch/shove anims); feedback into bonds and news | The feud's payoff — the escalation line lands and they go at it |
-| **0.8.0 — Trade with anyone** | Vendor census: traders, marketplaces, provisioners as trade targets; caps change hands on the road. Prefer each actor's existing in-game name (many fixed traders are already named, e.g. via We Have Names, Nexus 74287) — never overwrite a real name with a pool draw | The world feels connected, not bench-to-bench; the player's provisioner is now part of the economy |
-| **0.8.1 — Illness & Medicine** | A `Health` component (adapter-owned, hold-then-recover — the engine's locked shape); radstorm/food/wound/contagion vectors; the sick rest and buy medicine; untreated sickness can die | The wasteland has a price beyond hunger — settlements feel seasons, the radio reports the ill, and medicine makes the economy real |
+| **0.7.3 — Names for everyone** | The memory prerequisite for trade: every unnamed sim-relevant mind gets an individual name. The role placeholders ("Provisioner", "Guard", "Minuteman") join "Settler"/"Workshop Worker" as generic, and a role-named mind is named "<role> <first>" ("Provisioner Daisy"). Prefer each actor's existing in-game name — never overwrite a real name with a pool draw | Two provisioners stop being interchangeable; a Trade memory can name its seller |
+| **0.7.4 — Trade with anyone** | Vendor census: traders, marketplaces, provisioners as trade targets; caps change hands on the road (the core already resolves Trade to a person — no engine change, a who problem) | The world feels connected, not bench-to-bench; the player's provisioner is now part of the economy |
+| **0.7.5 — Fights** | Physical escalation via real combat (the game's own punch/shove anims); feedback into bonds and news | The feud's payoff — the escalation line lands and they go at it |
+| **0.8.0 — Illness & Medicine** | A `Health` component (adapter-owned, hold-then-recover — the engine's locked shape); radstorm/food/wound/contagion vectors; the sick rest and buy medicine; untreated sickness can die | The wasteland has a price beyond hunger — settlements feel seasons, the radio reports the ill, and medicine makes the economy real |
 
 **The reliability gate (0.9.0, hard):**
 
@@ -132,9 +133,10 @@ gets spawned — the whole life/death cycle?*
 0.7.0   shipped (names, feuds, radio)          ← we are here
 0.7.1   Talk — pools speak, captions live
 0.7.2   Rows — verbal altercations, gossip
-0.7.3   Fights — real combat escalation
-0.8.0   Trade with anyone — vendor census
-0.8.1   Illness & Medicine — health holds, recovers, or ends
+0.7.3   Names for everyone — provisioners, guards, minutemen
+0.7.4   Trade with anyone — vendor census
+0.7.5   Fights — real combat escalation
+0.8.0   Illness & Medicine — health holds, recovers, or ends
 0.9.0   The release gate — scale verified, docs, news polish
 1.0.0   Freeze, ship
 ```

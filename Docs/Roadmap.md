@@ -45,10 +45,10 @@ Current Stage   : Identity & the Player Window — every 0.7.0 stone
                    page stays honestly deferred (the INI already
                    delivers the tuning; the page needs MCM + the CK).
 
-Next Milestone  : 0.7.1 — Talk, then the staged run to 1.0.0
-                   (Docs/Design/ReleasePlan.md): 0.7.1 Talk → 0.7.2
-                   Rows → 0.7.3 Fights → 0.8.0 Trade with anyone →
-                   0.8.1 Illness & Medicine → 0.9.0 the release gate
+Next Milestone  : 0.7.3 — Names for everyone, then the staged run to
+                   1.0.0 (Docs/Design/ReleasePlan.md): 0.7.3 Names →
+                   0.7.4 Trade with anyone → 0.7.5 Fights → 0.8.0
+                   Illness & Medicine → 0.9.0 the release gate
                    (scale verified, docs) → 1.0.0 freeze and ship
 
 ═══════════════════════════════════════════════
@@ -593,13 +593,21 @@ STATUS: PLANNED — design docs written, no code.
     props as minds (turrets, spotlights hold the settler faction and
     seeded as Human): device/robot races are now excluded from
     sim-relevance and a polluted co-save self-heals via the prune.
-[ ] 0.7.3 — Fights: physical escalation via real combat (the game's
+[ ] 0.7.3 — Names for everyone: every unnamed sim-relevant mind gets
+    an individual name — the role placeholders ("Provisioner",
+    "Guard", "Minuteman") join "Settler"/"Workshop Worker" as
+    generic, and a role-named mind is named "<role> <first>"
+    ("Provisioner Daisy"). The memory prerequisite for trade: two
+    provisioners must be distinguishable in a Trade memory. Raiders
+    stay out (never minds — no workshop faction)
+[ ] 0.7.4 — Trade with anyone who sells: a vendor census (traders,
+    marketplaces, provisioners as mobile traders) — the hungry walk
+    resolves to a person, not only the bench. No engine change (the
+    core already resolves Trade to a person; it is a who problem)
+[ ] 0.7.5 — Fights: physical escalation via real combat (the game's
     own punch/shove anims — no pex needed); feedback into bonds and
     news
-[ ] 0.8.0 — Trade with anyone who sells: a vendor census (traders,
-    marketplaces, provisioners as mobile traders) — the hungry walk
-    resolves to a person, not only the bench
-[ ] 0.8.1 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
+[ ] 0.8.0 — Illness & Medicine (Docs/Design/Illness.md): a `Health`
     component (adapter-owned, co-save additive — the engine's locked
     hold-then-recover shape, answered as fact-plus-tick, not a new
     NeedType); radstorm/food/wound/contagion vectors at the edge; a
@@ -607,7 +615,7 @@ STATUS: PLANNED — design docs written, no code.
     stone's second good; untreated sickness can die (the existing
     death path). No engine change — the handoff's one open design
     question answered in the doc
-[ ] 0.8.2 — Burial: after the mourning window (`sim.death.burialDays`),
+[ ] 0.8.1 — Burial: after the mourning window (`sim.death.burialDays`),
     the adapter disables the corpse ref and logs the settlement laid
     X to rest (+ news) — the body doesn't linger forever (no cell
     reset in settlement cells). Game state, adapter-owned, no engine
