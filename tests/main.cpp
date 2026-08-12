@@ -3440,7 +3440,8 @@ namespace TLC::Tests
         }
 
         if (!IsGenericName("Settler") || !IsGenericName("settler")
-            || !IsGenericName("Workshop Worker"))
+            || !IsGenericName("Workshop Worker")
+            || !IsGenericName("Worker"))   // the Sanctuary work crews
         {
             return false;
         }

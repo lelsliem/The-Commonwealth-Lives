@@ -11,6 +11,18 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — the Workers get names at last (2026-08-12)
+
+The naming fix landed earlier, but the Sanctuary work crews (the game's
+own "Worker" NPCs, e.g. 000FA7F2/000FA7F6) still read "Worker": their
+minds were seeded before the generic list grew, so the sim's stored Name
+was literally the word "Worker" — and the per-second sweep wrote the
+stored name back to the game as-is, never re-deriving. The naming sweep
+now converges a Human whose stored name is itself a placeholder: a
+"Worker" or "Settler" persisted from a pre-fix save is replaced in
+place with a real procedural name before the write-through. NamesTest
+now asserts "Worker" is generic, locking the regression.
+
 ### 0.7.5 polish — every shove lands a little differently (2026-08-12)
 
 The fight's shove force is now the base sim.fight.push scaled by a

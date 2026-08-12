@@ -2339,13 +2339,13 @@ namespace TLC
                     return;
                 }
 
-                // A generic base ("Settler", "Dog"): write the sim's
-                // name once — an actor already showing it is left alone.
-                // An animal whose mind still holds the raw species word
-                // (a kept game name from before the naming rule) or a
-                // stale generated name converges to the rule: owned → a
-                // real name from the pool; a stray → nameless, its
-                // stamp dropped.
+                // A generic base ("Settler", "Worker", "Dog"): write
+                // the sim's name once — an actor already showing it is
+                // left alone. An animal whose mind still holds the raw
+                // species word (a kept game name from before the naming
+                // rule) or a stale generated name converges to the rule:
+                // owned → a real name from the pool; a stray → nameless,
+                // its stamp dropped.
                 if (species == Species::Animal
                     && TLC::Names::IsGenericName(
                         name->Full, Species::Animal))
@@ -2369,13 +2369,42 @@ namespace TLC
 
                         return;
                     }
-                }                 if (!actor->extraList->HasType(
-                         RE::EXTRA_DATA_TYPE::kTextDisplayData))
-                 {
-                     actor->extraList->SetOverrideName(name->Full.c_str());
-                 }
-             });
-     }
+                }
+
+                // The Human half of the same rule (0.7.5 field find): a
+                // mind whose STORED name is itself a placeholder — a
+                // "Worker" or "Settler" persisted before the generic
+                // list grew — would be written back to the game as-is
+                // and never change. Re-derive a real name in place,
+                // then the write below stamps it.
+                if (species == Species::Human
+                    && TLC::Names::IsGenericName(
+                        name->Full, Species::Human))
+                {
+                    auto gender = TLC::Names::GenderOf(entity);
+                    const auto sex = actor->GetSex();
+
+                    if (sex == RE::SEX::kMale)
+                    {
+                        gender = TLC::Names::Gender::Male;
+                    }
+                    else if (sex == RE::SEX::kFemale)
+                    {
+                        gender = TLC::Names::Gender::Female;
+                    }
+
+                    m_Registry.GetComponent<Name>(entity)->Full =
+                        TLC::Names::GenerateUnique(
+                            m_UsedNames, entity, m_Names, gender);
+                }
+
+                if (!actor->extraList->HasType(
+                        RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                {
+                    actor->extraList->SetOverrideName(name->Full.c_str());
+                }
+            });
+    }
 
      void Adapter::RebuildKin()
      {
