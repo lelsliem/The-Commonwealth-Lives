@@ -236,6 +236,23 @@ namespace TLC::Tuning
         // off (the fight books without the animation).
         float FightPush = 8.0f;
 
+        // The standing shove's flinch (0.7.5 polish): the game's melee
+        // hit-reaction — the same stagger that plays when a punch
+        // actually lands (Actor::DoHitMe with a zero-damage HitData).
+        // KnockExplosion alone collapses the victim in place with no
+        // visible push — the loop tests proved force alone never reads
+        // as a shove; the flinch plays first, so the victim stumbles
+        // back, then the fall reads as the punch's consequence.
+        // Magnitude: 1 small, 2 medium, 3 large, 4 extra-large. 0
+        // turns the flinch off (the fall still lands).
+        int FightStagger = 2;
+
+        // The flinch's push-back (0.7.5 polish): the linear impulse
+        // behind the stagger — how far the victim stumbles before the
+        // fall, in the game's units. Tuned so the stumble reads but
+        // never launches. 0 = flinch in place.
+        float FightPushBack = 25.0f;
+
         // The scuffle's beat (0.7.5): a hot-headed victim answers the
         // punch after a beat, not in the same instant — push, fall, get
         // up, push back. Seconds between the two shoves.
@@ -337,6 +354,12 @@ namespace TLC::Tuning
 
         settings.FightPush =
             read("sim.fight.push", settings.FightPush);
+
+        settings.FightStagger = static_cast<int>(
+            read("sim.fight.stagger",
+                static_cast<float>(settings.FightStagger)));
+        settings.FightPushBack =
+            read("sim.fight.pushback", settings.FightPushBack);
 
         settings.RetaliationDelay = read(
             "sim.fight.retaliation.delay", settings.RetaliationDelay);

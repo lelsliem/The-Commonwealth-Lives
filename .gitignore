@@ -26,3 +26,6 @@ CMakeUserPresets.json
 
 # Logs
 *.log
+
+# Private tool shortcuts — local machine only, never committed.
+/Not for github/

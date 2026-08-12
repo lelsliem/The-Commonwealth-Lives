@@ -30,6 +30,9 @@
 #include <RE/A/AIProcess.h>   // the game's knockback — the punch's shove
 #include <RE/A/Actor.h>
 #include <RE/B/BSContainer.h>
+#include <RE/D/DamageImpactData.h>
+#include <RE/H/HitData.h>      // the melee hit-reaction — the standing shove
+#include <RE/S/STAGGER_MAGNITUDE.h>
 #include <RE/C/Calendar.h>
 #include <RE/N/NiAVObject.h>
 #include <RE/P/PlayerCharacter.h>
@@ -80,6 +83,60 @@ namespace TLC
 {
     namespace
     {
+        //-------------------------------------------------------------------------
+        // The standing shove (ADR-0042: the punch's flinch). KnockExplosion
+        // — the game's knock-over — collapses the victim in place with no
+        // visible push: the loop tests proved that force alone, at any
+        // magnitude, never reads as a shove. The game's actual shove is the
+        // melee hit-reaction: when a punch lands, the victim staggers back
+        // (Actor::DoHitMe, the same path a bare-fisted brawl uses). Play
+        // that first — a zero-damage HitData carrying a stagger magnitude
+        // and a modest push-back — so the victim stumbles, and then the
+        // knock fall reads as the punch's consequence. Best-effort: a
+        // missing actor or process skips it (the fight is booked either
+        // way); sim.fight.stagger = 0 turns it off (fall only).
+        //-------------------------------------------------------------------------
+        void FireHitReaction(
+            RE::Actor* a_victim,
+            RE::Actor* a_aggressor,
+            int a_magnitude,
+            float a_pushBack)
+        {
+            if (a_victim == nullptr || a_aggressor == nullptr
+                || a_magnitude <= 0)
+            {
+                return;
+            }
+
+            // HitData has no default constructor (its weapon member
+            // needs a real weapon), so it is built on zeroed raw
+            // storage — the same shape the game's explosion-stagger
+            // path uses: weapon null, zero damage, a stagger magnitude
+            // and a push-back. The melee hit-reaction reads the
+            // stagger and plays the standing flinch; nothing is ever
+            // flagged as an attack (no combat escalation, no damage —
+            // the scuffle stays a scuffle). DoHitMe is synchronous;
+            // the block is freed right after.
+            auto* hit = static_cast<RE::HitData*>(
+                std::malloc(sizeof(RE::HitData)));
+            std::memset(hit, 0, sizeof(RE::HitData));
+            hit->aggressor =
+                RE::BSPointerHandleManagerInterface<RE::Actor>::GetHandle(
+                    a_aggressor);
+            hit->target =
+                RE::BSPointerHandleManagerInterface<RE::Actor>::GetHandle(
+                    a_victim);
+            hit->sourceRef =
+                RE::BSPointerHandleManagerInterface<
+                    RE::TESObjectREFR>::GetHandle(a_aggressor);
+            hit->stagger =
+                static_cast<RE::STAGGER_MAGNITUDE>(a_magnitude);
+            hit->pushBack = a_pushBack;
+
+            a_victim->DoHitMe(hit);
+            std::free(hit);
+        }
+
         //-------------------------------------------------------------------------
         // Species classification (ADR-0024: game knowledge at the edge). The
         // core never knows a race; the adapter decides which minds trade,
@@ -2798,6 +2855,16 @@ namespace TLC
                         0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f)));
                     const auto force = m_Settings.FightPush * pushJitter;
 
+                    // The standing shove (ADR-0042): play the melee
+                    // hit-reaction first — the victim's stagger — so
+                    // the punch reads as a shove, then the knock fall
+                    // as its consequence. Force alone never read as a
+                    // push in the loop tests; the flinch is the push.
+                    FireHitReaction(
+                        victimActor, aggressorActor,
+                        m_Settings.FightStagger,
+                        m_Settings.FightPushBack);
+
                     victimActor->currentProcess->KnockExplosion(
                         victimActor, aggressorActor->GetPosition(),
                         force);
@@ -2807,9 +2874,11 @@ namespace TLC
                     // always be matched to its push, or proven not to
                     // be one (the test loop's double-fall question).
                     REX::INFO(
-                        "LCE: shove: {} pushed by {} — {:.1f} force at {:.0f} u.",
+                        "LCE: shove: {} staggered by {} — flinch {} / push-back {:.0f} / fall {:.1f} force at {:.0f} u.",
                         MindLabelForm(m_Translator.FormFor(a_victim)),
                         MindLabelForm(m_Translator.FormFor(a_aggressor)),
+                        m_Settings.FightStagger,
+                        m_Settings.FightPushBack,
                         force, scene);
 
                     // The scuffle's second beat (0.7.5): a hot-headed
@@ -2976,14 +3045,22 @@ namespace TLC
                 1.15f,
                 0.75f + 0.5f * (0.5f + IdJitter(retaliator, 0.5f)));
 
+            // The answer carries its own flinch (ADR-0042): the
+            // counter-punch staggers too, then knocks over.
+            FireHitReaction(
+                targetActor, retaliatorActor,
+                m_Settings.FightStagger,
+                m_Settings.FightPushBack);
+
             targetActor->currentProcess->KnockExplosion(
                 targetActor, retaliatorActor->GetPosition(),
                 m_Settings.FightPush * backJitter);
 
             REX::INFO(
-                "LCE: {} shoves {} back — hot heads, both.",
+                "LCE: {} shoves {} back — flinch {}, hot heads, both.",
                 MindLabelForm(m_Translator.FormFor(retaliator)),
-                MindLabelForm(m_Translator.FormFor(target)));
+                MindLabelForm(m_Translator.FormFor(target)),
+                m_Settings.FightStagger);
 
             // The loser slinks off: the one who threw first walks to
             // the far side of the scene from the one who answered.
