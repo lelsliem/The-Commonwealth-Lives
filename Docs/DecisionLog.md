@@ -1374,3 +1374,26 @@ the forced fights apart from the sim's own.
 **The harness.** FightsTest grew the loop's core assertion: the same
 pair, the same day, forced again — booked (the old behavior would
 refuse); the gate still records the forced fight.
+
+### ADR-0038 — The shove is a bench scene: falls need proximity (2026-08-12)
+
+**Context.** The force-test loop (ADR-0037) exposed a real bug the
+sim's own coin had been hiding: *"they fall over not being anywhere
+near each other."* A fight can book between minds that are far apart —
+the loop fires on its timer wherever the pair is, and a restored
+keeper may not be standing at her stall yet — and KnockExplosion uses
+the aggressor's position as the knockback ORIGIN. A distant origin is
+a ghost: the victim is thrown along a vector from a point nowhere
+near them, which the player reads as a random fall with no one around.
+
+**The fix.** The physical shove is gated on proximity: within 400
+units (the bench scene — the pair who crossed at the market are
+adjacent) the shove and its retaliation fire exactly as before;
+beyond it, the shove is skipped and the log explains ("brawl at range
+(1234 u) — the shove waits for the bench"). The fight still books at
+range — the Combat memories, the deepened feud, the gossip, the news
+are all sim-level truth and stay. Only the animation is deferred to
+when the pair actually meets. The sim's own fights (which require a
+bench crossing) are untouched; the loop is now safe to watch from
+anywhere — a ranged brawl reads in the log and on the radio, and the
+falls only happen when the pair is genuinely face to face.

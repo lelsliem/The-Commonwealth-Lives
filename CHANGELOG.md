@@ -11,6 +11,19 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — the shove is a bench scene: no more ghost falls (2026-08-12)
+
+The force-test loop exposed it: a fight can book between minds that are
+far apart, and KnockExplosion uses the aggressor's position as the
+knockback origin — a distant origin threw the victim by a ghost, a fall
+with no one near. The physical shove is now gated on proximity (within
+400 units — the bench scene): adjacent, the shove and its retaliation
+fire exactly as before; at range, the shove waits (logged "brawl at
+range (N u) — the shove waits for the bench") while the fight still
+books — the feud, the gossip, the news are sim-level truth and stay.
+The sim's own fights are untouched (they require a bench crossing); the
+force-test loop is now safe to watch from anywhere.
+
 ### 0.7.5 — the test hook: a pinned pair brawls on demand (2026-08-12)
 
 sim.test.forceFight pins two minds (by low-24-bit form id) and brawls

@@ -2763,26 +2763,53 @@ namespace TLC
                 && aggressorActor != nullptr
                 && aggressorActor->currentProcess != nullptr)
             {
-                const auto pushJitter =
-                    0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f));
+                // The shove is a bench scene — it only reads when the
+                // pair is actually near each other. A fight can book
+                // between minds that are far apart (the force-test
+                // loop fires on a timer wherever the pair is; a
+                // restored keeper may not be standing at her stall
+                // yet), and KnockExplosion uses the aggressor's
+                // position as the knockback ORIGIN — a distant origin
+                // throws the victim by a ghost, a fall with no one
+                // near. Gate the shove on distance: adjacent or skip
+                // (the fight still books — the feud is real, only the
+                // animation is deferred to when they meet).
+                const auto scene =
+                    (aggressorActor->GetPosition()
+                        - victimActor->GetPosition())
+                        .Length();
 
-                victimActor->currentProcess->KnockExplosion(
-                    victimActor, aggressorActor->GetPosition(),
-                    m_Settings.FightPush * pushJitter);
-
-                if (TemperOf(a_victim) >= m_Settings.FightTemper)
+                if (scene > 400.0f)
                 {
-                    const auto backJitter =
-                        0.75f + 0.5f * (0.5f + IdJitter(a_aggressor, 0.5f));
-
-                    aggressorActor->currentProcess->KnockExplosion(
-                        aggressorActor, victimActor->GetPosition(),
-                        m_Settings.FightPush * backJitter);
-
                     REX::INFO(
-                        "LCE: {} shoves {} back — hot heads, both.",
+                        "LCE: {} and {} brawl at range ({:.0f} u) — the shove waits for the bench.",
+                        MindLabelForm(m_Translator.FormFor(a_aggressor)),
                         MindLabelForm(m_Translator.FormFor(a_victim)),
-                        MindLabelForm(m_Translator.FormFor(a_aggressor)));
+                        scene);
+                }
+                else
+                {
+                    const auto pushJitter =
+                        0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f));
+
+                    victimActor->currentProcess->KnockExplosion(
+                        victimActor, aggressorActor->GetPosition(),
+                        m_Settings.FightPush * pushJitter);
+
+                    if (TemperOf(a_victim) >= m_Settings.FightTemper)
+                    {
+                        const auto backJitter =
+                            0.75f + 0.5f * (0.5f + IdJitter(a_aggressor, 0.5f));
+
+                        aggressorActor->currentProcess->KnockExplosion(
+                            aggressorActor, victimActor->GetPosition(),
+                            m_Settings.FightPush * backJitter);
+
+                        REX::INFO(
+                            "LCE: {} shoves {} back — hot heads, both.",
+                            MindLabelForm(m_Translator.FormFor(a_victim)),
+                            MindLabelForm(m_Translator.FormFor(a_aggressor)));
+                    }
                 }
             }
         }
