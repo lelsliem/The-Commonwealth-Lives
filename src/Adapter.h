@@ -448,6 +448,13 @@ namespace TLC
         // both actors are in.
         void RebuildKin();
 
+        // The test hook's brawl loop (0.7.5): when sim.test.forceFight
+        // pins a pair, this fires their fight every ForceFightInterval
+        // seconds — the pair pinned to an enemy feud, the once-per-day
+        // gate bypassed, the aggressor alternating so the shove lands
+        // on both sides. Test-only: off when either form id is 0.
+        void ForceFightLoop();
+
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // remembers its market as a Trade-kind event whose Other is the
         // workshop entity — this walks the memories and gives each mind
@@ -721,7 +728,8 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         void EscalateToFight(
             LCE::Simulation::EntityId a_aggressor,
             LCE::Simulation::EntityId a_victim,
-            std::uint64_t a_day);
+            std::uint64_t a_day,
+            bool a_force = false);
 
         // The news feed (0.7.0 Stone 3): the world's paper, capped and
         // rotated — the settlement radio reads it as captions. Session
@@ -788,6 +796,13 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // (DecayRate * Derive(id).NextFloat(1 ± sim.jitter)). Session
         // state — never reset by EndWorld; the co-save resumes it.
         LCE::Simulation::Rng m_Rng{ kRngSeed };
+
+        // The test hook's brawl loop (0.7.5): when to fire the next
+        // forced fight, and which side threw last (the aggressor
+        // alternates so the shove lands on both). Session state;
+        // cleared with the world.
+        std::chrono::steady_clock::time_point m_LastForceFight{};
+        std::uint64_t m_ForceFightCount = 0;
 
         // Whether the current load's completion event was already handled.
         // F4SE can fire both kPostLoadGame and kGameLoaded for one load —

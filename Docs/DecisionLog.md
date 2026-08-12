@@ -1344,3 +1344,33 @@ solid stagger, 10+ = ragdoll; chance 0.1 = drama, 0.25 = lively,
 `come to blows` lines, pair-canonicalized, must show each pair at most
 once per session — the old build showed Harley/Gizmo 141 times in one
 session, the fixed build showed it once.
+
+### ADR-0037 — The test hook: a pinned pair brawls on demand (2026-08-12)
+
+**Context.** Verifying the fight machinery in-game means waiting on the
+sim's coin: an enemy pair must cross, the temper must be hot, the
+chance must land, and the once-per-day gate means one shot per day.
+The user asked for the direct thing: *"a test script force fight loop
+between 2 — Sturges and Jun."*
+
+**The hook.** sim.test.forceFight pins two minds by form id (low 24
+bits) and brawls them on a loop every sim.test.forceFight.interval
+seconds. Each iteration: the pair is pinned to an Enemy bond (the
+fight machinery requires a feud; the hook forces its fuel), the
+aggressor alternates so the shove lands on both sides, and the fight
+books with the once-per-day gate bypassed (BookFight's new a_force) —
+the full scene fires: Combat memories, deepened feud, gossip, threat,
+shove with its per-victim jitter, the retaliation when the victim is
+hot-headed, the fight line, and the news ("... — the feud turns
+physical. (test brawl)"). The species belt still holds — a forced
+brawl needs two adults like any fight.
+
+**Why a force param, not a bypass.** The gate lives in BookFight, the
+single chokepoint; a boolean keeps the loop honest — everything the
+real sim does, the loop does, minus the two waits (the coin and the
+day). Off by default (both form ids 0); a test line in the log tells
+the forced fights apart from the sim's own.
+
+**The harness.** FightsTest grew the loop's core assertion: the same
+pair, the same day, forced again — booked (the old behavior would
+refuse); the gate still records the forced fight.

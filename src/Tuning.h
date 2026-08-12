@@ -232,6 +232,16 @@ namespace TLC::Tuning
         // (the fight books without the animation).
         float FightPush = 3.0f;
 
+        // The test hook (0.7.5): sim.test.forceFight pins two minds by
+        // base form id (low 24 bits) and brawls them on a loop every
+        // ForceFightInterval seconds — the full fight machinery (shove,
+        // retaliation, news, gossip) on demand, the pair pinned to an
+        // enemy feud and the once-per-day gate bypassed, for spectating
+        // and testing without waiting on the sim's coin. Off by default.
+        std::uint32_t ForceFightA = 0;
+        std::uint32_t ForceFightB = 0;
+        float ForceFightInterval = 15.0f;
+
         // The player window (0.7.0 Stone 3): the news feed. Events go
         // on-screen as HUD notifications, throttled by NewsCooldown
         // seconds — a flood of lines is noise, not news. The feed is the
@@ -318,6 +328,15 @@ namespace TLC::Tuning
 
         settings.FightPush =
             read("sim.fight.push", settings.FightPush);
+
+        settings.ForceFightA = static_cast<std::uint32_t>(
+            read("sim.test.forceFight.a",
+                static_cast<float>(settings.ForceFightA)));
+        settings.ForceFightB = static_cast<std::uint32_t>(
+            read("sim.test.forceFight.b",
+                static_cast<float>(settings.ForceFightB)));
+        settings.ForceFightInterval = read(
+            "sim.test.forceFight.interval", settings.ForceFightInterval);
 
         settings.NewsCooldown =
             read("sim.news.cooldown", settings.NewsCooldown);

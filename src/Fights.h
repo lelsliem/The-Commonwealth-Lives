@@ -97,7 +97,10 @@ namespace TLC::Fights
     // the feud's face becomes a known face), and the fight serves the
     // aggression the row's wrong already started. Returns whether the
     // fight was booked (false when the pair is not an enemy feud or has
-    // already fought today).
+    // already fought today). a_force bypasses the once-per-day gate —
+    // the test hook's loop (sim.test.forceFight): a pinned pair brawls
+    // on demand so the fight machinery can be watched and verified,
+    // shove and all, without waiting for a day roll.
     //-------------------------------------------------------------------------
     inline bool BookFight(
         EntityRegistry& a_registry,
@@ -106,7 +109,8 @@ namespace TLC::Fights
         EntityId a_aggressor, EntityId a_victim,
         std::uint64_t a_day,
         const SimulationTuning& a_tuning,
-        LCE::Events::EventBus* a_events)
+        LCE::Events::EventBus* a_events,
+        bool a_force = false)
     {
         if (!a_aggressor.IsValid() || !a_victim.IsValid()
             || a_aggressor == a_victim)
@@ -122,8 +126,11 @@ namespace TLC::Fights
             return false;
         }
 
-        // Blows once a day — the pair already fought today.
-        if (AlreadyFoughtToday(a_gates, a_aggressor, a_victim, a_day))
+        // Blows once a day — the pair already fought today. The test
+        // hook's loop is the exception: a forced brawl repeats by
+        // design, on its own timer.
+        if (!a_force
+            && AlreadyFoughtToday(a_gates, a_aggressor, a_victim, a_day))
         {
             return false;
         }

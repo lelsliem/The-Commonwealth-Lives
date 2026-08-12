@@ -11,6 +11,18 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 — the test hook: a pinned pair brawls on demand (2026-08-12)
+
+sim.test.forceFight pins two minds (by low-24-bit form id) and brawls
+them on a loop every sim.test.forceFight.interval seconds — the full
+fight machinery on demand: Combat memories, deepened feud, gossip,
+threat, the shove with its jitter, the retaliation, the fight line, and
+the news (marked "(test brawl)"). The pair is pinned to an Enemy bond
+and the once-per-day gate is bypassed (BookFight's a_force) so the loop
+repeats without a day roll; the aggressor alternates so the shove lands
+on both sides; the species belt still holds. Off by default. Sturges
+(0001A4D8) vs Jun Long (0001A4DB) is the ready-made test pair.
+
 ### 0.7.5 fix — the Workers get names at last (2026-08-12)
 
 The naming fix landed earlier, but the Sanctuary work crews (the game's

@@ -2680,7 +2680,8 @@ namespace TLC
     void Adapter::EscalateToFight(
         LCE::Simulation::EntityId a_aggressor,
         LCE::Simulation::EntityId a_victim,
-        std::uint64_t a_day)
+        std::uint64_t a_day,
+        bool a_force)
     {
         // Three gates, all must pass (Fights::RollFight): the pair is
         // an enemy feud (rivals stay verbal — the verbal-first rule),
@@ -2688,7 +2689,12 @@ namespace TLC
         // churlish throw the punch), and the world's coin lands under
         // sim.fight.chance (1.0 forces every eligible escalation — the
         // test knob). The once-per-day gate lives in BookFight (a
-        // Combat memory stamped today, co-saved).
+        // Combat memory stamped today, co-saved). a_force is the test
+        // hook's loop (sim.test.forceFight): the coin is skipped and
+        // the once-per-day gate is bypassed — a pinned pair brawls on
+        // its own timer so the fight machinery can be watched on
+        // demand. The species belt still holds: a forced brawl needs
+        // two adults, like any fight.
         //
         // The species belt (0.7.5 field find): blows are people's
         // business — a feud needs two adults. A child can argue (the
@@ -2711,7 +2717,8 @@ namespace TLC
         const auto kind = Bonds::CurrentKind(m_Bonds, a_aggressor, a_victim);
         const float roll = m_Rng.NextFloat(0.0f, 1.0f);
 
-        if (!Fights::RollFight(
+        if (!a_force
+            && !Fights::RollFight(
                 kind, TemperOf(a_aggressor),
                 m_Settings.FightTemper, m_Settings.FightChance, roll))
         {
@@ -2721,7 +2728,7 @@ namespace TLC
         if (!Fights::BookFight(
                 m_Registry, m_Bonds, m_ConflictGates,
                 a_aggressor, a_victim,
-                a_day, m_CoreTuning, &m_Bus))
+                a_day, m_CoreTuning, &m_Bus, a_force))
         {
             return;
         }
@@ -2788,12 +2795,79 @@ namespace TLC
         const auto a = MindLabelForm(m_Translator.FormFor(a_aggressor));
         const auto b = MindLabelForm(m_Translator.FormFor(a_victim));
 
+        // The forced loop's fights carry their marker so the log and
+        // the radio read a test brawl distinctly from the sim's own.
+        const auto suffix = a_force ? " (test brawl)" : "";
+
         PushNews(a + " and " + b
-            + " come to blows — the feud turns physical.");
+            + " come to blows — the feud turns physical." + suffix);
 
         REX::INFO(
-            "LCE: {} and {} come to blows — the feud turns physical.",
-            a, b);
+            "LCE: {} and {} come to blows — the feud turns physical.{}.",
+            a, b, suffix);
+    }
+
+    void Adapter::ForceFightLoop()
+    {
+        // The test hook (0.7.5): sim.test.forceFight pins a pair that
+        // brawls on a loop — the full fight machinery (shove,
+        // retaliation, news, gossip) on demand, for spectating and
+        // verifying without waiting on the sim's coin or a day roll.
+        // Off when either form id is 0; the species belt still holds.
+        if (m_Settings.ForceFightA == 0 || m_Settings.ForceFightB == 0
+            || m_Settings.ForceFightInterval <= 0.0f)
+        {
+            m_LastForceFight = {};
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (m_LastForceFight.time_since_epoch().count() != 0
+            && now - m_LastForceFight
+                < std::chrono::seconds(
+                    static_cast<int>(m_Settings.ForceFightInterval)))
+        {
+            return;
+        }
+
+        const auto entityA =
+            m_Translator.EntityFor(m_Settings.ForceFightA);
+        const auto entityB =
+            m_Translator.EntityFor(m_Settings.ForceFightB);
+
+        if (!entityA.IsValid() || !entityB.IsValid()
+            || entityA == entityB)
+        {
+            return;
+        }
+
+        const auto tagA = m_Registry.GetComponent<SpeciesTag>(entityA);
+        const auto tagB = m_Registry.GetComponent<SpeciesTag>(entityB);
+
+        if (!tagA || !tagB
+            || tagA->Value != Species::Human
+            || tagB->Value != Species::Human)
+        {
+            return;
+        }
+
+        // The feud is forced, not earned: pin the pair as enemies so
+        // the fight machinery — which requires an enemy feud — always
+        // has its fuel, whatever the sim's dispositions say.
+        const auto day = CurrentDay();
+        m_Bonds[Bonds::PairKey(entityA, entityB)] =
+            { Bonds::BondKind::Enemy, day };
+
+        // Alternate who throws the punch so the shove lands on both
+        // sides of the loop.
+        const auto aggressor =
+            m_ForceFightCount++ % 2 == 0 ? entityA : entityB;
+        const auto victim = aggressor == entityA ? entityB : entityA;
+
+        EscalateToFight(aggressor, victim, day, true);
+
+        m_LastForceFight = now;
     }
 
     void Adapter::RadioCaptions()
@@ -4217,6 +4291,11 @@ namespace TLC
             // BEFORE the bond pass so a freshly-loaded family pair is
             // already gated when their dispositions reconcile.
             RebuildKin();
+
+            // The test hook's brawl loop (0.7.5): a pinned pair fights
+            // on its own timer — spectating and verifying the fight
+            // machinery on demand, the once-per-day gate bypassed.
+            ForceFightLoop();
 
             // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
             // event channel is instant; this pass is complete — quiet

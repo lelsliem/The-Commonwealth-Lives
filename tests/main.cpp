@@ -4089,6 +4089,23 @@ namespace TLC::Tests
             return false;
         }
 
+        // The test hook's loop (0.7.5): a FORCED fight bypasses the
+        // once-per-day gate — the same pair, the same day, forced again:
+        // yes. That is the point of sim.test.forceFight — a pinned pair
+        // brawls on its own timer, shove and all, without waiting for a
+        // day roll.
+        if (!TLC::Fights::BookFight(
+                registry, bonds, gates, a, b, 43, {}, nullptr, true))
+        {
+            return false;
+        }
+
+        // And the forced fight still lands the same bookkeeping.
+        if (!TLC::ConflictGates::FoughtToday(gates, a, b, 43))
+        {
+            return false;
+        }
+
         // A rival pair never books — words stay words.
         EntityRegistry quiet;
 
