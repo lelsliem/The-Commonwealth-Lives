@@ -61,6 +61,10 @@ namespace TLC
         case 0x000B1F08:   // TurretTripodRace
         case 0x000B28D3:   // TurretBubbleRace
         case 0x001A6D64:   // TurretWorkshopRace
+        // The wall-mounted spotlight's race (DLCRobot.esm / Automatron,
+        // record 0x2804) — the diagnostic named it 2026-08-12 when the
+        // spotlight survived the prune and kept feuding with Deacon.
+        case 0x01002804:
             return true;
 
         default:

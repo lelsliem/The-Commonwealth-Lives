@@ -34,6 +34,13 @@ change):
   seeds them. The species table's "robots are deliberately absent"
   note is finally honored; synths stay Human.
 
+Same-session follow-up: the wall-mounted spotlight's race
+(`0x01002804`, Automatron) slipped both tables — the new prune
+announces any Human mind with an unknown race once per session, and
+that line named it, so the spotlight joined the device table too. The
+unknown-race announce stays: it is the device table's way of
+learning.
+
 21/21 harness suites green; build clean. ADR-0026.
 
 ---
