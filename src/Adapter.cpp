@@ -2295,6 +2295,12 @@ namespace TLC
                 m_Settings.NewsCooldown))
         {
             m_LastNews = now;
+            // The HUD diagnostic (0.8.1 verification): the on-screen pop is
+            // the one thing the log cannot see — a stall inside
+            // ShowHUDMessage would show as a gap after this line. Timestamp
+            // each pop so the next session can prove (or clear) the
+            // message-path hang.
+            REX::DEBUG("hud: pop '{}'", a_line);
             RE::SendHUDMessage::ShowHUDMessage(
                 a_line.c_str(), "", false, false);
         }
@@ -2401,6 +2407,9 @@ namespace TLC
 
         if (!line.empty())
         {
+            // Same HUD diagnostic as PushNews: prove or clear the
+            // message-path stall (0.8.1 verification).
+            REX::DEBUG("hud: radio '{}'", line);
             RE::SendHUDMessage::ShowHUDMessage(
                 line.c_str(), "", false, false);
         }
