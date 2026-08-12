@@ -231,7 +231,12 @@ namespace TLC::Tuning
         // a shove that visibly registers (3 read as a tip-over in the
         // loop test), and the ±25% jitter spreads it 3–5. 0 turns the
         // shove off (the fight books without the animation).
-        float FightPush = 4.0f;
+        float FightPush = 5.0f;
+
+        // The scuffle's beat (0.7.5): a hot-headed victim answers the
+        // punch after a beat, not in the same instant — push, fall, get
+        // up, push back. Seconds between the two shoves.
+        float RetaliationDelay = 4.0f;
 
         // The test hook (0.7.5): sim.test.forceFight pins two minds by
         // base form id (low 24 bits) and brawls them on a loop every
@@ -329,6 +334,9 @@ namespace TLC::Tuning
 
         settings.FightPush =
             read("sim.fight.push", settings.FightPush);
+
+        settings.RetaliationDelay = read(
+            "sim.fight.retaliation.delay", settings.RetaliationDelay);
 
         settings.ForceFightA = static_cast<std::uint32_t>(
             read("sim.test.forceFight.a",

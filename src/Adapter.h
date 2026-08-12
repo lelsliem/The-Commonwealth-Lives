@@ -455,6 +455,15 @@ namespace TLC
         // on both sides. Test-only: off when either form id is 0.
         void ForceFightLoop();
 
+        // The scuffle's second beat (0.7.5): a hot-headed victim
+        // answers the punch after a beat — push, fall, get up, push
+        // back — instead of both shoves landing in the same instant
+        // (which read as a double-fall). Fires due counter-shoves and
+        // then walks the one who threw first away from the one who
+        // answered (the loser slinks off — the flee's first visible
+        // beat while the engine's Flee action is still a stub).
+        void ProcessPendingRetaliations();
+
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // remembers its market as a Trade-kind event whose Other is the
         // workshop entity — this walks the memories and gives each mind
@@ -803,6 +812,18 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // cleared with the world.
         std::chrono::steady_clock::time_point m_LastForceFight{};
         std::uint64_t m_ForceFightCount = 0;
+
+        // The scuffle's queued second beat (0.7.5): who answers whom,
+        // and when — the counter-shove fires a beat after the first
+        // punch so the exchange reads as a sequence, not a double-fall.
+        struct PendingRetaliation
+        {
+            LCE::Simulation::EntityId Retaliator;
+            LCE::Simulation::EntityId Target;
+            std::chrono::steady_clock::time_point Due;
+        };
+
+        std::vector<PendingRetaliation> m_PendingRetaliations;
 
         // Whether the current load's completion event was already handled.
         // F4SE can fire both kPostLoadGame and kGameLoaded for one load —

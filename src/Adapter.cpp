@@ -2807,19 +2807,26 @@ namespace TLC
                         MindLabelForm(m_Translator.FormFor(a_aggressor)),
                         force, scene);
 
-                    if (TemperOf(a_victim) >= m_Settings.FightTemper)
+                    // The scuffle's second beat (0.7.5): a hot-headed
+                    // victim answers the punch — but after a beat, not
+                    // in the same instant (both shoves in one frame
+                    // read as a double-fall). The forced loop's test
+                    // pair answers always, so the full chain — push,
+                    // fall, get up, push back, slink off — is watchable
+                    // on demand.
+                    const bool answers =
+                        a_force
+                        || TemperOf(a_victim) >= m_Settings.FightTemper;
+
+                    if (answers)
                     {
-                        const auto backJitter =
-                            0.75f + 0.5f * (0.5f + IdJitter(a_aggressor, 0.5f));
-
-                        aggressorActor->currentProcess->KnockExplosion(
-                            aggressorActor, victimActor->GetPosition(),
-                            m_Settings.FightPush * backJitter);
-
-                        REX::INFO(
-                            "LCE: {} shoves {} back — hot heads, both.",
-                            MindLabelForm(m_Translator.FormFor(a_victim)),
-                            MindLabelForm(m_Translator.FormFor(a_aggressor)));
+                        m_PendingRetaliations.push_back(
+                            PendingRetaliation{
+                                a_victim, a_aggressor,
+                                std::chrono::steady_clock::now()
+                                    + std::chrono::seconds(
+                                        static_cast<int>(
+                                            m_Settings.RetaliationDelay)) });
                     }
                 }
             }
@@ -2906,6 +2913,77 @@ namespace TLC
         EscalateToFight(aggressor, victim, day, true);
 
         m_LastForceFight = now;
+    }
+
+    void Adapter::ProcessPendingRetaliations()
+    {
+        // The scuffle's second beat (0.7.5): a hot-headed victim (or a
+        // forced test pair) answers the punch a beat later, once they
+        // are back on their feet. The counter-shove lands from the
+        // retaliator's position, only if the pair is still at the
+        // scene (they parted — no ghost punch), and then the one who
+        // threw first slinks off — the flee's first visible beat while
+        // the engine's Flee action is still a table stub.
+        const auto now = std::chrono::steady_clock::now();
+
+        for (auto it = m_PendingRetaliations.begin();
+             it != m_PendingRetaliations.end();)
+        {
+            if (now < it->Due)
+            {
+                ++it;
+                continue;
+            }
+
+            const auto retaliator = it->Retaliator;
+            const auto target = it->Target;
+            it = m_PendingRetaliations.erase(it);
+
+            if (m_Settings.FightPush <= 0.0f)
+            {
+                continue;
+            }
+
+            auto* targetActor = RE::TESForm::GetFormByID<RE::Actor>(
+                m_Translator.FormFor(target));
+            auto* retaliatorActor = RE::TESForm::GetFormByID<RE::Actor>(
+                m_Translator.FormFor(retaliator));
+
+            if (targetActor == nullptr
+                || targetActor->currentProcess == nullptr
+                || retaliatorActor == nullptr
+                || retaliatorActor->currentProcess == nullptr)
+            {
+                continue;
+            }
+
+            const auto scene =
+                (retaliatorActor->GetPosition()
+                    - targetActor->GetPosition())
+                    .Length();
+
+            if (scene > 400.0f)
+            {
+                continue;   // they parted — no counter-punch at range
+            }
+
+            const auto backJitter =
+                0.75f + 0.5f * (0.5f + IdJitter(retaliator, 0.5f));
+
+            targetActor->currentProcess->KnockExplosion(
+                targetActor, retaliatorActor->GetPosition(),
+                m_Settings.FightPush * backJitter);
+
+            REX::INFO(
+                "LCE: {} shoves {} back — hot heads, both.",
+                MindLabelForm(m_Translator.FormFor(retaliator)),
+                MindLabelForm(m_Translator.FormFor(target)));
+
+            // The loser slinks off: the one who threw first walks to
+            // the far side of the scene from the one who answered.
+            Movement::WalkAwayFrom(
+                targetActor, retaliatorActor->GetPosition());
+        }
     }
 
     void Adapter::RadioCaptions()
@@ -4334,6 +4412,11 @@ namespace TLC
             // on its own timer — spectating and verifying the fight
             // machinery on demand, the once-per-day gate bypassed.
             ForceFightLoop();
+
+            // The scuffle's second beat (0.7.5): due counter-shoves
+            // fire, then the one who threw first walks off — the
+            // exchange reads as a sequence, not a double-fall.
+            ProcessPendingRetaliations();
 
             // 0.6.0 Stone 2 — bonds: the 1-second dissolve net. The
             // event channel is instant; this pass is complete — quiet

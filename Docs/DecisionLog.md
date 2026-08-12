@@ -1415,3 +1415,38 @@ double-fall question resolves from the log, not the screen. The base
 force moves 3 → 4 (the crowd mod's proven 5 was a solid shove; 3 read
 as a tip-over in the loop test), so the jitter spreads 3–5 — a shove
 that visibly registers rather than a collapse.
+
+### ADR-0040 — The scuffle reads as a sequence: push, fall, get up, push back, slink off (2026-08-12)
+
+**Context.** The loop test showed the exchange wrong: "really odd
+looking — no pushing at all, both do exact same thing same time and
+fall over." Two problems surfaced from the log. First, the punch's
+force was reading 2.4–3.0 in the session — the user's INI still had
+sim.fight.push = 3 (the shipped default was bumped but the override
+won), and at that force KnockExplosion plays a collapse, not a shove.
+Second, the retaliation fired in the SAME instant as the aggressor's
+punch (when it fired at all — the test pair's temps never passed the
+line), so the exchange had no sequence: both bodies hit the deck at
+once. And the chain's ending was missing entirely — the engine's Flee
+action is a declared-but-unbuilt table stub ("fleeing is unbuilt,
+executes nothing in-game yet"), so "decides Flee" never even logged
+and nobody ever ran away.
+
+**The sequence.** The scuffle is now three beats:
+1. The aggressor's shove lands now — visible push at force 5 (the
+   crowd mod's proven default; the shipped INI carries it).
+2. A hot-headed victim answers after a beat (sim.fight.retaliation.
+   delay, default 4s — the get-up window), via a pending-retaliation
+   queue the per-second sweep drains; the forced loop's test pair
+   answers always, so the full chain is watchable on demand.
+3. The one who threw first slinks off: the first visible flee — a new
+   Movement::WalkAwayFrom walks the loser to the cell reference
+   FARTHEST from the one who answered (mirrors WanderNear's cell
+   enumeration; skips actor refrs; falls back to HoldPlace). The
+   engine's real Flee action stays a stub for the engine tab — this
+   is the adapter's beat, and the sim's own fights get it too (a
+   feud's loser walking off is readable drama, not just a test).
+
+The counter-shove keeps the scene gate (they parted — no ghost
+punch). The receipts stay: `shove:` for the first punch, `shoves
+back` for the answer, and the range line when either waits.

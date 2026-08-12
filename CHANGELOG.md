@@ -11,6 +11,20 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 — the scuffle reads as a sequence (2026-08-12)
+
+The loop test showed the exchange wrong: no visible push, both bodies
+hitting the deck at once. Three fixes: the punch's force moves to 5
+(the user's INI had 3, which plays a collapse, not a shove); the
+retaliation is now a beat later (sim.fight.retaliation.delay, default
+4s) via a pending queue — push, fall, get up, push back — instead of
+both shoves in one instant, and the forced loop's pair always answers
+so the chain is watchable on demand; and the loser slinks off — a new
+Movement::WalkAwayFrom walks the one who threw first to the far side
+of the scene from the one who answered (the engine's Flee action is
+still a stub; this is the adapter's first visible flee, for sim fights
+too). The scene gate stays: a parted pair never ghosts a punch.
+
 ### 0.7.5 — the shove logs its receipt (2026-08-12)
 
 The loop's close-range fights read as a double-fall with no visible

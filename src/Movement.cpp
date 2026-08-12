@@ -226,4 +226,72 @@ namespace TLC::Movement
             ? IssueTravel(a_actor, target)
             : HoldPlace(a_actor);
     }
+
+    bool WalkAwayFrom(
+        RE::Actor* a_actor, const RE::NiPoint3& a_threat,
+        float a_minDistance)
+    {
+        if (a_actor == nullptr || a_actor->currentProcess == nullptr)
+        {
+            return false;
+        }
+
+        const auto cell = a_actor->GetParentCell();
+
+        if (cell == nullptr)
+        {
+            return HoldPlace(a_actor);
+        }
+
+        const auto position = a_actor->GetPosition();
+
+        RE::TESObjectREFR* farObject = nullptr;
+        float farDistance = 0.0f;
+
+        // The flee (0.7.5): the reference in this cell FARTHEST from
+        // the threat — the loser makes ground instead of milling near
+        // the scene. Actor refrs are skipped (chasing a moving target
+        // is not a flee); the walk must also clear a_minDistance from
+        // the actor's own spot or it would spin in place.
+        cell->ForEachReferenceInRange(
+            position, 4000.0f,
+            [&](RE::TESObjectREFR* a_ref) -> RE::BSContainer::ForEachResult
+            {
+                if (a_ref == nullptr || a_ref == a_actor)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                const auto base = a_ref->GetObjectReference();
+
+                if (base == nullptr
+                    || base->GetFormType() == RE::ENUM_FORM_ID::kACHR)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                const auto spot = a_ref->GetPosition();
+
+                // Ground between the actor and the target, then pick
+                // the farthest from the threat.
+                if ((spot - position).Length() < a_minDistance)
+                {
+                    return RE::BSContainer::ForEachResult::kContinue;
+                }
+
+                const auto fromThreat = (spot - a_threat).Length();
+
+                if (fromThreat > farDistance)
+                {
+                    farDistance = fromThreat;
+                    farObject = a_ref;
+                }
+
+                return RE::BSContainer::ForEachResult::kContinue;
+            });
+
+        return farObject != nullptr
+            ? IssueTravel(a_actor, farObject)
+            : HoldPlace(a_actor);
+    }
 }

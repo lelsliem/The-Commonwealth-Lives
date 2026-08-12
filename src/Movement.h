@@ -13,6 +13,7 @@ namespace RE
 {
     class Actor;
     class TESObjectREFR;
+    struct NiPoint3;
 }
 
 namespace TLC
@@ -56,5 +57,15 @@ namespace TLC
         // plan-entry decision line is the narrative; a wander every
         // cooldown across hundreds of minds must not flood the log.
         bool WanderNear(RE::Actor* a_actor, float a_radius = 4000.0f);
+
+        // One flee (0.7.5): walks the actor to the reference in its
+        // cell FARTHEST from a threat position — the loser slinks off
+        // after a scuffle instead of standing at the scene of the
+        // crime. Needs at least a_minDistance of ground between the
+        // actor and the target (a same-spot walk would just spin), or
+        // it falls back to HoldPlace. Same refusals as WalkTo.
+        bool WalkAwayFrom(
+            RE::Actor* a_actor, const RE::NiPoint3& a_threat,
+            float a_minDistance = 600.0f);
     }
 }
