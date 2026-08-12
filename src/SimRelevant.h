@@ -27,6 +27,19 @@ namespace TLC
     //-------------------------------------------------------------------------
     inline constexpr std::uint32_t kSettlerFactionFormId = 0x000337F3;
 
+    // HasBeenCompanionFaction — the game applies it permanently to any
+    // actor the moment they are recruited as a companion (FACT record
+    // 0x000A1B85, verified in Fallout4.esm 2026-08-12). Membership is
+    // the companion signal: a dismissed companion assigned to a
+    // settlement gains the settler faction (and becomes a mind), but
+    // can never have reached a settlement without having been
+    // recruited — so this faction is always set for the minds we must
+    // keep out of the dating pool.
+    inline constexpr std::uint32_t kHasBeenCompanionFactionFormId = 0x000A1B85;
+
+    // Cached runtime lookup of the faction form (null until the game loads).
+    [[nodiscard]] const RE::TESFaction* HasBeenCompanionFaction();
+
     // Cached runtime lookup of the faction form (null until the game loads).
     [[nodiscard]] const RE::TESFaction* SettlerFaction();
 

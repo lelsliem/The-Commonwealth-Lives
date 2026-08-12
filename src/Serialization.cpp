@@ -249,6 +249,26 @@ namespace TLC
             };
         }
 
+        ComponentSerializer<CompanionTag> MakeCompanionTagSerializer()
+        {
+            // Empty marker component — presence is the truth (the same
+            // shape as the kin set: a co-saved companion stays tagged
+            // through save/load even before its actor streams in).
+            return {
+                [](const CompanionTag&)
+                {
+                    Codec::Writer writer;
+                    writer.U32(1);
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob&)
+                {
+                    return CompanionTag{};
+                }
+            };
+        }
+
         ComponentSerializer<CapPouch> MakeCapPouchSerializer()
         {
             return {
@@ -364,6 +384,8 @@ namespace TLC
         registry.RegisterSerializer<Intent>(MakeIntentSerializer());
         registry.RegisterSerializer<FormRef>(MakeFormRefSerializer());
         registry.RegisterSerializer<SpeciesTag>(MakeSpeciesTagSerializer());
+        registry.RegisterSerializer<CompanionTag>(
+            MakeCompanionTagSerializer());
         registry.RegisterSerializer<CapPouch>(MakeCapPouchSerializer());
         registry.RegisterSerializer<Name>(MakeNameSerializer());
 

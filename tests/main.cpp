@@ -4324,6 +4324,68 @@ namespace TLC::Tests
             return false;   // the stale romance dissolves to family
         }
 
+        // The companion gate (0.7.5 field find), through the full
+        // reconcile pass: a CompanionTag mind warms to a settler at
+        // spouse-grade — the pair must cap at Friend. Enemies stay
+        // enemies (the user's rule: friends and feuds are fine, the
+        // dating pool is closed).
+        EntityRegistry companionRegistry;
+
+        const auto companion = companionRegistry.CreateEntity();
+        const auto settler = companionRegistry.CreateEntity();
+
+        companionRegistry.AddComponent<CompanionTag>(
+            companion, CompanionTag{});
+        companionRegistry.AddComponent<SpeciesTag>(
+            companion, SpeciesTag{ Species::Human });
+        companionRegistry.AddComponent<SpeciesTag>(
+            settler, SpeciesTag{ Species::Human });
+
+        auto companionR = Relationships{};
+        auto settlerR = Relationships{};
+        companionR.ByEntity[settler] = { 0.9f, 0.9f };
+        settlerR.ByEntity[companion] = { 0.9f, 0.9f };
+        companionRegistry.AddComponent<Relationships>(
+            companion, std::move(companionR));
+        companionRegistry.AddComponent<Relationships>(
+            settler, std::move(settlerR));
+
+        BondMap companionBonds;
+
+        Bonds::Reconcile(
+            companionRegistry, thresholds, companionBonds, 42, nullptr);
+
+        const auto companionKind =
+            Bonds::CurrentKind(companionBonds, companion, settler);
+
+        if (companionKind != BondKind::Friend)
+        {
+            return false;   // the companion's dating pool is closed
+        }
+
+        // And the negative side stays open: the same pair at enemy
+        // grade forms an enemy feud — the user's "friends with enemy
+        // is fine".
+        auto enemyR = Relationships{};
+        auto enemyROther = Relationships{};
+        enemyR.ByEntity[settler] = { -0.9f, -0.9f };
+        enemyROther.ByEntity[companion] = { -0.9f, -0.9f };
+        companionRegistry.GetComponent<Relationships>(companion)->ByEntity =
+            enemyR.ByEntity;
+        companionRegistry.GetComponent<Relationships>(settler)->ByEntity =
+            enemyROther.ByEntity;
+
+        BondMap enemyBonds;
+
+        Bonds::Reconcile(
+            companionRegistry, thresholds, enemyBonds, 43, nullptr);
+
+        if (Bonds::CurrentKind(enemyBonds, companion, settler)
+            != BondKind::Enemy)
+        {
+            return false;   // feuds are allowed for companions
+        }
+
         return true;
     }
 

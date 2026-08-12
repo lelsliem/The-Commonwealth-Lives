@@ -40,6 +40,19 @@ namespace TLC
     };
 
     //-------------------------------------------------------------------------
+    // CompanionTag — a mind that has ever been a companion (0.7.5
+    // field find). Set from the actor's HasBeenCompanionFaction (the
+    // faction the game applies permanently the moment a companion is
+    // recruited) and re-derived each second like the species, so a
+    // pre-fix save heals. A companion stays a full mind — fed, trading,
+    // befriending, feuding — but is never in the dating pool: the bond
+    // gates refuse it a sweetheart or spouse (the kin flag).
+    //-------------------------------------------------------------------------
+    struct CompanionTag
+    {
+    };
+
+    //-------------------------------------------------------------------------
     // CapPouch — the economy stone (0.5.x): a mind's few caps. Humans are
     // born with a small pouch (SeedPouch) and pay for their meals at the
     // market (PayForMeal); the seller's pouch grows. A missing pouch reads

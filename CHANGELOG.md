@@ -11,6 +11,19 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.5 fix — the companion's dating pool is closed (2026-08-12)
+
+A companion dismissed to a settlement becomes a mind — trading, naming,
+befriending, feuding — but must never romance a settler. The game
+applies HasBeenCompanionFaction (0x000A1B85) permanently at recruitment,
+and a companion can only reach a settlement by being dismissed there, so
+the faction is the exact signal. A CompanionTag marker rides each mind
+(co-saved, re-derived every second like the species — a pre-fix save
+heals), and both bond channels refuse it a sweetheart or spouse — capped
+at Friend — while enemies stay enemies: friends and feuds are fine, the
+dating pool is closed. On load: `companion: <name> is a companion —
+friends and feuds, never romance.`
+
 ### 0.7.5 fix — blows are people's business: children row, never fight (2026-08-12)
 
 The safety audit after the kin gate found one more gap: the fight

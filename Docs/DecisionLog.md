@@ -1277,3 +1277,41 @@ noted for 0.8.x); married couples can dissolve into rivals/enemies
 (the family-flip rule) and the household pouch splits — drama, not a
 bug; kin pairs can feud (a father-son row is drama) — only romance is
 kin-gated.
+
+### ADR-0035 — The companion's dating pool is closed: friends and feuds, never romance (2026-08-12)
+
+**Context.** The safety audit's one open question came back as a
+decision: *"yeah we should block companions from dating zone become
+freinds with enemy is fine."* A companion dismissed to a settlement
+gains the settler faction and becomes a mind — she trades, she names,
+she befriends, she feuds — but she must never cross the sweetheart or
+spouse line with a settler. Friends and enemies are explicitly fine;
+romance is not.
+
+**The signal.** The base-game ESM hides its companion NPCs behind
+quest aliases (no static companion faction on the base records — the
+ESM forensics proved it: no companion NPC record holds any of the four
+companion factions). The reliable truth is runtime: the game applies
+**HasBeenCompanionFaction** (FACT 0x000A1B85, verified in
+Fallout4.esm) permanently the moment a companion is recruited — and a
+companion can only ever reach a settlement (become a mind) by being
+dismissed there, which requires recruitment. So the faction is always
+set exactly for the minds that must stay out of the dating pool.
+
+**Mechanics.** A new marker component (CompanionTag, co-saved like
+SpeciesTag) rides each mind. It is set at seed and re-derived every
+second in the same pass that re-derives species (ReclassifyLoadedMinds
+— an actor reading HasBeenCompanionFaction gets the tag; a mind whose
+tag no longer matches loses it), so a pre-fix save heals the moment
+the companion's actor loads. Both bond channels — the reconcile pass
+and the RelationshipChangedEvent handler — fold the tag into the same
+`kin` flag ApplyPair already refuses romance with (capped at Friend),
+so the companion gate and the family gate share one code path. The
+kin-gate test grew a companion leg: spouse-grade warmth caps at
+Friend, and enemy-grade warmth still forms the feud — the user's exact
+shape, "friends with enemy is fine."
+
+**What the user sees.** On load (or when a companion's actor streams
+in): `companion: <name> is a companion — friends and feuds, never
+romance.` No sweetheart or spouse line ever names a companion, in the
+log or on the radio.

@@ -910,13 +910,17 @@ namespace TLC
 
         // The family gate (0.7.5 field find), the same rule the
         // reconcile pass applies: a child never romances anyone (kin by
-        // species), and a curated kin pair (the vanilla families) never
-        // romances either — family can be friends, never lovers.
+        // species), a curated kin pair (the vanilla families) never
+        // romances either — family can be friends, never lovers — and
+        // a companion (HasBeenCompanionFaction) never romances either:
+        // friends and feuds are fine, the dating pool is closed.
         const bool kin =
             eventTagA->Value == Species::Child
             || eventTagB->Value == Species::Child
             || m_Kin.contains(
-                Bonds::PairKey(a_event.Subject, a_event.Other));
+                Bonds::PairKey(a_event.Subject, a_event.Other))
+            || m_Registry.GetComponent<CompanionTag>(a_event.Subject)
+            || m_Registry.GetComponent<CompanionTag>(a_event.Other);
 
         Bonds::ApplyPair(
             m_Bonds,
@@ -1603,6 +1607,20 @@ namespace TLC
 
         m_Registry.AddComponent<FormRef>(id, FormRef{ formId });
         m_Registry.AddComponent<SpeciesTag>(id, SpeciesTag{ species });
+
+        // The companion truth (0.7.5 field find): a mind that has ever
+        // been a companion is never in the dating pool. The seed marks
+        // it the moment it becomes a mind (a dismissed companion
+        // assigned to a settlement); the per-second sweep re-derives it
+        // like the species, so a pre-fix save heals too.
+        const auto companionFaction = HasBeenCompanionFaction();
+
+        if (companionFaction != nullptr
+            && a_actor->IsInFaction(companionFaction))
+        {
+            m_Registry.AddComponent<CompanionTag>(id, CompanionTag{});
+        }
+
         m_Registry.AddComponent<Needs>(id, std::move(needs));
         m_Registry.AddComponent<Goals>(id, SeededGoals(species));
         m_Registry.AddComponent<Memory>(id, Memory{});
@@ -2443,6 +2461,33 @@ namespace TLC
                  if (!entity.IsValid())
                  {
                      return;
+                 }
+
+                 // The companion truth (0.7.5 field find): a mind that
+                 // has ever been a companion — HasBeenCompanionFaction,
+                 // set permanently at recruitment — stays a full mind
+                 // (fed, trading, befriending, feuding) but is never in
+                 // the dating pool. Re-derived every pass like the
+                 // species, so a pre-fix save heals and a dismissed
+                 // companion who joins a settlement is caught the
+                 // moment the actor loads.
+                 const auto companionFaction = HasBeenCompanionFaction();
+                 const bool isCompanion = companionFaction != nullptr
+                     && a_actor->IsInFaction(companionFaction);
+                 const bool tagged =
+                     m_Registry.GetComponent<CompanionTag>(entity) != nullptr;
+
+                 if (isCompanion && !tagged)
+                 {
+                     m_Registry.AddComponent<CompanionTag>(
+                         entity, CompanionTag{});
+                     REX::INFO(
+                         "companion: {} is a companion — friends and feuds, never romance.",
+                         MindLabel(entity));
+                 }
+                 else if (!isCompanion && tagged)
+                 {
+                     m_Registry.RemoveComponent<CompanionTag>(entity);
                  }
 
                  const auto tag = m_Registry.GetComponent<SpeciesTag>(entity);

@@ -34,6 +34,14 @@ namespace TLC
         return faction;
     }
 
+    const RE::TESFaction* HasBeenCompanionFaction()
+    {
+        static const RE::TESFaction* faction = RE::TESForm::GetFormByID<
+            RE::TESFaction>(kHasBeenCompanionFactionFormId);
+
+        return faction;
+    }
+
     //-------------------------------------------------------------------------
     // The workshop's props are not minds (0.7.2 fix): the game hands the
     // settler faction to anything a settlement can place that counts as

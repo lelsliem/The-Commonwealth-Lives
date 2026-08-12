@@ -360,10 +360,12 @@ namespace TLC::Bonds
     // from the map; a_onChanged fires only when the bond CHANGED this
     // call (formation, dissolve, upgrade, family flip — resting is
     // silent), with the old and new kinds and the since-day (0 when the
-    // bond dissolved). a_kin names a pair the world knows is family
-    // (Kin.h — a shared parent, a child): family can be friends, never
-    // lovers, so a romantic kind is refused — including one already on
-    // the books, so a pre-fix save's mistake heals on the next pass.
+    // bond dissolved). a_kin names a pair the world knows must never
+    // romance — family (Kin.h — a shared parent, a child) or a
+    // companion (the CompanionTag): family can be friends, never
+    // lovers, and a companion's dating pool is closed, so a romantic
+    // kind is refused — including one already on the books, so a
+    // pre-fix save's mistake heals on the next pass.
     //-------------------------------------------------------------------------
     inline void ApplyPair(
         BondMap& a_bonds,
@@ -492,13 +494,19 @@ namespace TLC::Bonds
                         continue;
                     }
 
-                    // The family gate: a child never romances anyone
-                    // (kin by species), and a curated kin pair (the
-                    // vanilla families) never romances either.
+                    // The never-romance gate (0.7.5 field finds): a
+                    // child never romances anyone (kin by species), a
+                    // curated kin pair (the vanilla families) never
+                    // romances either, and a companion
+                    // (HasBeenCompanionFaction — the CompanionTag) never
+                    // romances: friends and feuds are fine, the dating
+                    // pool is closed.
                     const bool kin =
                         tagA->Value == Species::Child
                         || tagB->Value == Species::Child
-                        || a_kin.contains(key);
+                        || a_kin.contains(key)
+                        || a_registry.GetComponent<CompanionTag>(a_entity)
+                        || a_registry.GetComponent<CompanionTag>(other);
 
                     float dOtherToMe = 0.0f;
 
