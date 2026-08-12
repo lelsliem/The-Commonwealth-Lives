@@ -9,6 +9,26 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.7.4 verification — the log flood tamed (2026-08-12)
+
+The growing frame hang traced to the verify channel itself: near-tied
+intents (Rest/Explore) re-rolled every frame, and each re-roll wrote a
+synchronous file line on the game thread — 22,478 "decides" lines in
+under three minutes, 75% of the whole log, alongside every HUD message
+moment. The game froze silently at the end of that session.
+
+- **Time-based decision logging** — `LogPlanEntry` dedupes on intent
+  *and* time: a mind's "decides X" line logs when its intent changes,
+  or at most once per `sim.log.decisions.every` seconds (default 1.0)
+  while it flip-flops. The verify channel stays readable — one line per
+  mind per second at most — instead of a 150-line-per-second file-I/O
+  flood on the game thread.
+- The intent-change gate still fires instantly on real decisions (a
+  walk's target, an arrival), so nothing observable is lost; only the
+  per-frame Rest/Explore re-roll noise is throttled.
+
+---
+
 ## 0.7.4 Trade with anyone — the sellers are minds (2026-08-12)
 
 The bench was the only food source a hungry mind remembered; the world
