@@ -2140,7 +2140,14 @@ namespace TLC
                         // swallow the sim's name. Write through when
                         // the actor shows nothing or the bare role — a
                         // different deliberate name (a player rename)
-                        // is respected.
+                        // is respected. Verified in-game: the write is
+                        // a no-op against the game's own mask while the
+                        // actor is assigned to a supply line (the label
+                        // is re-derived from the assignment, ahead of
+                        // any extra-data override — a universal FO4
+                        // limitation). It still lands the moment the
+                        // provisioner is reassigned to another role, so
+                        // the write stays.
                         if (shown == nullptr
                             || TLC::Names::EqualsFold(
                                 displayName, role))

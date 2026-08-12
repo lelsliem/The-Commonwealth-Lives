@@ -28,7 +28,16 @@ was built for:
   name them. A role-word **base form now passes the gate on its own**
   (device-race and NPC-base checks still apply) — the road's people
   are minds, and they are exactly who a hungry settler trades with on
-  the road (0.7.4).
+  the road (0.7.4). Confirmed live: Trader Chloe, caravan guards with
+  names.
+- **One game limitation, proven and accepted.** The visible name of a
+  supply-line provisioner cannot be changed while assigned — the game
+  re-derives "Provisioner" from the assignment itself, ahead of any
+  extra-data override (diagnostic: `base 'Settler'`, wrote "Provisioner
+  Atlas", read-back "Provisioner"). Even the console `setname` fails
+  there, per the top Nexus renaming mod's known issues. The sim's role
+  name still lives in memory, log, and co-save; the radio speaks it;
+  and the write lands the moment the provisioner is reassigned.
 
 ## 0.7.3 Names for everyone — the roles gain people (2026-08-12)
 

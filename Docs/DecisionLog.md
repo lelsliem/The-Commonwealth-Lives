@@ -992,3 +992,15 @@ passes sim-relevance without the faction, gated by the device-race and
 NPC-base checks so no prop sneaks back. The road's people are minds —
 and they are exactly who a hungry settler trades with on the road
 (0.7.4).
+
+**Second verification (same day) — the supply-line mask is game-deep.**
+A one-line diagnostic (`base 'Settler', wrote 'Provisioner Atlas',
+after 'Provisioner', text-display present`) proved the visible name of
+a supply-line provisioner cannot be overridden: the game re-derives
+"Provisioner" from the assignment itself, ahead of any extra-data
+override. The top Nexus renaming mod (Settler Renaming, 6,856
+endorsements) documents the same wall — even the console `setname`
+command fails there. Accepted as a universal FO4 limitation: the sim's
+role name lives in memory, the log, and the co-save (the 0.7.3
+requirement), the radio speaks it, and the write is kept because it
+lands the moment the provisioner is reassigned to another role.

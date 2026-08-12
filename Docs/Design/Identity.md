@@ -119,6 +119,19 @@ gets **ears** (the radio) — with MCM honestly deferred (below).
   deliberate rename (the player's own) is still respected. Raiders
   never reach the sim, so enemies keep the game's own labels.
 
+  One game limitation, confirmed live by the diagnostic (`base
+  'Settler'`, wrote "Provisioner Atlas", read-back "Provisioner"):
+  the **visible** name of a supply-line provisioner cannot be changed
+  while it is assigned — the game re-derives the "Provisioner" label
+  from the assignment itself, ahead of any extra-data override. The
+  top Nexus renaming mod documents the same wall, and even the console
+  `setname` command fails there. The sim's name still lives in memory,
+  the log, and the co-save (the 0.7.3 requirement — trade memories),
+  the radio speaks it, and the write is kept because it **lands the
+  moment the provisioner is reassigned to another role**. Every other
+  role-named mind (road caravans, traders, minutemen, guards) shows
+  its name normally.
+
 ## Stone 2 — The conflict source: relationships good *and bad* — ✅ verified in-game
 
 **The ask.** Nothing in 0.6.0 made dispositions go negative, so rival
