@@ -1494,14 +1494,32 @@ namespace TLC
             ? RE::TESFullName::GetFullName(*a_actor->GetObjectReference())
             : std::string_view{};
 
+        // The role may live on the reference, not the base: the game
+        // names a supply-line settler "Provisioner" itself, so the
+        // base form is still the generic "Settler". Read the actor's
+        // display name first (it falls back to the base form) and
+        // prefer it for the role rule — real names and placeholders are
+        // still decided by the base form exactly as before; the display
+        // read is only ever consulted as a role candidate.
+        const auto* shownName = const_cast<RE::Actor*>(a_actor)
+            ->GetDisplayFullName();
+        const auto displayName = shownName
+            ? std::string_view(shownName)
+            : std::string_view{};
+
         // A game name is the truth — unless it is a placeholder or a
         // role label. A placeholder ("Settler") gets a full procedural
         // name; a role label ("Provisioner", "Guard") keeps its
         // title and gains the person — "Provisioner Cole" — so memory
         // can tell two provisioners apart (0.7.3 Stone 1).
-        const auto role = species == Species::Human
-            ? TLC::Names::IsRoleName(gameName)
+        auto role = species == Species::Human
+            ? TLC::Names::IsRoleName(displayName)
             : std::string_view{};
+
+        if (role.empty() && species == Species::Human)
+        {
+            role = TLC::Names::IsRoleName(gameName);
+        }
 
         if (TLC::Names::IsGenericName(gameName, species) || !role.empty())
         {
@@ -2068,16 +2086,29 @@ namespace TLC
                 // A role label is a title, not a name (0.7.3 Stone 1):
                 // the mind wears "Provisioner Cole", never the bare
                 // "Provisioner" — memory must tell two provisioners
-                // apart. The base never overrides the role name (the
+                // apart. The role may live on the reference rather than
+                // the base (the game names supply-line settlers
+                // "Provisioner" itself), so the display name is read
+                // first. The base never overrides the role name (the
                 // converge below would stamp the bare role word back
                 // on), and a mind still wearing a pre-0.7.3 name (the
                 // bare role word, or a restore-time full name) converges
                 // to its role name here.
                 if (species == Species::Human)
                 {
-                    if (const auto role =
-                            TLC::Names::IsRoleName(baseName);
-                        !role.empty())
+                    const auto* shown = actor->GetDisplayFullName();
+                    const auto displayName = shown
+                        ? std::string_view(shown)
+                        : std::string_view{};
+
+                    auto role = TLC::Names::IsRoleName(displayName);
+
+                    if (role.empty())
+                    {
+                        role = TLC::Names::IsRoleName(baseName);
+                    }
+
+                    if (!role.empty())
                     {
                         auto& mind = name->Full;
 
@@ -2103,8 +2134,16 @@ namespace TLC
                                 m_Names, gender);
                         }
 
-                        if (!actor->extraList->HasType(
-                                RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                        // The game names supply-line settlers itself:
+                        // the actor can already wear the bare role word
+                        // as a text-display override, which would
+                        // swallow the sim's name. Write through when
+                        // the actor shows nothing or the bare role — a
+                        // different deliberate name (a player rename)
+                        // is respected.
+                        if (shown == nullptr
+                            || TLC::Names::EqualsFold(
+                                displayName, role))
                         {
                             actor->extraList->SetOverrideName(
                                 mind.c_str());

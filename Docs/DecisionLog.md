@@ -974,3 +974,21 @@ rule ("Mara Cole") — accepted, reads as a real name, noted for the
 households stone if it ever grates. Raiders never reach the sim (no
 workshop faction), so enemies keep the game's own labels.
 
+
+**Follow-up (same day, in-game verification):** two of the very people
+the stone was built for stayed bare. (1) The game names a supply-line
+settler "Provisioner" itself — the label lives on the reference's
+display name (`GetDisplayFullName`), the base form stays the generic
+"Settler", so the base-form role rule never matched, and the game's own
+text-display override made the sweep's write guard skip the actor. (2)
+The road caravans — generic "Provisioner"/"Caravan Guard" NPCs roaming
+with the brahmin — hold no settler faction, so `IsSimRelevant` never
+let them in to be named. The role rule now reads the display name
+first (base fallback; real names and placeholders still decided by the
+base exactly as before — the display read is only ever a role
+candidate), the sweep writes the role name through a bare role-word
+display (a player rename is respected), and a role-word base form
+passes sim-relevance without the faction, gated by the device-race and
+NPC-base checks so no prop sneaks back. The road's people are minds —
+and they are exactly who a hungry settler trades with on the road
+(0.7.4).

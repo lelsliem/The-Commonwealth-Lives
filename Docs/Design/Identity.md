@@ -94,18 +94,30 @@ gets **ears** (the radio) — with MCM honestly deferred (below).
   and fast travel; the news feed (Stone 3) names the people it talks
   about.
 
-  **0.7.3 — the roles gain people (built 2026-08-12, verification
-  pending).** A role label ("Provisioner", "Guard", "Minuteman",
-  "Caravan Guard", "Trader", "Merchant") is a title, not a name:
-  every provisioner in the Commonwealth reads identical in memory, so
-  a Trade memory could never tell its seller apart. The sim now keeps
-  the role as a prefix and adds the person — "Provisioner Cole",
-  "Guard Mara" — deterministic per id, deduped against the world like
-  any name, and applied on all three naming paths (seed, the per-
-  second sweep, restore self-heal). Real names still win: Sturges
-  stays Sturges, and the game-name-first rule is untouched for
-  everyone with a proper name. Raiders never reach the sim (no
-  workshop faction), so enemies keep the game's own labels.
+  **0.7.3 — the roles gain people (built and verified 2026-08-12).**
+  A role label ("Provisioner", "Guard", "Minuteman", "Caravan
+  Guard", "Trader", "Merchant") is a title, not a name: every
+  provisioner in the Commonwealth reads identical in memory, so a
+  Trade memory could never tell its seller apart. The sim keeps the
+  role as a prefix and adds the person — "Provisioner Cole", "Guard
+  Mara" — deterministic per id, deduped against the world like any
+  name, applied on all three naming paths (seed, the per-second sweep,
+  restore self-heal). Real names still win: Sturges stays Sturges.
+
+  In-game verification found the role label in two places the first
+  cut missed: the game names a **supply-line settler** "Provisioner"
+  itself — the label lives on the reference's display name while the
+  base form stays the generic "Settler" — and the **road caravans**
+  (generic "Provisioner" and "Caravan Guard" NPCs with the brahmin)
+  hold no settler faction at all, so the faction gate never let them
+  into the sim. Both are now covered: the role rule reads the actor's
+  display name first (falling back to the base), the sweep writes the
+  role name through even when the game already stamped the bare role
+  word as a text-display override, and a role-word base form passes
+  sim-relevance on its own — the road's people are minds too, which is
+  exactly who a hungry settler trades with on the road (0.7.4). A
+  deliberate rename (the player's own) is still respected. Raiders
+  never reach the sim, so enemies keep the game's own labels.
 
 ## Stone 2 — The conflict source: relationships good *and bad* — ✅ verified in-game
 
@@ -236,7 +248,9 @@ group echo).
       form read fix, the per-second sweep, the INI synced to the
       curated pools, pets unique — and 0.7.3 gives the role placeholders
       people ("Provisioner Cole", "Guard Mara") so memory can tell
-      two provisioners apart
+      two provisioners apart; the role rule reads the display name
+      first (supply-line settlers are named by the game) and the road
+      caravans (role-word base, no settler faction) are minds too
 - [x] Stone 2 — The conflict source: closed-market arrivals report
       `ReportOutcome({keeper, Social, Failure})`, the temper line
       (`sim.slight.temper`) decides who blames, settlement `Groups`

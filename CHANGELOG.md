@@ -9,6 +9,27 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.7.3 verification — the road's people (2026-08-12)
+
+In-game testing showed the role rule missed two of the very people it
+was built for:
+
+- **Supply-line settlers are named by the game itself.** The label
+  "Provisioner" lives on the reference's display name while the base
+  form stays the generic "Settler", so the role rule (reading the
+  base) never matched — and the game's own text-display override
+  swallowed the sim's write. The role rule now reads the actor's
+  **display name first** (falling back to the base), and the sweep
+  writes through a bare role-word display; a deliberate player rename
+  is still respected.
+- **The road caravans hold no settler faction.** The generic
+  "Provisioner" and "Caravan Guard" NPCs that roam the Commonwealth
+  with the brahmin never passed sim-relevance, so the sim couldn't
+  name them. A role-word **base form now passes the gate on its own**
+  (device-race and NPC-base checks still apply) — the road's people
+  are minds, and they are exactly who a hungry settler trades with on
+  the road (0.7.4).
+
 ## 0.7.3 Names for everyone — the roles gain people (2026-08-12)
 
 Trade memories (0.7.4) reference a *person* — but the game-name-first

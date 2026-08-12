@@ -9,6 +9,8 @@
 
 #include "SimRelevant.h"
 
+#include "Names.h"   // the role words — the road's people carry them
+
 // CommonLibF4's headers rely on its PCH for standard headers (concepts,
 // type_traits, ...) — include it first, as the library's own sources do.
 #include <F4SE/Impl/PCH.h>
@@ -18,6 +20,7 @@
 #include <RE/T/TESFaction.h>
 #include <RE/T/TESForm.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
+#include <RE/T/TESFullName.h>
 #include <RE/T/TESNPC.h>
 #include <RE/T/TESRace.h>
 
@@ -80,10 +83,28 @@ namespace TLC
         }
 
         const auto* faction = SettlerFaction();
+        const bool inFaction =
+            faction != nullptr && a_actor->IsInFaction(faction);
 
-        if (faction == nullptr || !a_actor->IsInFaction(faction))
+        // The road's people are minds too (0.7.3 verification): the
+        // game's generic "Provisioner" and "Caravan Guard" NPCs roam
+        // the Commonwealth with the brahmin caravans and hold no
+        // settler faction — yet a hungry settler trades with exactly
+        // these people on the road. A base-form name that is a known
+        // role word passes the gate on its own. The name read only
+        // runs for actors the faction already rejected, so the common
+        // case stays a single faction test.
+        if (!inFaction)
         {
-            return false;
+            const auto* base = a_actor->GetObjectReference();
+
+            if (base == nullptr
+                || TLC::Names::IsRoleName(
+                    RE::TESFullName::GetFullName(*base))
+                    .empty())
+            {
+                return false;
+            }
         }
 
         // The props hold the faction too, but they are not minds.

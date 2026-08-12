@@ -607,8 +607,18 @@ STATUS: PLANNED — design docs written, no code.
     base-name converge and upgrades a pre-0.7.3 mind (bare role word
     or a restore-time full name) to its role name, and restored worlds
     self-heal on the next sweep. Real names still win (Sturges stays
-    Sturges). 21/21 harness suites green (NamesTest extended); in-game
-    verification pending
+    Sturges). 21/21 harness suites green (NamesTest extended).
+
+    Verification fix (same day): the role label lives in two places
+    the first cut missed — the game names a supply-line settler
+    "Provisioner" itself (the reference's display name; the base stays
+    "Settler"), and the road caravans (generic "Provisioner"/"Caravan
+    Guard" NPCs) hold no settler faction. The role rule now reads the
+    display name first (base fallback), the sweep writes through a
+    bare role-word text-display (a player rename is respected), and a
+    role-word base form passes sim-relevance on its own — the road's
+    people are minds, the people a hungry settler trades with on the
+    road
 [ ] 0.7.4 — Trade with anyone who sells: a vendor census (traders,
     marketplaces, provisioners as mobile traders) — the hungry walk
     resolves to a person, not only the bench. No engine change (the
