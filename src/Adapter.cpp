@@ -1494,7 +1494,16 @@ namespace TLC
             ? RE::TESFullName::GetFullName(*a_actor->GetObjectReference())
             : std::string_view{};
 
-        if (TLC::Names::IsGenericName(gameName, species))
+        // A game name is the truth — unless it is a placeholder or a
+        // role label. A placeholder ("Settler") gets a full procedural
+        // name; a role label ("Provisioner", "Guard") keeps its
+        // title and gains the person — "Provisioner Cole" — so memory
+        // can tell two provisioners apart (0.7.3 Stone 1).
+        const auto role = species == Species::Human
+            ? TLC::Names::IsRoleName(gameName)
+            : std::string_view{};
+
+        if (TLC::Names::IsGenericName(gameName, species) || !role.empty())
         {
             if (species == Species::Animal)
             {
@@ -1522,8 +1531,11 @@ namespace TLC
                     gender = TLC::Names::Gender::Female;
                 }
 
-                fullName = TLC::Names::GenerateUnique(
-                    m_UsedNames, id, m_Names, gender);
+                fullName = role.empty()
+                    ? TLC::Names::GenerateUnique(
+                        m_UsedNames, id, m_Names, gender)
+                    : TLC::Names::GenerateUniqueRole(
+                        m_UsedNames, role, id, m_Names, gender);
             }
 
             // The name's visible half: write it onto the actor's extra
@@ -2052,6 +2064,55 @@ namespace TLC
                     ? RE::TESFullName::GetFullName(
                         *actor->GetObjectReference())
                     : std::string_view{};
+
+                // A role label is a title, not a name (0.7.3 Stone 1):
+                // the mind wears "Provisioner Cole", never the bare
+                // "Provisioner" — memory must tell two provisioners
+                // apart. The base never overrides the role name (the
+                // converge below would stamp the bare role word back
+                // on), and a mind still wearing a pre-0.7.3 name (the
+                // bare role word, or a restore-time full name) converges
+                // to its role name here.
+                if (species == Species::Human)
+                {
+                    if (const auto role =
+                            TLC::Names::IsRoleName(baseName);
+                        !role.empty())
+                    {
+                        auto& mind = name->Full;
+
+                        if (mind.empty()
+                            || TLC::Names::IsGenericName(
+                                mind, Species::Human)
+                            || !TLC::Names::HasRolePrefix(mind, role))
+                        {
+                            auto gender = TLC::Names::GenderOf(entity);
+                            const auto sex = actor->GetSex();
+
+                            if (sex == RE::SEX::kMale)
+                            {
+                                gender = TLC::Names::Gender::Male;
+                            }
+                            else if (sex == RE::SEX::kFemale)
+                            {
+                                gender = TLC::Names::Gender::Female;
+                            }
+
+                            mind = TLC::Names::GenerateUniqueRole(
+                                m_UsedNames, role, entity,
+                                m_Names, gender);
+                        }
+
+                        if (!actor->extraList->HasType(
+                                RE::EXTRA_DATA_TYPE::kTextDisplayData))
+                        {
+                            actor->extraList->SetOverrideName(
+                                mind.c_str());
+                        }
+
+                        return;
+                    }
+                }
 
                 if (!TLC::Names::IsGenericName(baseName, species))
                 {

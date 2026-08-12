@@ -941,3 +941,36 @@ own, what to borrow. Three decisions:
 **Consequences:** No engine change (edge-only: game knowledge at the edge, ADR-0024). The species table's "robots are deliberately absent — a robot is its own species for a later stone" note is finally honored. Synths stay Human (a synth settler is a person).
 
 **Follow-up (same day):** the diagnostic in the prune announced the wall-mounted spotlight's race — `0x01002804` (DLCRobot.esm/Automatron, record 0x2804) — which joined the device table. A Human-classified mind whose race is neither a known organic race nor a known device now announces itself once per session (a permanent line, the table's way of learning).
+
+---
+
+### ADR-0027 — A role label is a title, not a name: the roles gain people (2026-08-12)
+
+**Context:** 0.7.3 (pulled forward from the 0.8.0 pillar) makes every
+unnamed sim-relevant mind individually nameable, because Trade memories
+(0.7.4) reference a person — and a world full of identical "Provisioner"
+labels cannot tell two provisioners apart. The game-name-first rule kept
+the bare role word ("Provisioner", "Guard", "Minuteman") as the mind's
+name: correct for a real NPC (Sturges stays Sturges) but a memory
+dead-end for the generic roles.
+
+**Decision:** A role label is not a name to hand out. `Names.h` gains
+`IsRoleName` (case-insensitive match against the role list: Provisioner,
+Guard, Minuteman, Caravan Guard, Trader, Merchant — people only, an
+animal's "Junkyard Dog" stays a species word), `HasRolePrefix`,
+`GenerateRoleName` (title + a gendered first name from the person's
+pool: "Provisioner Cole", never a family name), and `GenerateUniqueRole`
+(deduped against the world like any name). The role check sits beside
+`IsGenericName` on all three naming paths: the seed gives a role mind
+"Role First" at creation; the per-second sweep's base-name converge is
+guarded so the bare role word is never stamped back over the role name,
+and a pre-0.7.3 mind (a bare role word, or a restore-time full name)
+converges to its role name; restored worlds self-heal on the next sweep.
+
+**Consequences:** Two provisioners are distinguishable in memory and on
+the actor (SetOverrideName). A provisioner household's child takes the
+provisioner's first name as its family name via the existing `FamilyOf`
+rule ("Mara Cole") — accepted, reads as a real name, noted for the
+households stone if it ever grates. Raiders never reach the sim (no
+workshop faction), so enemies keep the game's own labels.
+

@@ -593,13 +593,22 @@ STATUS: PLANNED — design docs written, no code.
     props as minds (turrets, spotlights hold the settler faction and
     seeded as Human): device/robot races are now excluded from
     sim-relevance and a polluted co-save self-heals via the prune.
-[ ] 0.7.3 — Names for everyone: every unnamed sim-relevant mind gets
+[x] 0.7.3 — Names for everyone: every unnamed sim-relevant mind gets
     an individual name — the role placeholders ("Provisioner",
-    "Guard", "Minuteman") join "Settler"/"Workshop Worker" as
-    generic, and a role-named mind is named "<role> <first>"
-    ("Provisioner Daisy"). The memory prerequisite for trade: two
-    provisioners must be distinguishable in a Trade memory. Raiders
-    stay out (never minds — no workshop faction)
+    "Guard", "Minuteman", "Caravan Guard", "Trader", "Merchant")
+    keep their title and gain the person: a role-named mind is
+    "<role> <first>" ("Provisioner Daisy"). The memory prerequisite
+    for trade: two provisioners must be distinguishable in a Trade
+    memory. Raiders stay out (never minds — no workshop faction).
+    Built 2026-08-12 — `Names.h` gains `IsRoleName`/`HasRolePrefix`/
+    `GenerateRoleName`/`GenerateUniqueRole` (pure, tested); wired into
+    all three naming paths: the seed gives a role mind "Role First"
+    at creation, the per-second sweep keeps the role name from the
+    base-name converge and upgrades a pre-0.7.3 mind (bare role word
+    or a restore-time full name) to its role name, and restored worlds
+    self-heal on the next sweep. Real names still win (Sturges stays
+    Sturges). 21/21 harness suites green (NamesTest extended); in-game
+    verification pending
 [ ] 0.7.4 — Trade with anyone who sells: a vendor census (traders,
     marketplaces, provisioners as mobile traders) — the hungry walk
     resolves to a person, not only the bench. No engine change (the

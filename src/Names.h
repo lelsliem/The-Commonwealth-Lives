@@ -245,6 +245,33 @@ namespace TLC::Names
     }
 
     //-------------------------------------------------------------------------
+    // EqualsFold — case-insensitive whole-string compare (ASCII). The
+    // name rules are case-insensitive: "settler" is as generic as
+    // "Settler", and "PROVISIONER" is as much a role as "Provisioner".
+    //-------------------------------------------------------------------------
+    inline bool EqualsFold(
+        std::string_view a, std::string_view b) noexcept
+    {
+        if (a.size() != b.size())
+        {
+            return false;
+        }
+
+        for (std::size_t i = 0; i < a.size(); ++i)
+        {
+            const auto c = static_cast<unsigned char>(a[i]);
+            const auto o = static_cast<unsigned char>(b[i]);
+
+            if (std::tolower(c) != std::tolower(o))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    //-------------------------------------------------------------------------
     // IsGenericName — is this the game's placeholder for "no name yet"?
     // A real NPC keeps its name; a generic settler is named by the sim.
     // Empty counts (some refs read an empty full-name), the two stock
@@ -264,23 +291,7 @@ namespace TLC::Names
 
         const auto equals = [a_name](std::string_view other)
         {
-            if (a_name.size() != other.size())
-            {
-                return false;
-            }
-
-            for (std::size_t i = 0; i < a_name.size(); ++i)
-            {
-                const auto c = static_cast<unsigned char>(a_name[i]);
-                const auto o = static_cast<unsigned char>(other[i]);
-
-                if (std::tolower(c) != std::tolower(o))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return EqualsFold(a_name, other);
         };
 
         if (a_species == Species::Animal)
@@ -313,6 +324,48 @@ namespace TLC::Names
         }
 
         return equals("Settler") || equals("Workshop Worker");
+    }
+
+    //-------------------------------------------------------------------------
+    // IsRoleName — the game's role labels (0.7.3 Stone 1). A generic
+    // "Provisioner", "Guard" or "Minuteman" is a title, not a name:
+    // every provisioner in the Commonwealth reads identical in memory,
+    // and a trade needs to tell two provisioners apart. The sim keeps
+    // the role as a prefix and adds the person — "Provisioner Cole".
+    // Returns the canonical role word (matched case-insensitively) or
+    // empty for a real name. People only: an animal's "Junkyard Dog"
+    // is a species word, owned by IsGenericName's animal list.
+    //-------------------------------------------------------------------------
+    inline std::string_view IsRoleName(std::string_view a_name) noexcept
+    {
+        static constexpr std::string_view kRoles[] = {
+            "Provisioner", "Guard", "Minuteman",
+            "Caravan Guard", "Trader", "Merchant",
+        };
+
+        for (const auto role : kRoles)
+        {
+            if (EqualsFold(a_name, role))
+            {
+                return role;
+            }
+        }
+
+        return {};
+    }
+
+    //-------------------------------------------------------------------------
+    // HasRolePrefix — does this name already carry the role's title?
+    // "Provisioner Cole" has the "Provisioner" prefix; "Cole Hart"
+    // and a bare "Provisioner" do not. The converge rule uses it to
+    // know when a mind already wears its role name.
+    //-------------------------------------------------------------------------
+    inline bool HasRolePrefix(
+        std::string_view a_name, std::string_view a_role) noexcept
+    {
+        return a_name.size() > a_role.size()
+            && a_name.compare(0, a_role.size(), a_role) == 0
+            && a_name[a_role.size()] == ' ';
     }
 
     //-------------------------------------------------------------------------
@@ -355,6 +408,31 @@ namespace TLC::Names
         const auto last = a_pool.Lasts[(seed >> 32) % a_pool.Lasts.size()];
 
         return first + " " + last;
+    }
+
+    // A role name: the title the game gave ("Provisioner") plus a first
+    // name drawn from the person's gender pool — "Provisioner Cole",
+    // "Guard Mara". No family name: the role is the person's calling
+    // card in memory, and two provisioners are told apart by their
+    // firsts. Deterministic per id like any name.
+    inline std::string GenerateRoleName(
+        std::string_view a_role, EntityId a_id, const NamePool& a_pool,
+        Gender a_gender, std::uint32_t a_attempt = 0) noexcept
+    {
+        const auto& firsts = a_gender == Gender::Male
+            ? a_pool.MaleFirsts : a_pool.FemaleFirsts;
+
+        if (firsts.empty())
+        {
+            return std::string(a_role);
+        }
+
+        const auto seed = Mix(
+            a_id.Value() * 0x9E3779B97F4A7C15ull
+            + static_cast<std::uint64_t>(a_attempt) * 0xC2B2AE3D27D4EB4Full);
+
+        return std::string(a_role) + " "
+            + firsts[seed % firsts.size()];
     }
 
     // An owned animal's name: its own pool, no family name — a dog is
@@ -431,6 +509,29 @@ namespace TLC::Names
         }
 
         return GenerateAnimalName(a_id, a_pool,
+            static_cast<std::uint32_t>(a_id.Value()));
+    }
+
+    // The role variant of GenerateUnique: step attempts until the role
+    // name is free of the world's used set (a settlement can't gain two
+    // "Provisioner Cole"s). Deterministic, like every draw.
+    inline std::string GenerateUniqueRole(
+        std::unordered_set<std::string>& a_used,
+        std::string_view a_role, EntityId a_id,
+        const NamePool& a_pool, Gender a_gender) noexcept
+    {
+        for (std::uint32_t attempt = 0; attempt < 64; ++attempt)
+        {
+            auto candidate =
+                GenerateRoleName(a_role, a_id, a_pool, a_gender, attempt);
+
+            if (a_used.insert(candidate).second)
+            {
+                return candidate;
+            }
+        }
+
+        return GenerateRoleName(a_role, a_id, a_pool, a_gender,
             static_cast<std::uint32_t>(a_id.Value()));
     }
 

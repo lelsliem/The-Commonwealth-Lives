@@ -90,9 +90,22 @@ gets **ears** (the radio) — with MCM honestly deferred (below).
   silently, so the curated pools (family tails included) never ran.
   Pets dedupe per world (a restore-time pass — the five Bandits
   became five unique names), owned dogs draw from the animal pool
-  again ("Junkyard Dog" is a species label), and provisioners keep
-  the bare role. Names survive save/load and fast travel; the news
-  feed (Stone 3) names the people it talks about.
+  again ("Junkyard Dog" is a species label). Names survive save/load
+  and fast travel; the news feed (Stone 3) names the people it talks
+  about.
+
+  **0.7.3 — the roles gain people (built 2026-08-12, verification
+  pending).** A role label ("Provisioner", "Guard", "Minuteman",
+  "Caravan Guard", "Trader", "Merchant") is a title, not a name:
+  every provisioner in the Commonwealth reads identical in memory, so
+  a Trade memory could never tell its seller apart. The sim now keeps
+  the role as a prefix and adds the person — "Provisioner Cole",
+  "Guard Mara" — deterministic per id, deduped against the world like
+  any name, and applied on all three naming paths (seed, the per-
+  second sweep, restore self-heal). Real names still win: Sturges
+  stays Sturges, and the game-name-first rule is untouched for
+  everyone with a proper name. Raiders never reach the sim (no
+  workshop faction), so enemies keep the game's own labels.
 
 ## Stone 2 — The conflict source: relationships good *and bad* — ✅ verified in-game
 
@@ -221,7 +234,9 @@ group echo).
       restore; every channel speaks names — **verified in-game**: the
       names are written onto the actors (SetOverrideName), the base-
       form read fix, the per-second sweep, the INI synced to the
-      curated pools, pets unique, provisioners bare
+      curated pools, pets unique — and 0.7.3 gives the role placeholders
+      people ("Provisioner Cole", "Guard Mara") so memory can tell
+      two provisioners apart
 - [x] Stone 2 — The conflict source: closed-market arrivals report
       `ReportOutcome({keeper, Social, Failure})`, the temper line
       (`sim.slight.temper`) decides who blames, settlement `Groups`

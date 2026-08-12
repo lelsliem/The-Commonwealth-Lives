@@ -9,6 +9,31 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.7.3 Names for everyone — the roles gain people (2026-08-12)
+
+Trade memories (0.7.4) reference a *person* — but the game-name-first
+rule kept the role placeholders ("Provisioner", "Guard", "Minuteman")
+bare, so every provisioner in the Commonwealth read identical in
+memory. A role label is now a title, not a name: the sim keeps the
+role as a prefix and adds the person.
+
+- **`Names.h`** gains the role machinery, pure and tested: `IsRoleName`
+  (case-insensitive match: Provisioner, Guard, Minuteman, Caravan
+  Guard, Trader, Merchant — people only), `HasRolePrefix`,
+  `GenerateRoleName` ("Provisioner Cole", never a family name) and
+  `GenerateUniqueRole` (deduped against the world like any name).
+- **All three naming paths** honour the rule: a role mind is seeded
+  "Role First" at creation; the per-second sweep guards the base-name
+  converge so the bare role word is never stamped back on, and a
+  pre-0.7.3 mind (a bare role word, or a restore-time full name)
+  converges to its role name; restored worlds self-heal on the next
+  sweep.
+- **Real names still win** — Sturges stays Sturges; the rule touches
+  only the nameless roles. Raiders never reach the sim, so enemies
+  keep the game's own labels.
+- 21/21 harness suites green (NamesTest extended with the role rules);
+  in-game verification pending.
+
 ## 0.7.2 Rows — in-game verification fixes (2026-08-12)
 
 0.7.1's speech and 0.7.2's rows verified live in a 673-mind restored

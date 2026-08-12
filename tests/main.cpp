@@ -3288,11 +3288,28 @@ namespace TLC::Tests
             return false;
         }
 
-        // A role label is not a name to give out: "Provisioner" keeps
-        // itself (the caravan NPCs are named by their role, not the
-        // sim), while the workshop placeholders are generic.
+        // A role label is not a placeholder either (0.7.3 Stone 1):
+        // "Provisioner" is a title, not a name — the sim keeps the
+        // role and adds the person ("Provisioner Cole") so memory can
+        // tell two provisioners apart. So IsGenericName stays false
+        // for a role (the role branch owns it), while the workshop
+        // placeholders stay generic.
         if (IsGenericName("Provisioner")
+            || IsGenericName("Guard")
             || !IsGenericName("Settler") || !IsGenericName("Workshop Worker"))
+        {
+            return false;
+        }
+
+        // IsRoleName: the role list is recognized case-insensitively
+        // and returns the canonical word; a real name is not a role;
+        // and an animal's "Junkyard Dog" is a species word, not a role.
+        if (IsRoleName("Provisioner") != "Provisioner"
+            || IsRoleName("guard") != "Guard"
+            || IsRoleName("MINUTEMAN") != "Minuteman"
+            || IsRoleName("Caravan Guard") != "Caravan Guard"
+            || !IsRoleName("Sturges").empty()
+            || !IsRoleName("Junkyard Dog").empty())
         {
             return false;
         }
@@ -3357,6 +3374,40 @@ namespace TLC::Tests
             "Vance", EntityId{ 9 }, pool, Gender::Female);
 
         if (child.find("Vance") == std::string::npos)
+        {
+            return false;
+        }
+
+        // A role name keeps its title and adds a gendered first name —
+        // "Provisioner Cole", never a family name — and dedups like
+        // any name: a claimed "Provisioner Cole" steps to the next
+        // free draw.
+        const auto roleName = GenerateRoleName(
+            "Provisioner", EntityId{ 21 }, pool, Gender::Male);
+
+        if (roleName.rfind("Provisioner ", 0) != 0
+            || roleName.find(' ', 12) != std::string::npos)
+        {
+            return false;
+        }
+
+        std::unordered_set<std::string> usedRoles;
+        usedRoles.insert(roleName);
+        const auto nextRole = GenerateUniqueRole(
+            usedRoles, "Provisioner", EntityId{ 21 }, pool, Gender::Male);
+
+        if (nextRole == roleName
+            || nextRole.rfind("Provisioner ", 0) != 0)
+        {
+            return false;
+        }
+
+        // HasRolePrefix: the title must lead the name — a role-named
+        // mind is recognised, a bare role word or a plain full name is
+        // not.
+        if (!HasRolePrefix("Provisioner Cole", "Provisioner")
+            || HasRolePrefix("Cole Hart", "Provisioner")
+            || HasRolePrefix("Provisioner", "Provisioner"))
         {
             return false;
         }
