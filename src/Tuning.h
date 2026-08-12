@@ -263,8 +263,17 @@ namespace TLC::Tuning
 
         // The scuffle's beat (0.7.5): a hot-headed victim answers the
         // punch after a beat, not in the same instant — push, fall, get
-        // up, push back. Seconds between the two shoves.
-        float RetaliationDelay = 4.0f;
+        // up, push back. Seconds between the two shoves. Tuned so the
+        // get-up animation has time to finish before the answer lands
+        // (0.7.5 field: the fall is ~1s, the get-up a couple more — a
+        // 4s beat blurred the two; 7s reads as a real pause).
+        float RetaliationDelay = 7.0f;
+
+        // The parting beat (0.7.5 field): seconds between the
+        // counter-fall and the loser walking off. The loser must GET UP
+        // before fleeing — a same-instant walk-off was a ghost sprint
+        // from the ground. 3s lets the get-up play, then the slink.
+        float FightPartDelay = 3.0f;
 
         // The test hook (0.7.5): sim.test.forceFight pins two minds by
         // base form id (low 24 bits) and brawls them on a loop every
@@ -373,6 +382,9 @@ namespace TLC::Tuning
 
         settings.RetaliationDelay = read(
             "sim.fight.retaliation.delay", settings.RetaliationDelay);
+
+        settings.FightPartDelay = read(
+            "sim.fight.part.delay", settings.FightPartDelay);
 
         settings.ForceFightA = static_cast<std::uint32_t>(
             read("sim.test.forceFight.a",

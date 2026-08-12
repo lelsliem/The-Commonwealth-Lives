@@ -1504,3 +1504,12 @@ Also: the shove gate tightens 400u → 150u (a table-scene needs the pair
 within reach) and a fight booked at range now walks the thrower to the
 victim first, so the next beat lands face to face instead of a ghost
 push across the square.
+## ADR-0046 — The fight's rhythm (retaliation and parting beats)
+
+The exchange was two falls blurring together: the retaliation fired 4s
+after the shove (inside the get-up window) and the loser's walk-off
+landed the same instant as the counter-fall (a ghost sprint from the
+ground). The beats now read as a sequence: kick, fall, get up, PAUSE,
+answer, fall, get up, slink off. Two keys: sim.fight.retaliation.delay
+(4 → 7s, so the get-up finishes before the answer) and the new
+sim.fight.part.delay (3s between the counter-fall and the walk-off).

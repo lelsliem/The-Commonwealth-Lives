@@ -3183,9 +3183,16 @@ namespace TLC
                 additions.push_back(
                     PendingShove{
                         ShoveBeat::kCounterFall, thrower, victim, beat });
+
+                // The parting beat (0.7.5 field): the loser must GET UP
+                // before fleeing — the walk-off lands after the get-up
+                // window, not in the same instant as the counter-fall.
                 additions.push_back(
                     PendingShove{
-                        ShoveBeat::kWalkOff, thrower, victim, beat });
+                        ShoveBeat::kWalkOff, thrower, victim,
+                        beat + std::chrono::milliseconds(
+                            static_cast<int>(
+                                m_Settings.FightPartDelay * 1000.0f)) });
                 break;
             }
 
