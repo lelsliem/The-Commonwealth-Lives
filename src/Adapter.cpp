@@ -2421,6 +2421,13 @@ namespace TLC
         // knows the market can decide MoveTo; one that doesn't explores.
         SeedMarket(true);
 
+        // The sellers (0.7.4 Trade with anyone): who sells in the loaded
+        // world, remembered by the minds near them — a person who sells
+        // out-scores the bench while both are fresh (the seed weight is
+        // a hair above the market's), so a hungry mind trades with the
+        // trader on the road or at the market stall, not only the bench.
+        SeedVendors(true);
+
         // The conflict source's settlement (0.7.0 Stone 2): every mind
         // with a market memory belongs to its settlement's group — the
         // engine's echo then spreads a slight (or a warmth) through the
@@ -3297,6 +3304,143 @@ namespace TLC
         }
     }
 
+    void Adapter::SeedVendors(bool a_announce)
+    {
+        using namespace LCE::Simulation;
+
+        // The vendor census: who sells in the loaded world right now
+        // (0.7.4 Trade with anyone). A seller is an actor with a
+        // merchant container — SimRelevant::IsVendor, the same gate
+        // that admits them as minds. Spatial on purpose: a mind only
+        // remembers a seller within walking distance, so the census is
+        // the loaded lists, not the whole Commonwealth.
+        std::vector<TLC::VendorPosition> vendors;
+
+        ForEachLoadedActor(
+            [this, &vendors](const RE::Actor* a_actor)
+            {
+                if (!IsVendor(a_actor))
+                {
+                    return;
+                }
+
+                const auto pos = a_actor->GetPosition();
+                vendors.push_back(TLC::VendorPosition{
+                    a_actor->GetFormID(), pos.x, pos.y });
+            });
+
+        if (a_announce)
+        {
+            REX::INFO(
+                "sim: {} sellers loaded — trade resolves to a person when one is remembered.",
+                vendors.size());
+        }
+
+        if (vendors.empty())
+        {
+            return;
+        }
+
+        // The loaded sellers by form, for the idempotency check: a mind
+        // that already remembers a seller it can still see keeps its
+        // memory — the seed only ever adds the fact back to minds that
+        // lost it, exactly like the market seed.
+        std::unordered_set<std::uint32_t> vendorForms;
+
+        for (const auto& vendor : vendors)
+        {
+            vendorForms.insert(vendor.FormId);
+        }
+
+        m_Registry.ForEachWithComponent<Memory>(
+            [this, &vendors, &vendorForms](
+                EntityId a_entity, Memory& a_memory)
+            {
+                // Only people trade. A child or an animal is fed — its
+                // food source stays the owner or the settlement, never
+                // a seller.
+                const auto tag =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                if (tag == nullptr || tag->Value != Species::Human)
+                {
+                    return;
+                }
+
+                const auto formId = m_Translator.FormFor(a_entity);
+                const auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+                if (actor == nullptr)
+                {
+                    return;   // not loaded — the refresh catches it
+                }
+
+                const auto pos = actor->GetPosition();
+                auto nearest =
+                    TLC::NearestVendor(pos.x, pos.y, vendors, kMarketRadius);
+
+                // A seller's own stall is not a customer: a vendor mind
+                // is always the nearest vendor to itself (distance 0), so
+                // when the nearest is the mind's own form, find the next
+                // nearest instead.
+                if (nearest == formId)
+                {
+                    nearest = 0;
+                    float bestSq = kMarketRadius * kMarketRadius;
+
+                    for (const auto& vendor : vendors)
+                    {
+                        if (vendor.FormId == formId)
+                        {
+                            continue;
+                        }
+
+                        const auto dx = vendor.X - pos.x;
+                        const auto dy = vendor.Y - pos.y;
+                        const auto distSq = dx * dx + dy * dy;
+
+                        if (distSq < bestSq)
+                        {
+                            bestSq = distSq;
+                            nearest = vendor.FormId;
+                        }
+                    }
+                }
+
+                if (nearest == 0)
+                {
+                    return;   // no seller in walking distance
+                }
+
+                const auto seller = m_Translator.EntityFor(nearest);
+
+                if (!seller.IsValid() || seller == a_entity)
+                {
+                    return;   // no entity yet, or the seller is me
+                }
+
+                for (const auto& event : a_memory.Events)
+                {
+                    if (event.Kind != InteractionKind::Trade
+                        || !event.Other.IsValid())
+                    {
+                        continue;
+                    }
+
+                    const auto known = m_Translator.FormFor(event.Other);
+
+                    if (known != 0 && vendorForms.contains(known))
+                    {
+                        return;   // already remembers a seller here
+                    }
+                }
+
+                a_memory.Events.push_back(MemoryEvent{
+                    seller, InteractionKind::Trade, kVendorSeedWeight });
+            });
+    }
+
     bool Adapter::IsRadstorm(const RE::TESWeather* a_weather) const
     {
         // Radstorms shut the gatherings: a { invalid, Social } world fact
@@ -3561,6 +3705,12 @@ namespace TLC
             ReconcileBonds();
 
             SeedMarket(false);
+
+            // 0.7.4 Trade with anyone: the sellers refresh on the same
+            // cadence — vendors stream in and out of the loaded area as
+            // they travel, so the who-sells memory re-points at whoever
+            // is nearest now (idempotent; silent).
+            SeedVendors(false);
 
             // The conflict source's settlement (0.7.0 Stone 2): late-
             // loading minds join their settlement's group once their

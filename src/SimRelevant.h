@@ -31,7 +31,18 @@ namespace TLC
     [[nodiscard]] const RE::TESFaction* SettlerFaction();
 
     // A settler is sim-relevant: an actor in the settler faction, player
-    // excluded. This is the whole rule for the translation stone — one
-    // named function to change if the first in-game test mis-captures.
+    // excluded — or, since 0.7.3/0.7.4, one of the road's people (a
+    // role-word base form: provisioner, caravan guard, trader) or a
+    // seller (anyone with a merchant container). This is the whole rule
+    // for the translation stone — one named function to change if the
+    // first in-game test mis-captures.
     [[nodiscard]] bool IsSimRelevant(const RE::Actor* a_actor);
+
+    // Who sells (0.7.4 Trade with anyone): an actor with a merchant
+    // container. The game computes a runtime vendor faction for anyone
+    // who sells; the fast path reads it, the deterministic path scans
+    // the base form's factions for a merchant container (the runtime
+    // faction is computed lazily — a just-loaded vendor may still read
+    // null).
+    [[nodiscard]] bool IsVendor(const RE::Actor* a_actor);
 }

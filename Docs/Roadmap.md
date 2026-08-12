@@ -619,10 +619,23 @@ STATUS: PLANNED — design docs written, no code.
     role-word base form passes sim-relevance on its own — the road's
     people are minds, the people a hungry settler trades with on the
     road
-[ ] 0.7.4 — Trade with anyone who sells: a vendor census (traders,
-    marketplaces, provisioners as mobile traders) — the hungry walk
-    resolves to a person, not only the bench. No engine change (the
-    core already resolves Trade to a person; it is a who problem)
+[x] 0.7.4 — Trade with anyone who sells: the vendor census and its
+    seed — who sells in the loaded world, remembered by the minds near
+    them — the hungry walk resolves to a person, not only the bench.
+    No engine change (the core already resolves Trade to a person; it
+    is a who problem). Built 2026-08-12 — `SimRelevant::IsVendor`
+    (a merchant container on the base form's factions; the game's
+    runtime vendor faction as the fast path) admits sellers as minds
+    alongside the settlers and the road's people; `SeedVendors`
+    (Adapter.cpp, mirroring the market seed) remembers the nearest
+    seller within walking distance at weight 1.05 — a hair above the
+    market seed's 1.0, so a person who sells out-scores the bench
+    while both are fresh, and the arrival trades directly with them
+    (the existing person-target path). Idempotent; self-excluding (a
+    vendor never shops at their own stall); the bench stays the
+    fallback when no seller is remembered. Pure `NearestVendor` in
+    Market.h, tested. 21/21 harness suites green; in-game verification
+    pending
 [ ] 0.7.5 — Fights: physical escalation via real combat (the game's
     own punch/shove anims — no pex needed); feedback into bonds and
     news

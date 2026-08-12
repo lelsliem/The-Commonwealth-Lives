@@ -262,6 +262,21 @@ namespace TLC
         // the tick's periodic refresh passes false (idempotent, silent).
         void SeedMarket(bool a_announce);
 
+        // 0.7.4 Trade with anyone: the vendor census and its seed. Who
+        // sells in the loaded world (SimRelevant::IsVendor — a merchant
+        // container), remembered by the minds near them: a hungry human
+        // with a seller within walking distance remembers the person at
+        // weight 1.05 — a hair above the market seed's 1.0, so a person
+        // who sells out-scores the bench while both are fresh — and the
+        // arrival then trades with them directly (the existing person-
+        // target path). Idempotent: a mind that already remembers a
+        // seller it can still see is left alone; the memory fades when
+        // the seller leaves, and the refresh re-points at whoever is
+        // nearest now. Runs at world start (a_announce) and on the
+        // tick's per-second refresh (silent). The bench stays the
+        // fallback when no seller is remembered.
+        void SeedVendors(bool a_announce);
+
         // Rebuilds the world from a co-save snapshot: Restore the registry
         // (identities preserved), rebuild the translator from the restored
         // FormRef components (the edge's memory is adapter state, never

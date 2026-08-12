@@ -86,22 +86,23 @@ namespace TLC
         const bool inFaction =
             faction != nullptr && a_actor->IsInFaction(faction);
 
-        // The road's people are minds too (0.7.3 verification): the
-        // game's generic "Provisioner" and "Caravan Guard" NPCs roam
-        // the Commonwealth with the brahmin caravans and hold no
-        // settler faction — yet a hungry settler trades with exactly
-        // these people on the road. A base-form name that is a known
-        // role word passes the gate on its own. The name read only
-        // runs for actors the faction already rejected, so the common
+        // The road's people and the sellers are minds too, without the
+        // settler faction (0.7.3 verification + 0.7.4 Trade with
+        // anyone): the game's generic "Provisioner" and "Caravan
+        // Guard" NPCs roam the Commonwealth with the brahmin caravans,
+        // and anyone with a merchant container sells — a hungry settler
+        // trades with exactly these people on the road. The reads only
+        // run for actors the faction already rejected, so the common
         // case stays a single faction test.
         if (!inFaction)
         {
             const auto* base = a_actor->GetObjectReference();
-
-            if (base == nullptr
-                || TLC::Names::IsRoleName(
+            const bool roleBase = base != nullptr
+                && !TLC::Names::IsRoleName(
                     RE::TESFullName::GetFullName(*base))
-                    .empty())
+                    .empty();
+
+            if (!roleBase && !IsVendor(a_actor))
             {
                 return false;
             }
@@ -117,5 +118,45 @@ namespace TLC
         }
 
         return a_actor->GetNPC() != nullptr;
+    }
+
+    //-------------------------------------------------------------------------
+    // The vendor signal (0.7.4 Trade with anyone). The game computes a
+    // runtime vendor faction for anyone who sells (the barter menu's
+    // gate); reading it is the fast path — null for almost everyone.
+    // The deterministic path scans the base form's factions for a
+    // merchant container (TESFaction::vendorData.merchantContainer):
+    // that is the form data the runtime faction is derived from, so it
+    // answers even for a vendor the game has not processed yet.
+    //-------------------------------------------------------------------------
+    bool IsVendor(const RE::Actor* a_actor)
+    {
+        if (a_actor == nullptr)
+        {
+            return false;
+        }
+
+        if (a_actor->vendorFaction != nullptr)
+        {
+            return true;
+        }
+
+        const auto* npc = a_actor->GetNPC();
+
+        if (npc == nullptr)
+        {
+            return false;
+        }
+
+        for (const auto& fr : npc->factions)
+        {
+            if (fr.faction != nullptr
+                && fr.faction->vendorData.merchantContainer != nullptr)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

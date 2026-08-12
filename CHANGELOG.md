@@ -9,6 +9,32 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.7.4 Trade with anyone — the sellers are minds (2026-08-12)
+
+The bench was the only food source a hungry mind remembered; the world
+is full of sellers. 0.7.4 widens who the walk resolves to — a person
+who sells, not only the bench. The engine needed nothing: the core
+already resolves a Trade memory to a person.
+
+- **The vendor signal** — `SimRelevant::IsVendor`: the game's runtime
+  vendor faction, or a merchant container on any base-form faction
+  (deterministic — the runtime faction is computed lazily). Anyone who
+  sells passes sim-relevance on their own and becomes a full mind — a
+  name, needs, memory, co-save, just like a settler. The road trader,
+  the marketplace stall-keeper, the caravan merchant — all in.
+- **The who-sells seed** — `SeedVendors` mirrors the market seed:
+  every human mind remembers the nearest seller within walking
+  distance, at weight 1.05 — a hair above the market seed's 1.0, so a
+  person who sells out-scores the bench while both are fresh (the
+  core's tie-break goes to the first event, and the market seed runs
+  first). The bench takes over again when the seller leaves. A vendor
+  never shops at their own stall; sellers near each other trade with
+  each other — the marketplace comes alive.
+- The arrival already traded directly with a person target and
+  `RecordSale` warmed the seller — the exchange is unchanged, only who
+  is remembered widened. Pure `NearestVendor` (Market.h) tested; 21/21
+  harness suites green; in-game verification pending.
+
 ## 0.7.3 verification — the road's people (2026-08-12)
 
 In-game testing showed the role rule missed two of the very people it

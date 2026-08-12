@@ -55,8 +55,19 @@ namespace TLC
     // units from Sanctuary, Abernathy ~22,000. The probe proved why this
     // matters: the process lists carry settler-faction actors from
     // settlements kilometers away, and every one of them was issued a
-    // walk to the Sanctuary workbench.
+    // walk to the Sanctuary workbench. The vendor seed (0.7.4) reuses
+    // the same radius: a seller is remembered within the same walking
+    // distance as a market, so the two compete on equal geography.
     inline constexpr float kMarketRadius = 10000.0f;
+
+    // The vendor seed's memory weight (0.7.4 Trade with anyone): a hair
+    // above the market seed's 1.0. The core's ChooseTarget scores
+    // weight + relationship and breaks ties to the FIRST event, and the
+    // market seed runs first — an equal weight would send the hungry
+    // walk to the bench every time. A person who sells out-scores the
+    // bench while both are remembered; when the seller leaves range the
+    // memory fades, and the bench takes over again.
+    inline constexpr float kVendorSeedWeight = 1.05f;
 
     //-------------------------------------------------------------------------
     // WorkshopPosition
@@ -102,6 +113,47 @@ namespace TLC
             {
                 bestSq = distSq;
                 best = workshop.FormId;
+            }
+        }
+
+        return best;
+    }
+
+    //-------------------------------------------------------------------------
+    // VendorPosition / NearestVendor
+    //
+    // One seller as the pure seed sees it: a loaded vendor's form and
+    // world position. NearestVendor is the same spatial rule as
+    // NearestWorkshop — the nearest seller within a_maxDistance, or 0
+    // when none is in range (the seed then leaves the mind to its
+    // market). Squared distances, no sqrt.
+    //-------------------------------------------------------------------------
+    struct VendorPosition
+    {
+        std::uint32_t FormId;
+        float X;
+        float Y;
+    };
+
+    inline std::uint32_t NearestVendor(
+        float a_x, float a_y,
+        const std::vector<VendorPosition>& a_vendors,
+        float a_maxDistance) noexcept
+    {
+        const auto maxSq = a_maxDistance * a_maxDistance;
+        float bestSq = maxSq;
+        std::uint32_t best = 0;
+
+        for (const auto& vendor : a_vendors)
+        {
+            const auto dx = vendor.X - a_x;
+            const auto dy = vendor.Y - a_y;
+            const auto distSq = dx * dx + dy * dy;
+
+            if (distSq < bestSq)
+            {
+                bestSq = distSq;
+                best = vendor.FormId;
             }
         }
 

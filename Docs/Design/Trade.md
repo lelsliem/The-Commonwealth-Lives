@@ -116,3 +116,33 @@ LCE: settler 0001A4D7 fed: Hunger 0.02 -> 1.00
 - **A settlement of one never trades.** Its lone settler sets up the
   stall and is fed by the settlement — honest: one person is not a
   market economy.
+
+## 0.7.4 — Trade with anyone (the sellers are minds)
+
+**Status:** ✅ BUILT 2026-08-12 (ADR-0028) — in-game verification pending.
+
+The bench was the only food source a hungry mind remembered. 0.7.4
+widens *who* the walk resolves to, with the engine untouched (the core
+already resolves a Trade memory to a person):
+
+- **The vendor signal** — `SimRelevant::IsVendor`: the game's runtime
+  vendor faction (fast path) or a merchant container on any base-form
+  faction (`TESFaction::vendorData.merchantContainer`). Anyone who
+  sells passes sim-relevance on their own — a full mind, like a
+  settler.
+- **The who-sells seed** — `SeedVendors` mirrors the market seed:
+  every human mind remembers the nearest seller within walking
+  distance, at weight **1.05** — a hair above the market seed's 1.0.
+  The core's `ChooseTarget` scores weight + relationship and breaks
+  ties to the first event; the market seed runs first, so an equal
+  weight would send the hungry walk to the bench every time. A person
+  who sells out-scores the bench while both are fresh; when the seller
+  leaves range, the memory fades and the bench takes over.
+- **The arrival resolution is unchanged** — the person target already
+  trades directly (`Trade, Success`), `RecordSale` warms the seller,
+  and the emergent second visit (the buyer remembers the seller, who
+  out-scores everything) becomes the *first* visit whenever a seller
+  is near.
+- **Sellers trade with each other** — a vendor's nearest seller is
+  another vendor (their own form is excluded), so a marketplace of
+  sellers quietly does business among itself when no customer is near.

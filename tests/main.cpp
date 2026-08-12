@@ -1478,13 +1478,62 @@ namespace TLC::Tests
                 != 0)
             {
                 return false;
-            }
-
-            // Empty census — no workshops.
+            }            // Empty census — no workshops.
             if (NearestWorkshop(0.0f, 0.0f, {}, kMarketRadius) != 0)
             {
                 return false;
             }
+
+        }
+
+        //-------------------------------------------------------------------------
+        // NearestVendor (0.7.4 Trade with anyone) — the same spatial
+        // rule for the sellers: the nearest within walking distance, 0
+        // when none is in range. Pure, like NearestWorkshop.
+        //-------------------------------------------------------------------------
+        {
+            // Three sellers: Carla on the road west (200,0), a market
+            // stall-keeper east (1000,0), a trader far north (60000,0).
+            const std::vector<VendorPosition> vendors{
+                { 0x0001F25E, 200.0f, 0.0f },
+                { 0x0002C1B0, 1000.0f, 0.0f },
+                { 0x0003A4C2, 60000.0f, 0.0f } };
+
+            // A settler near the road remembers the closest seller.
+            if (NearestVendor(100.0f, 0.0f, vendors, kMarketRadius)
+                != 0x0001F25E)
+            {
+                return false;
+            }
+
+            // Closer to the market stall, the stall-keeper wins.
+            if (NearestVendor(900.0f, 0.0f, vendors, kMarketRadius)
+                != 0x0002C1B0)
+            {
+                return false;
+            }
+
+            // Near the far trader, the far trader is the nearest seller.
+            if (NearestVendor(59000.0f, 0.0f, vendors, kMarketRadius)
+                != 0x0003A4C2)
+            {
+                return false;
+            }
+
+            // A mind at the edge of the world knows none of them — the
+            // far trader is 60 km out, beyond the walking radius.
+            if (NearestVendor(-50000.0f, 0.0f, vendors, kMarketRadius)
+                != 0)
+            {
+                return false;
+            }
+
+            // Empty census — no sellers.
+            if (NearestVendor(0.0f, 0.0f, {}, kMarketRadius) != 0)
+            {
+                return false;
+            }
+
         }
 
         return true;

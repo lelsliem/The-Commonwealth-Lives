@@ -1004,3 +1004,41 @@ command fails there. Accepted as a universal FO4 limitation: the sim's
 role name lives in memory, the log, and the co-save (the 0.7.3
 requirement), the radio speaks it, and the write is kept because it
 lands the moment the provisioner is reassigned to another role.
+
+---
+
+### ADR-0028 — Trade with anyone: the sellers are minds (2026-08-12)
+
+**Context:** 0.7.4 (the 0.8.0 pillar pulled forward) widens who the
+hungry walk resolves to — the bench was the only food source, but the
+world is full of sellers: road traders, marketplace stalls, the caravan
+merchants. The engine needed nothing (the core already resolves Trade
+to a person once a Trade memory to one exists); the question was purely
+who counts as a seller and how a mind comes to remember one.
+
+**Decision:** (a) **The vendor signal.** `SimRelevant::IsVendor` — the
+game's runtime vendor faction (fast path) or a merchant container on
+any base-form faction (`TESFaction::vendorData.merchantContainer`,
+deterministic — the runtime faction is computed lazily). Anyone who
+sells passes `IsSimRelevant` on their own, becoming a full mind: a
+name, needs, memory, co-save — the same machinery as a settler. (b)
+**The who-sells seed.** `SeedVendors` mirrors `SeedMarketMemory`:
+every human mind with a loaded actor remembers the nearest seller
+within the market radius at weight 1.05 — a hair above the market
+seed's 1.0, because the core's `ChooseTarget` breaks ties to the
+first event and the market seed runs first; a person who sells
+out-scores the bench while both are fresh, and the bench takes over
+again when the seller leaves. The arrival already trades directly with
+a person target, and `RecordSale` warms the seller — the exchange is
+unchanged, only the geography of who is remembered widened.
+
+**Consequences:** Sellers join the sim — a road trader is a mind, a
+Diamond City stall-keeper is a mind, and the marketplace becomes a
+place where sellers trade with each other when no customer is near (a
+vendor's nearest seller is another vendor). A vendor never shops at
+their own stall (the seed excludes the mind's own form). The stall
+economy is untouched when no seller is within walking distance — the
+bench remains the fallback. The engine stays untouched; this is game
+knowledge at the edge (ADR-0024), the pure `NearestVendor` rule tested
+in the harness.
+
