@@ -221,6 +221,17 @@ namespace TLC::Tuning
         float FightChance = 0.1f;
         float FightTemper = 1.0f;
 
+        // The punch's shove (0.7.5 polish): the victim is knocked back
+        // from the aggressor — the game's own knockback plays the
+        // stagger (the same physical push the "Get Out Of My Face"
+        // crowd mod uses; the engine's function is AIProcess::
+        // KnockExplosion, REL::ID-resolved against the installed
+        // Address Library). Magnitude in game units — the crowd mod's
+        // default was 5 and "anything above 10 is pretty insane"; a
+        // modest 3 is a shove, not a ragdoll. 0 turns the shove off
+        // (the fight books without the animation).
+        float FightPush = 3.0f;
+
         // The player window (0.7.0 Stone 3): the news feed. Events go
         // on-screen as HUD notifications, throttled by NewsCooldown
         // seconds — a flood of lines is noise, not news. The feed is the
@@ -304,6 +315,9 @@ namespace TLC::Tuning
             read("sim.fight.chance", settings.FightChance);
         settings.FightTemper =
             read("sim.fight.temper", settings.FightTemper);
+
+        settings.FightPush =
+            read("sim.fight.push", settings.FightPush);
 
         settings.NewsCooldown =
             read("sim.news.cooldown", settings.NewsCooldown);

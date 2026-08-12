@@ -27,6 +27,7 @@
 // type_traits, ...) — include it first, as the library's own sources do.
 #include <F4SE/Impl/PCH.h>
 
+#include <RE/A/AIProcess.h>   // the game's knockback — the punch's shove
 #include <RE/A/Actor.h>
 #include <RE/B/BSContainer.h>
 #include <RE/C/Calendar.h>
@@ -2366,6 +2367,32 @@ namespace TLC
                 a_day, m_CoreTuning, &m_Bus))
         {
             return;
+        }
+
+        // The punch lands (0.7.5 polish): the victim is shoved back
+        // from the aggressor — the game's own knockback (AIProcess::
+        // KnockExplosion, REL::ID-resolved against the installed
+        // Address Library) plays the stagger, the same physical push
+        // the "Get Out Of My Face" crowd mod uses. Best-effort: a
+        // missing actor or process skips the shove; the fight is
+        // booked either way, and sim.fight.push = 0 turns it off.
+        if (m_Settings.FightPush > 0.0f)
+        {
+            auto* victimActor = RE::TESForm::GetFormByID<RE::Actor>(
+                m_Translator.FormFor(a_victim));
+
+            if (victimActor != nullptr && victimActor->currentProcess != nullptr)
+            {
+                auto* aggressorActor = RE::TESForm::GetFormByID<RE::Actor>(
+                    m_Translator.FormFor(a_aggressor));
+
+                if (aggressorActor != nullptr)
+                {
+                    victimActor->currentProcess->KnockExplosion(
+                        victimActor, aggressorActor->GetPosition(),
+                        m_Settings.FightPush);
+                }
+            }
         }
 
         // The words before the blows (0.7.1 Talk's fight pool — "Come
