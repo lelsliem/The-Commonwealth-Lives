@@ -1450,3 +1450,13 @@ and nobody ever ran away.
 The counter-shove keeps the scene gate (they parted — no ghost
 punch). The receipts stay: `shove:` for the first punch, `shoves
 back` for the answer, and the range line when either waits.
+
+## ADR-0041 — the shove's default force is 8, and the jitter caps at 1.15×
+
+**Status:** Accepted (0.7.5).
+
+**Context:** Every loop test since ADR-0040 ran with the user's INI still overriding `sim.fight.push = 3` — a force that the game reads as a tip-over, not a shove, so "they go down separately but no push or shove animation" kept recurring no matter what the DLL default said. The shipped default had been bumped once already (3 → 5) but the override masked it.
+
+**Decision:** The default is now `sim.fight.push = 8` — a knock that visibly moves the victim (the crowd mod's own scale: 5 is a shove, 6–8 a solid stagger, 10+ ragdoll). The ±jitter now caps at 1.15× so a strong deterministic draw never crosses into the "insane" 10+ zone. The INI comment documents that an old `sim.fight.push = 3/5` line in the player's file silently overrides the DLL default — delete the line to inherit it.
+
+**Consequences:** The scuffle sequence (ADR-0040) finally reads as intended at default settings: push → fall → get up → push back → slink off. The jitter cap keeps every draw in the 6–9 band. Force is still fully tunable per-install via the INI.

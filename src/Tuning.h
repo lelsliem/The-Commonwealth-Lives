@@ -227,11 +227,14 @@ namespace TLC::Tuning
         // crowd mod uses; the engine's function is AIProcess::
         // KnockExplosion, REL::ID-resolved against the installed
         // Address Library). Magnitude in game units — the crowd mod's
-        // default was 5 and "anything above 10 is pretty insane"; 4 is
-        // a shove that visibly registers (3 read as a tip-over in the
-        // loop test), and the ±25% jitter spreads it 3–5. 0 turns the
-        // shove off (the fight books without the animation).
-        float FightPush = 5.0f;
+        // default was 5 and "anything above 10 is pretty insane"; 8 is
+        // the scuffle's default: a knock that VISIBLY moves the victim
+        // (3–5 read as a tip-over in the loop tests — the force that
+        // mattered was the INI override, which the user's file kept at
+        // 3), and the jitter (capped at 1.15× so a strong draw never
+        // hits the insane 10 zone) spreads it 6–9. 0 turns the shove
+        // off (the fight books without the animation).
+        float FightPush = 8.0f;
 
         // The scuffle's beat (0.7.5): a hot-headed victim answers the
         // punch after a beat, not in the same instant — push, fall, get

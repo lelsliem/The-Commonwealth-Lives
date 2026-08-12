@@ -2789,8 +2789,13 @@ namespace TLC
                 }
                 else
                 {
-                    const auto pushJitter =
-                        0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f));
+                    // The jitter is capped at 1.15× so a strong draw
+                    // never crosses into the crowd mod's "insane" 10+
+                    // ragdoll zone — the scuffle shoves hard, never
+                    // launches.
+                    const auto pushJitter = std::min(
+                        1.15f,
+                        0.75f + 0.5f * (0.5f + IdJitter(a_victim, 0.5f)));
                     const auto force = m_Settings.FightPush * pushJitter;
 
                     victimActor->currentProcess->KnockExplosion(
@@ -2967,8 +2972,9 @@ namespace TLC
                 continue;   // they parted — no counter-punch at range
             }
 
-            const auto backJitter =
-                0.75f + 0.5f * (0.5f + IdJitter(retaliator, 0.5f));
+            const auto backJitter = std::min(
+                1.15f,
+                0.75f + 0.5f * (0.5f + IdJitter(retaliator, 0.5f)));
 
             targetActor->currentProcess->KnockExplosion(
                 targetActor, retaliatorActor->GetPosition(),
