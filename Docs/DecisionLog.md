@@ -1521,3 +1521,17 @@ Say() deliberately never popped the HUD — speech was feed-and-log only
 just the "come to blows" news. Say now takes a_loud: the fight pool
 rides the same throttled HUD pop as news, so the threat lands on
 screen before the shove. Ordinary conversation stays quiet.
+
+## ADR-0046 — the loud line's home is the game's subtitle queue (0.7.5)
+
+The 0.7.5 fight threats were log-and-feed only, then a top-left news pop.
+The player asked for dialogue-style lines: bottom of the screen, only
+when close enough to hear. The game's own subtitle display is
+`SubtitleManager`'s priority array — the same queue dialogue lines use —
+and it is fully wrapped (SubtitleInfo, SUBTITLE_PRIORITY, the manager's
+singleton + RW lock). Pushing an entry with the speaker's handle and the
+line makes the HUD render it as a bottom subtitle on its next frame;
+the `"who: \"line\""` prefix keeps the box self-contained. New key
+`sim.subtitle.radius = 500` (game units) gates it: a nearby brawl is
+loud, a cross-settlement squabble is not. The feed still carries every
+line for the radio's story; the top-left news pop is retired for speech.

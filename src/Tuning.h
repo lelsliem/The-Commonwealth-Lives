@@ -295,6 +295,12 @@ namespace TLC::Tuning
         float RadioCaptionEvery = 45.0f;
         float RadioRadius = 3000.0f;
 
+        // The loud line's hearing range (0.7.5 Fights): a spoken fight
+        // line shows as a bottom-of-screen subtitle only when the
+        // player is within this many game units of the speaker — a
+        // nearby brawl is loud, a cross-settlement squabble is not.
+        float SubtitleRadius = 500.0f;
+
         // The settlement radio's base form. The default is the workshop
         // "Radio" — a hardcoded FormID, so it is flagged for xEdit
         // verification before it is trusted (the verify ritual); the key
@@ -401,6 +407,8 @@ namespace TLC::Tuning
             read("sim.radio.caption.every", settings.RadioCaptionEvery);
         settings.RadioRadius =
             read("sim.radio.radius", settings.RadioRadius);
+        settings.SubtitleRadius =
+            read("sim.subtitle.radius", settings.SubtitleRadius);
 
         settings.LogDecisionEvery =
             read("sim.log.decisions.every", settings.LogDecisionEvery);

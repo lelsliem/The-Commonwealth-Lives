@@ -30,6 +30,7 @@
 #include <RE/A/AIProcess.h>   // the game's knockback — the punch's shove
 #include <RE/A/Actor.h>
 #include <RE/B/BSContainer.h>
+#include <RE/B/BSSpinLock.h>     // BSAutoWriteLock — the subtitle queue's lock
 #include <RE/D/DamageImpactData.h>
 #include <RE/H/HitData.h>      // the melee hit-reaction — the standing shove
 #include <RE/T/TESIdleForm.h>   // the paired push — the game's real shove animation
@@ -40,6 +41,7 @@
 #include <RE/P/ProcessLists.h>
 #include <RE/S/SendHUDMessage.h>
 #include <RE/S/Sky.h>
+#include <RE/S/SubtitleManager.h>   // the game's own subtitle queue — the loud line's screen
 #include <RE/T/TESDataHandler.h>
 #include <RE/T/TESFullName.h>
 #include <RE/T/TESForm.h>
@@ -2779,18 +2781,69 @@ namespace TLC
         // on-screen captions, so a conversation line pops while the
         // player is near. (PushNews would also pop a HUD notification;
         // speech is quieter — the feed alone is the radio's story.) A
-        // loud line is the exception: it rides the same throttled HUD
-        // pop as news, so the fight's threats land on screen before the
-        // blows (0.7.5 field: the words were log-and-feed only, and the
-        // on-screen beat was just "come to blows").
+        // loud line is the exception: it rides the game's own subtitle
+        // display — a bottom-of-screen subtitle, like dialogue — and
+        // only when the player is close enough to hear it (0.7.5 field:
+        // the words were log-and-feed only, then a top-left news pop;
+        // a spoken threat reads as a subtitle, not a headline).
         const auto lineLabel =
             MindLabelForm(speakerForm) + ": \"" + line + "\"";
         m_News.Add(lineLabel);
 
         if (a_loud)
         {
-            PushNews(lineLabel);
+            auto* speaker =
+                RE::TESForm::GetFormByID<RE::TESObjectREFR>(speakerForm);
+            const auto* player = RE::PlayerCharacter::GetSingleton();
+
+            if (speaker != nullptr && player != nullptr
+                && player->GetPosition().GetDistance(speaker->GetPosition())
+                    <= m_Settings.SubtitleRadius)
+            {
+                ShowSubtitle(speaker, lineLabel);
+            }
         }
+    }
+
+    void Adapter::ShowSubtitle(
+        RE::TESObjectREFR* a_speaker,
+        const std::string& a_line)
+    {
+        if (a_speaker == nullptr)
+        {
+            return;
+        }
+
+        // The game's own subtitle display: the HUD renders the best
+        // entry from SubtitleManager's priority array each frame — the
+        // same queue dialogue lines use — so a pushed line reads as a
+        // bottom-of-screen subtitle. All the fields are wrapped; this
+        // drives the real mechanism, no ESP, no custom HUD. The line
+        // carries its own "who" prefix, so the box needs no speaker
+        // name plumbing to read right.
+        auto* mgr = RE::SubtitleManager::GetSingleton();
+
+        if (mgr == nullptr)
+        {
+            return;
+        }
+
+        const RE::BSAutoWriteLock lock{ RE::SubtitleManager::GetRWLock() };
+
+        RE::SubtitleInfo info{};
+        info.speaker =
+            RE::BSPointerHandleManagerInterface<RE::TESObjectREFR>::GetHandle(
+                a_speaker);
+        info.subtitleText = a_line.c_str();
+        info.topicInfo = nullptr;
+        info.priority = RE::SUBTITLE_PRIORITY::kNormal;
+        info.distFromPlayer = 0.0f;
+        mgr->subtitlePriorityArray.push_back(info);
+        mgr->currentSpeaker = info.speaker;
+
+        // The verify channel: the receipt tells us the subtitle fired
+        // (and whether the player was close enough to see it).
+        REX::INFO("LCE: subtitle ({} u): {}", m_Settings.SubtitleRadius, a_line);
     }
 
     void Adapter::EscalateToFight(

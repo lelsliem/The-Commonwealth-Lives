@@ -43,6 +43,7 @@
 namespace RE
 {
     class Actor;
+    class TESObjectREFR;
     class TESWeather;
 }
 
@@ -733,6 +734,17 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             LCE::Simulation::EntityId a_listener,
             Dialogue::Pool a_pool,
             bool a_loud = false);
+
+        // The loud line's on-screen home (0.7.5 field): a spoken line
+        // rides the game's own subtitle display — SubtitleManager's
+        // priority array, the same queue dialogue lines use — so it
+        // reads as a bottom-of-screen subtitle instead of a top-left
+        // news pop. The caller has already checked the speaker is
+        // within sim.subtitle.radius of the player (a brawl nearby is
+        // loud; a cross-settlement squabble is not).
+        void ShowSubtitle(
+            RE::TESObjectREFR* a_speaker,
+            const std::string& a_line);
 
         // The physical escalation (0.7.5 Fights): when a feud's words
         // fail — an enemy pair's row, or a slighted mind facing an
