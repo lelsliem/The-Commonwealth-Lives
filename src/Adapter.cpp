@@ -143,6 +143,66 @@ namespace TLC
             return Species::Human;
         }
 
+        // The species table's complement: every race a person can be.
+        // ClassifySpecies defaults anything unknown to Human (a workshop
+        // population is usually people — ADR-0024), and the device table
+        // in SimRelevant.cpp catches what it knows. A Human-classified
+        // mind whose race is neither here nor a known device is either a
+        // modded race (fine — default Human is the point) or a prop that
+        // slipped the table; the prune announces it once so the table can
+        // grow. Races verified in xEdit 2026-08-10 from Fallout4.esm.
+        bool IsKnownOrganicRace(const RE::TESRace* a_race)
+        {
+            if (a_race == nullptr)
+            {
+                return false;
+            }
+
+            switch (a_race->GetFormID())
+            {
+            // People, in every form the sim seeds as Human.
+            case 0x00013746:   // HumanRace
+            case 0x000EAFB6:   // GhoulRace
+            case 0x0001A009:   // SuperMutantRace
+            case 0x0001D31E:   // PowerArmorRace (an armored settler)
+            case 0x000E8D09:   // SynthGen1Race
+            case 0x0010BD65:   // SynthGen2Race
+            case 0x002261A4:   // SynthGen2RaceValentine
+            // Children and the animal table (species-tagged, never
+            // classified Human — listed so the complement is total).
+            case 0x0011D83F:   // HumanChildRace
+            case 0x0011EB96:   // GhoulChildRace
+            case 0x0001D698:   // DogmeatRace
+            case 0x0001D810:   // MoleratRace
+            case 0x0001DB4A:   // DeathclawRace
+            case 0x0002047E:   // BrahminRace
+            case 0x00023FFC:   // MirelurkRace
+            case 0x0002456D:   // BloodbugRace
+            case 0x00029463:   // BloatflyRace
+            case 0x0003578A:   // ViciousDogRace
+            case 0x0004716C:   // RadRoachRace
+            case 0x0005FBB1:   // StingwingRace
+            case 0x000636AB:   // RadScorpionRace
+            case 0x00064C60:   // MirelurkHunterRace
+            case 0x0006B4EC:   // FeralGhoulRace
+            case 0x0007ED1D:   // RadStagRace
+            case 0x00090C33:   // FEVHoundRace
+            case 0x000A0F2F:   // YaoGuaiRace
+            case 0x000A563A:   // EyeBotRace
+            case 0x000A96BF:   // FeralGhoulGlowingRace
+            case 0x000B7F91:   // MirelurkKingRace
+            case 0x000C9ACF:   // CatRace
+            case 0x000D77E3:   // VertibirdRace
+            case 0x000D9804:   // GorillaRace
+            case 0x000E12A6:   // MirelurkQueenRace
+            case 0x00187AF9:   // RaiderDogRace
+                return true;
+
+            default:
+                return false;
+            }
+        }
+
         // The world's voice for a mind — the same labels the arrival
         // logging uses, read from the mind's tag (a missing tag reads as
         // a settler, the workshop default).
@@ -1687,6 +1747,53 @@ namespace TLC
                 "and robots are not minds.",
                 pruned.size(), pruned.size() == 1 ? "" : "s");
         }
+
+        // The table's blind spot (2026-08-12): the wall-mounted spotlight
+        // slipped the device list — its race is neither a known device nor
+        // a known organic race, so it survived the prune and became a
+        // Human mind. Announce any such mind once per session, with its
+        // race hex, so the device table can grow. A modded organic race
+        // warns once and then stays a settler — default Human is the
+        // design (ADR-0024); the line is how the table learns.
+        std::unordered_set<std::uint32_t> announced;
+
+        m_Registry.ForEachWithComponent<FormRef>(
+            [&](LCE::Simulation::EntityId a_entity, FormRef& a_form)
+            {
+                const auto tag =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                if (tag == nullptr || tag->Value != Species::Human)
+                {
+                    return;
+                }
+
+                auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(a_form.FormId);
+
+                if (actor == nullptr || actor->race == nullptr
+                    || IsKnownOrganicRace(actor->race))
+                {
+                    return;
+                }
+
+                if (!announced.insert(actor->race->GetFormID()).second)
+                {
+                    return;
+                }
+
+                const auto* npc = actor->GetNPC();
+
+                REX::WARN(
+                    "sim: {:#x} ({}) is a Human mind with unknown race "
+                    "{:#x} — if this is a device, its race belongs in the "
+                    "device table (SimRelevant.cpp).",
+                    a_form.FormId,
+                    npc != nullptr
+                        ? RE::TESFullName::GetFullName(*npc)
+                        : "?",
+                    actor->race->GetFormID());
+            });
     }
 
     void Adapter::RemoveMind(
