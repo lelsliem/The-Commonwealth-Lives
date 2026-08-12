@@ -11,6 +11,15 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
+### 0.7.4 fix (0.8.1 field finding) — decisions log: stable minds go silent
+
+The 1s decisions cadence (previous fix) fired for every mind, so a restored
+600-mind world wrote ~640 lines/s (65 KB/s of synchronous game-thread file
+I/O) — the 'little hangs'. A stable mind now prints its intent once and stays
+quiet until the intent actually changes; flip-flopping minds are still capped
+at one line per second. Same seed + same world, the log drops from hundreds
+of lines/s to tens.
+
 The growing frame hang traced to the verify channel itself: near-tied
 intents (Rest/Explore) re-rolled every frame, and each re-roll wrote a
 synchronous file line on the game thread — 22,478 "decides" lines in
