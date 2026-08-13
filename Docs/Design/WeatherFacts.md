@@ -106,3 +106,26 @@ Force the sky with `fw 1ca7e4` (rain), `fw 2b52a` (clear), `fw 1c3d5e`
   it only remembers. A future stone can read the weather fact and e.g.
   prefer Rest indoors when it rains (a new gate kind, engine-side).
 - **The `Feed` engine ask** (from the real test) is unchanged.
+
+## Seasons — the audit candidate (2026-08-13)
+
+The engine exposes `SeasonOf(day)` (four 90-day seasons, derived never
+stored — core stone 06) and the adapter does not use it yet. The
+candidate, if the 0.8.6a audit takes it: **a season that bites**.
+
+- The adapter reads the season in the tick and scales need decay and
+  the illness vectors by INI multipliers — `sim.season.hungerMult`
+  (defaults 1.0, winter 1.15), `sim.season.illnessMult` (winter
+  raises the food/contagion chances). A harsher winter makes
+  settlements leaner and sickness likelier; summer stays the default
+  world.
+- Pure tuning: a multiplier applied to existing decay, derived from
+  the day — no new state, no co-save, no engine change. The same
+  `SeasonOf` read that drives it costs nothing when the multiplier
+  is 1.0.
+- The gate (if any) is deliberate: a season should never close the
+  market (WorldFacts.md keeps rain out of the doors) — it leans on
+  the same needs, it doesn't lock them.
+
+Verdict captured in Run080.md's engine-pattern table: covered, one
+candidate — this is it. Decision point: the 0.8.6a audit.

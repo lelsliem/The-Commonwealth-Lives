@@ -25,6 +25,8 @@ events), `Identity.md` (0.7.0 — names, conflict source, the radio),
 `FutureStones.md` (0.7.6-0.8.0 — fight-feel, babies, illness),
 `ReleasePlan.md` (the staged path to 1.0.0, including the honest cuts),
 `Run080.md` (the 0.8.x–0.9.x run to the Nexus beta — the working plan),
+`InterSettlementTrade.md` (the roads candidate — designed, not
+scheduled; the 0.8.6a audit weighs it),
 `Landscape.md` (the Nexus survey — what exists, what we own, what to
 borrow, what to skip), `RealTest.md` (the live log evidence). Each is
 flipped to **verified in-game** as its stone lands; the ones that aren't
