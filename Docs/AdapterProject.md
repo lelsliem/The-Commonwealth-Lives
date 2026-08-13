@@ -14,18 +14,20 @@ of the conversation that built it.
 
 **Design docs in this repo** (`Docs/Design/`): `Translation.md` (form ↔
 entity), `Executor.md` (the tick + intent executor), `Walking.md` (the
-walk), `CoSave.md` (the co-save record — v6; v5's bond map and v3's
+walk), `CoSave.md` (the co-save record — v7; v5's bond map and v3's
 stall section still ride), `Behaviour.md` (the
 species split), `Market.h`'s sibling `SettlementMarkets.md` (the census
 + per-settlement markets), `Trade.md` (the stall-keeper trade),
-`Economy.md` (cap pouches), `Tuning.md` (the INI),`WorldFacts.md` (the gates: market hours + weather), `WeatherFacts.md` (weather memory
+`Economy.md` (cap pouches), `Tuning.md` (the INI), `WorldFacts.md` (the
+gates: market hours + weather), `WeatherFacts.md` (weather memory
 events), `Identity.md` (0.7.0 — names, conflict source, the radio),
-`RealEvents.md` (0.8.0 plan — trade with anyone, talk, rows, fights),
+`RealEvents.md` (0.7.1-0.7.5 — talk, rows, names, trade, fights),
+`FutureStones.md` (0.7.6-0.8.0 — fight-feel, babies, illness),
 `ReleasePlan.md` (the staged path to 1.0.0, including the honest cuts),
 `Landscape.md` (the Nexus survey — what exists, what we own, what to
-borrow, what to skip), `RealTest.md` (the live log evidence). Each is flipped to
-**verified in-game** as its stone lands; the ones that aren't verified
-yet say so.
+borrow, what to skip), `RealTest.md` (the live log evidence). Each is
+flipped to **verified in-game** as its stone lands; the ones that aren't
+verified yet say so.
 
 ---
 
@@ -53,17 +55,24 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | Version | Stone | Status |
 |---------|-------|--------|
 | 0.1.0 | Scaffold + heartbeat | ✅ verified in-game |
-| 0.2.0 | Translation | ✅ verified in-game — settler-faction actors become minds |
-| 0.3.0 | Intent executor | ✅ verified in-game — tick + settlers walk to market |
-| 0.4.0 | Co-save | ✅ verified in-game — 637 entities saved and restored |
-| 0.5.0 | Living world ("The Settler Goes to Market") | ✅ complete (2026-08-10) — **everything implemented and verified in-game: species split, arrival outcomes, real test, world facts (settlers stop at 22:00), tuning, need-decay tuning, weather memory events, per-settlement markets (persistent-cell census), desync, the trade stone, the economy stone, the engine's per-tick decay jitter wired (`90a9d33` + Rng wiring, co-save v2), stall-keepers persisted (co-save v3), memory world-days persisted (co-save v4), lifecycle + walk-probe hardenings, the tuning INI template (`config/TheLivingCommonwealth.ini`), and the GitHub publish (repo live, tag `0.5.0-beta`, 2026-08-10)** |
-| 0.6.0 | Life & Emergent Quests ("The Commonwealth Remembers") | ✅ complete (2026-08-11) — **every stone built (16/16 harness suites), verified in-game, and shipped as tag `0.6.0`. The world keeps its books (a real kill books confirming → died one second apart; the dead never restore, never ghost-walk; fresh games book zero false deaths — ADR-0011). Bonds: the adapter owns an EventBus (Request A, stone 08) subscribed to `RelationshipChangedEvent`; `sim.bond.threshold.*` from the INI; mutual + sticky derivation in `Bonds.h`; co-save v5; the buyer's half of a trade is `Remember({keeper, Social})`; the living drift clock (`sim.drift.rate = 0.0002`) — a real marriage emerged from shared meals and survived save/load (ADR-0012). Households: the Spouse bond forms one (two pouches → one shared wallet, family bench feeds the spouse free, one-pouch enforced on restore, ADR-0013) — the family stall verified in-game. The sleep cycle closed the loop (eat → rest → recover → walk → eat, ADR-0014/0015). Stone 3.75 — Rest/Explore execute in-game as a bounded wander (`Movement::WanderNear`, ADR-0017 addendum 2): settlers mill around instead of freezing at the bench. Stone 4 gossip verified: `643 minds remember settler X is gone`. Stone 5 arcs verified: grief fired exactly once (`arcs: settler 0x50976 grieves for 0x2f2a7 — they seek company.`) — two bugs found and fixed in test (the announce's dead-code form lookup, the family meal not warming couples; ADR-0017 addenda 5–6); the feud's organic appearance waits on 0.7.0's conflict source (nothing makes dispositions negative yet). Stone 6 birth verified: sim-only children born, fed, and `3 sim-only children restored too` across two save/load cycles (restore-birth fix, ADR-0017 addendum 4). Engine hand-over Requests A–C delivered; the engine shipped stone 08 (RelationshipChangedEvent + sim.bond.threshold.*) and stone 09 (Society — Groups & Traits)** |
-| 0.7.0 | Identity & the Player Window ("The Player Listens") | ✅ complete (2026-08-11) — **all three stones built, 19/19 harness suites green (NamesTest, SocietyTest, CoSaveV6Test), verified in-game, and shipped as tag `0.7.0`. Stone 1 names: a `Name` component (additive — record v6 is the legacy section), game names first, gender-split pools + a separate animal pool curated in the INI (`names.first.male/.female/.animal`, `names.last`), owned animals named / strays nameless, back-filled on restore — verified live with the fixes the hunt surfaced: the game name reads from the **base form** (the reference read is empty for most actors and was renaming Mama Murphy/Marcy/Jun), names are **written onto the actors** (SetOverrideName — the workshop view reads "Mara Price"), a per-second sweep names streaming actors and heals stale stamps, the shipped INI synced to the curated pools, pets deduped per world, provisioners keep the bare role. Stone 2 conflict source: the engine's decided channels — a hungry arrival at a closed market reports `ReportOutcome({keeper, Social, Failure})` (−0.1), the temper line (`sim.slight.temper`) decides who blames, settlement `Groups` spread the echo, rival/enemy bonds form and the feud arc begins — **verified end-to-end in-game** after the engine shipped the desperate-hunger gate (`sim.hunger.desperate`, core commit `509a54d`): `is shut … and blames the keeper` → rivals → `is feuding with` → gossip → `arcs: X cooled the feud between …` (127 mediation attempts in the stressed run); two adapter fixes landed during the hunt (the feud headline fires on any crossing into Enemy; the feud is mediated at formation because gossip dies in ~4.5 s at `sim.memory.fade` 0.2 — the once-per-day pass could never find a mediator). Stone 3 the player window: one-line news as throttled HUD notifications (verified on-screen) + the news feed, and a settlement radio (configurable `radio.base.formid`) speaking captions (verified on-screen); audio after 0.9.0. Engine 0.7.0 (Legacy — Bequeath, InheritMemory, the legacy store) wired into the death/birth paths. MCM's UI page honestly deferred (the INI already delivers the tuning; the page needs MCM + the CK)** |
-| 0.7.1 | Talk (the first Real Events stage) | ✅ verified in-game (2026-08-12) — **`Dialogue.h` (the author's pools: the good greet/gossip/family, the bad trade/row, the ugly grief/fight/feud), INI overrides (`dialogue.*`), a seeded picker (per mind and day — the same line all day, a new one tomorrow), and `Say` wired into the paid trade, the family meal, and the shut-stall slight (the first words of a feud); speech rides the news feed so the settlement radio reads it, and the 0.7.5 fight threats ride the game's own subtitle queue (ADR-0048/0049). 20/20 harness suites green (DialogueTest added). Design: Docs/Design/RealEvents.md + the staged run in Docs/Design/ReleasePlan.md** |
-| 0.7.2 | Rows (the verbal altercation) | ✅ verified in-game (2026-08-12) — **rivals and enemies who cross paths at the same bench have words (`src/Rows.h`, pure like Gossip): each remembers the other wronged them (engine Wronged, −0.25 — the unprompted-wrong channel, distinct from the shut-stall's −0.1 executed let-down), the settlement hears the shouting (SpreadBond gossip), and the wrongs publish on the bus so a crossing can push the pair over the enemy line the instant it lands. The crossing scan runs at bench arrivals (an ephemeral per-day attendance book, pruned, never co-saved); the once-a-day gate is the Wronged memory (co-saved — save/load never double-rows); the shut-stall slight keeps its own Say unless the keeper already rowed this arrival. Physical escalation (0.7.5) landed. Verified in the 0.7.5 field sessions — the feud pipeline (row → rival → feud headline → fight) fired live end to end. 21/21 harness suites green (RowsTest added)** |
-| 0.7.3 | Names for everyone | ✅ complete (2026-08-12) — **every unnamed sim-relevant mind gets an individual name: role placeholders keep the title and gain the person ("Provisioner Daisy"). `Names.h` gains IsRoleName/HasRolePrefix/GenerateRoleName/GenerateUniqueRole (pure, tested); wired into all three naming paths (seed, per-second sweep, restore). The verification fix: the role label lives in two places the first cut missed — the game's own display name for supply-line settlers and the road caravans' generic bases; the rule now reads the display name first and the sweep writes through a bare role-word text-display. Real names still win (Sturges stays Sturges). 21/21 suites green (NamesTest extended)** |
-| 0.7.4 | Trade with anyone who sells | ✅ complete (2026-08-12) — **the vendor census (`SimRelevant::IsVendor` + `SeedVendors`) remembers who sells in the loaded world, the hungry walk resolves to a person — trader, merchant, provisioner — not only the bench; a vendor never shops at their own stall; the bench stays the fallback. No engine change (the core already resolves Trade to a person — a who problem). Pure NearestVendor in Market.h, tested; in-game: "i met a trader Chloe so thats confirmed working"** |
-| 0.7.5 | Fights (the physical escalation) | ✅ feature-complete (2026-08-12), verified in-game — **the feud turns physical: the temper + chance rolls book a fight (once-per-day, ConflictGates co-saved v7), the victim is shoved with the game's own paired-push kick (PairedFrontPushKick + _Human, the crowd mod's decoded mechanism — no ESP), the exchange runs on separate beats (kick → fall → get-up → retaliation → slink-off, ADR-0042…0046), fight lines ride the game's own subtitle queue as bottom subtitles gated by sim.subtitle.radius, species + kin splits keep the brawl human and families safe. 23/23 suites green. Known fight-feel bugs (ghost-slide, both-fall look) parked in 0.7.6** |
+| 0.2.0 | Translation | ✅ verified in-game |
+| 0.3.0 | Intent executor | ✅ verified in-game |
+| 0.4.0 | Co-save | ✅ verified in-game |
+| 0.5.0 | Living world | ✅ complete (tag `0.5.0-beta`) |
+| 0.6.0 | Life & Emergent Quests | ✅ complete (tag `0.6.0`) |
+| 0.7.0 | Identity & the Player Window | ✅ complete (tag `0.7.0`) |
+| 0.7.1 | Talk | ✅ verified in-game |
+| 0.7.2 | Rows | ✅ verified in-game |
+| 0.7.3 | Names for everyone | ✅ verified in-game |
+| 0.7.4 | Trade with anyone | ✅ verified in-game |
+| 0.7.5 | Fights | ✅ verified in-game |
+| 0.7.6 | Fight-feel bug pass | ✅ verified in-game (2026-08-13) |
+| 0.7.7 | Babies | ✅ verified in-game (2026-08-13) |
+| 0.7.8 | Visible children pairing | ✅ verified in-game (2026-08-13) |
+| 0.7.9 | Bugs & polish | 🔲 planned |
+| 0.8.0 | Illness & Medicine | 🔲 design complete (Illness.md) |
+| 0.9.0 | Release gate | 🔲 planned |
+| 1.0.0 | Freeze and ship | 🔲 planned |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
@@ -79,7 +88,9 @@ src/main.cpp        F4SE entry: hooks (Tick), messaging (lifecycle),
                     serialization callbacks (co-save glue)
 src/Adapter.h/.cpp  the one world object: registry + translator, the
                     lifecycle, the tick loop (Update → plan → execute → probe),
-                    species classification (race → Human/Child/Animal)
+                    species classification (race → Human/Child/Animal),
+                    fight execution (paired-push kick, fall, retaliation),
+                    birth lifecycle (pregnancy, growth, visible-children pairing)
 src/Translator.h/.cpp  formId ↔ EntityId tables (adapter state, game-free)
 src/SimRelevant.h/.cpp the settler predicate (WorkshopNPCFaction 0x000337F3)
 src/Behaviour.h/.cpp   Species + BehaviourProfile — who trades, who is fed
@@ -88,16 +99,35 @@ src/Executor.h/.cpp    pure plan builder — refusals are the contract
 src/Movement.h/.cpp    WalkTo: the pinned Actor::InitiateCommandModeTravelPackage
 src/Market.h           the census (persistent-cell scan) + per-settlement
                        market seeding (nearest workshop within ~140 m)
-src/Serialization.h/.cpp  per-type serializers (Needs, Memory, …, SpeciesTag,
-                       CapPouch)
-src/CoSave.h/.cpp     the durable co-save record (stable names, versioning;
-                       v4 — v3's stall section still rides, and the memory
-                       payload now carries each event's world day)
-src/BlobCodec.h       little-endian byte codec
-src/Components.h      FormRef + SpeciesTag + CapPouch (adapter components)
-src/Tuning.h          the INI — sim.* decay rates, meal price, market hours
-src/WorldFacts.h      the gates: market hours (closed at night) + weather
-src/Tick.h/.cpp       the per-frame VM-tick hooks
+src/Names.h            name pools (gender-split, animal, family tails),
+                       role names, the seeded picker
+src/Dialogue.h         dialogue pools (greet/gossip/family/trade/row/
+                       grief/fight/feud), INI overrides, seeded picker
+src/Rows.h             verbal altercations at the bench, Wronged memories
+src/Fights.h           physical escalation: paired-push kick, fall,
+                       retaliation, once-per-day gate (ConflictGates)
+src/Birth.h            pregnancy window, gestation, birth, growth,
+                       visible-children pairing (runtime scan)
+src/Bonds.h            relationship states (friend/sweetheart/spouse/
+                       rival/enemy), mutual + sticky derivation
+src/Households.h       shared wallet, family bench
+src/Gossip.h           bond/death/feud spread to settlement
+src/Arcs.h             mediation, grief, birth arc
+src/Kin.h              family gate (curated vanilla families)
+src/Subtitles.h        on-screen fight lines (game's SubtitleManager)
+src/ConflictGates.h    once-per-day fight/row gate (co-saved)
+src/Serialization.h/.cpp  per-type serializers
+src/CoSave.h/.cpp      the durable co-save record (v7)
+src/BlobCodec.h        little-endian byte codec
+src/Components.h       FormRef + SpeciesTag + CapPouch + Name + Pregnancy
+                       + BirthDay (adapter components)
+src/Tuning.h           the INI — sim.* decay rates, meal price, market
+                       hours, fight/birth/dialogue tuning
+src/WorldFacts.h       the gates: market hours (closed at night) + weather
+src/Tick.h/.cpp        the per-frame VM-tick hooks
+data/                  TheLivingCommonwealthAnims.esp (unconditional
+                       paired-push IDLE records for real kicks)
+config/                TheLivingCommonwealth.ini (tuning defaults)
 ```
 
 **Lifecycle mapping (current, verified):**
@@ -105,9 +135,9 @@ src/Tick.h/.cpp       the per-frame VM-tick hooks
 | Game event | The adapter does |
 |------------|------------------|
 | `kGameLoaded` (startup) | `StartWorld`: translate loaded sim-relevant actors into entities (tagged by species, seeded per species); seed the market memory |
-| `kPostLoadGame` (a save finished loading) | Apply the co-save restore (or start fresh) — **the load's completion event; `kGameLoaded` alone does not fire for real loads** |
+| `kPostLoadGame` (a save finished loading) | Apply the co-save restore (or start fresh) |
 | `kPreLoadGame` | `EndWorld` (Clear; serializers survive); arm abort recovery (60s) |
-| `kDeleteGame` (a save FILE was deleted) | nothing — a running world survives (an autosave rotation once killed it mid-world; `EndWorld` here is a no-op now) |
+| `kDeleteGame` (a save FILE was deleted) | nothing — a running world survives |
 | serialization save callback | `CaptureWorld` → `CoSave::Encode` → `WriteRecord` |
 | serialization load callback | read record → `CoSave::Decode` → `QueueRestore` (applied on `kPostLoadGame`) |
 | new game (revert callback) | `EndWorld` |
@@ -117,292 +147,9 @@ src/Tick.h/.cpp       the per-frame VM-tick hooks
 issue; sessions capped at 16) → `ProbeWalks` (live distance probes).
 
 **The co-save record:** the core's snapshot is process-local (component
-keys are `std::type_index`) — the adapter's record translates it to stable
-names (`needs`, `memory`, `relationships`, `goals`, `intent`, `formref`,
-`species`, `name`, `cappouch`) with its own version (`kRecordVersion =
-6` — v2 the Rng header, v3 the stall section, v4 memory world-days,
-v5 the bond map, v6 the registry-level legacy section). Refusals are the
-contract: truncated records, unsupported versions, and unknown component
-names never half-apply. Save-compatibility is the adapter's job.
-
-**Two environment lessons learned (documented in Walking.md / CoSave.md):**
-- The crash saga: a corrupt save, not the plugin — the identical
-  fail-fast signature hit no-DLL runs. DisableExitSave prevents the
-  exit-save cycle.
-- Every "load abort" was our own recovery timer: real loads are slow
-  (a 600-actor co-save world takes >12s), and the completion event is
-  `kPostLoadGame`.
-
----
-
-## The species/behaviour split (0.5.0 groundwork — built)
-
-The junkyard dog and brahmin are minds like settlers (they carry
-WorkshopNPCFaction too, so they pass the same sim-relevance gate) — they
-walk to the market when hungry, and they should. But a dog must not
-*trade, buy, or talk*. The core is species-agnostic by design, so the
-split lives in the adapter (see `Docs/Design/Behaviour.md`):
-
-- **`SpeciesTag` component** — set at translation from the actor's race,
-  persisted in the co-save (`species`), so a restored world keeps its dogs
-  dogs. Missing tag → Human.
-- **`BehaviourProfile` table** (`Behaviour.h`) — the single source of
-  truth:
-
-  | | Human | Child | Animal |
-  |---|---|---|---|
-  | Market interaction | `Trade` (with a trader) | `Aid` (fed) | `Aid` (fed) |
-  | CanTrade / CanTalk | ✅ / ✅ | ❌ / ✅ | ❌ / ❌ |
-  | Needs | all 5 | all 5 | Hunger/Fatigue/Safety |
-
-  No Social need → the core never produces a Socialize intent → an animal
-  never wanders off to "talk". No Comfort need → no Work intents.
-- **Classification** (`ClassifySpecies` in Adapter.cpp) — race FormIDs
-  **verified in xEdit 2026-08-10**: children = HumanChildRace
-  `0011D83F`, GhoulChildRace `0011EB96`; animals = DogmeatRace
-  `0001D698`, BrahminRace `0002047E`, CatRace `000C9ACF`, GorillaRace
-  `000D9804`, plus the wild set (24 races total, future-proofing).
-  Everything else defaults to Human.
-- **The one deliberate lie:** the market *memory* keeps `Trade`-kind for
-  every species. The core's hunger branch finds food only through
-  Trade-kind memories (`ChooseTarget(..., Trade)`) — change the seed to
-  `Aid` and the dog stops walking to the market. The memory says "food is
-  over there"; the profile decides what arrival means.
-- **Enemies never reach the table:** sim-relevance is WorkshopNPCFaction
-  membership, which hostiles don't hold. **Robots/synths:** a synth
-  settler is a person (Human is right); a robot (Mr. Handy, Protectron,
-  turrets) is a deliberate future species — no biological needs to seed.
-
----
-
-## The 0.5.0 roadmap — "The Settler Goes to Market"
-
-The core has shipped everything the adapter needs (see the canonical
-handoff — tuning stone 01, outcome channel stone 02, seeded RNG stone 05
-all live). Adapter progress:
-
-1. ✅ **World facts** (verified in-game 2026-08-10 — the settlers stopped
-   their market walks around 22:00 and only the dog and a couple of
-   stragglers stayed visible) — the market's trading hours gate the
-   hungry walk (a remembered `{ invalid, Trade }` fact makes Decide
-   explore; the refresh pattern keeps the door shut at night with no
-   flicker) and a radstorm shuts the gatherings (`{ invalid, Social }`;
-   weather forms pinned from the xEdit dump — only CommonwealthGSRadstorm
-   `001C3D5E` matches, see Docs/WeatherForms.md). See
-   Docs/Design/WorldFacts.md.
-2. ✅ **Tuning from Configuration** (implemented 2026-08-10, verified
-   in-game 2026-08-11) — one text file next to the DLL
-   (`Data\F4SE\Plugins\TheLivingCommonwealth.ini`): the `sim.*` keys
-   feed `SimulationTuning::FromConfiguration`; the adapter's own keys
-   (`market.open.hour` / `market.close.hour`) ride in the same file and
-   drive the world-facts hours gate. Missing/broken lines keep defaults.
-   See Docs/Design/Tuning.md.
-3. ✅ **Arrival outcomes + the real test** (verified in-game 2026-08-10)
-   — walks report per species: Human → `Trade` (the trade stone: Success
-   with the stall-keeper or remembered merchant, Partial only for the
-   stall-keeper setting up), Child/Animal → `{ feeder, Aid, Success }`
-   (fed, gives nothing in return); the hunger write-through closes the
-   loop (fed:
-   Hunger X -> 1.00; the fed dog deciding Rest, not MoveTo, was the
-   first sight of the sleep cycle — Rest now recovers fatigue, so that
-   is the correct, productive behavior, not a stall; 19 feeds across
-   the session).
-4. ✅ **Migration** (implemented 2026-08-10) — old saves load forward:
-   `Decode` accepts version ≤ current (a pre-species save restores with
-   no tag → Human) and skips unknown component names (a removed type is
-   dropped, never fatal); a newer version is refused. Pinned by
-   CoSaveTest's crafted fixtures.
-5. ✅ **Weather memory events** (implemented 2026-08-10, verified
-   in-game 2026-08-11) — the live sky classifies into six categories
-   (verified forms) pushed as day-stamped world facts (`{ invalid,
-   WeatherRain, 1.0, day }`); today's categories refresh all day,
-   yesterday's fade, the day-turn logs. The engine grew the `Weather*`
-   kinds (append-only, save-safe). Re-derived at the edge — never
-   co-save state. See Docs/Design/WeatherFacts.md.
-6. ✅ **Per-settlement markets** (implemented 2026-08-10, verified
-   in-game 2026-08-11) — a census of the worldspaces' **persistent
-   cells** (base `000C1AEB`) finds every settlement market; each mind
-   remembers the nearest within ~140 m instead of one global Sanctuary
-   bench. FO4 never fills `formArrays[REFR]` — the original flat-array
-   census always read 0 in-game (the live log showed `0 workshops
-   known` every session, so the stone was silently running its
-   fallback), and settlement workbenches are all persistent refs, so
-   the persistent-cell scan is the correct FO4-native enumeration. The
-   legacy single-bench fallback still covers an empty census, and the
-   census RETRIES when it finds nothing — with a one-time base-form
-   probe so the next log says what the filter actually saw. No new
-   pins. See Docs/Design/SettlementMarkets.md.
-7. ✅ **Desync the herd** (implemented 2026-08-10, verified in-game
-   2026-08-11) — `VaryNeeds` jitters each mind's seeded needs
-   (deterministic per entity id): hunger arrives at different times, and
-   the decay-rate jitter is a metabolism that persists after every feed.
-   The co-save already serializes the rate — no engine change, no new
-   pins. See the Behaviour.md desync section.
-7b. ✅ **Per-tick decay jitter** (engine core 0.5.0 stone 07 SHIPPED
-   `90a9d33`, WIRED 2026-08-10, verified in-game 2026-08-11) — the
-   engine jitters each tick's decay per entity (`DecayRate *
-   Derive(id).NextFloat(1 ± sim.jitter)`), and the adapter now owns a
-   seeded `Rng`, passes it to every `Update`, and persists `rng.State()`
-   in the co-save (record v2 — the Rng header is the record's first real
-   format bump; a v1 record reseeds fresh). See Docs/Design/Tuning.md
-   (sim.jitter) and Docs/Design/CoSave.md (the v2 header).
-8. ✅ **Seeded need decay rates in the INI** (implemented 2026-08-10,
-   verified in-game 2026-08-11) — sim.hunger.decay / .fatigue /.safety
-   /.social /.comfort ride in the same file, so the whole rhythm tunes
-   to "a few meals a day" without a recompile. Rates thread StartWorld
-   → SeededNeeds, still jittered per mind by VaryNeeds, serialized by
-   the co-save. Missing/broken values keep the defaults. See
-   Docs/Design/Tuning.md.
-9. ✅ **The trade stone** (implemented 2026-08-10, verified in-game
-   2026-08-11) — a human arrival at the market is a real exchange: the
-   first human at each market sets up its stall, every later
-   bench-arrival trades with them (Trade, Success — the core serves
-   AcquireFood and earns trust), and the trader's half lands too
-   (RecordSale: the stall-keeper remembers the customer and warms
-   toward them; sim.sale.warmth). The buyer's memory of the merchant
-   then beats the bench, so the next hungry walk resolves to the
-   person. No engine change, no new pins. See Docs/Design/Trade.md.
-10. ✅ **The economy stone** (implemented 2026-08-10, verified
-    in-game 2026-08-11) — the exchange is physical: every human mind
-    carries a CapPouch (40 ± 20 caps, deterministic per id); a buyer
-    pays what they can afford up to sim.meal.price (default 5) and the
-    seller's pouch grows; a broke buyer is fed on the settlement's
-    credit. The pouch is a co-save component (stable name cappouch) —
-    a saved purse restores exactly, pre-economy saves are back-filled
-    on restore. No engine change, no new pins. See Docs/Design/Economy.md.
-11. ✅ **Stall-keepers survive save/load** (implemented 2026-08-10,
-    verified in-game 2026-08-11) — who runs each market's stall rides
-    the co-save record's v3 section as (market FormID, keeper FormID)
-    pairs — form ids, stable across sessions, unlike the session-local
-    entity ids — and ApplyRestore rebuilds the map from the restored
-    FormRefs. A saved market reopens under the same keeper; a pre-v3
-    save re-derives each stall on first arrival. Record v3, the second
-    real format bump (after v2's Rng header). See Docs/Design/CoSave.md.
-11b. ✅ **Memory world-days survive save/load** (implemented 2026-08-10,
-    verified by the harness) — engine stone 06 (WorldTime +
-    MemoryEvent::Day) shipped in the canonical handoff with the ⚠
-    note: the memory serializer must carry the world day, or a saved
-    weather fact loses the day it happened. The adapter's serializer
-    was dropping `Day` (the weather facts stamp it — WorldFacts.h — so
-    save/load really did lose it). Fixed: the serializer writes/reads
-    `event.Day`, and the record bumped to **v4** (third real format
-    bump). Pre-v4 records migrate at decode: memory events read back
-    with `Day = 0` — "time immemorial", honest for facts saved before
-    the calendar. Proven by CoSaveTest: a crafted v3 record with an
-    old-format memory blob loads forward, and the round-trip keeps
-    `Day = 42`.
-12. ✅ **GitHub publish** (plan change 2026-08-10 — Nexus comes
-    later): repo live at
-    `github.com/lelsliem/The-Commonwealth-Lives` — author `lelsliem`
-    in xmake.lua, hygiene (`.gitignore` / `README` / `LICENSE`) done,
-    pushed, tag `0.5.0-beta`. The release page (DLL + INI from
-    `config/`) is live; the Nexus upload remains; the F4SE
-    serialization UID is only needed if the mod reaches the F4SE
-    plugin registry.
-
----
-
-## Dependency Wiring
-
-- **CommonLibF4** — the game API + plugin contract, from the local clone
-  (`Depends/commonlibf4`); its `RUNTIME_LATEST` (1.11.221) matches the game.
-- **F4SE** — runtime-only; CommonLibF4 replaces it as the static dependency.
-- **LCE.Core** — linked statically, built by its own CMake via the
-  `lce.core` rule into `Build/core` (never touching the core repo's
-  `Build/`). The rule pins the core version (refuses below 0.5.0).
-  Point at another checkout with `LCE_CORE_PATH`.
-- **spdlog** — the local clone feeds the core build's v1.16.0; the mod
-  logs through LCE's API and `REX::LOG`, never spdlog directly.
-
----
-
-## What's Next
-
-0.7.0 is shipped (tag `0.7.0`, release live). The staged run to 1.0.0
-is planned in `Docs/Design/ReleasePlan.md` (and the stones in
-`Docs/Design/RealEvents.md` + `Docs/Design/Illness.md`): 0.7.1 Talk
-and **0.7.2 Rows** are built (the drafted `dialogue.*` pools speak on
-the sim's social interactions; rivals and enemies crossing at the same
-bench row — Wronged both ways, gossip spread) and await in-game
-verification → 0.7.3 Fights (real-combat escalation — the game
-animates everything) → 0.8.0 Trade with anyone (the vendor census) →
-**0.8.1 Illness & Medicine** (a `Health` component at the edge — the
-engine's locked hold-then-recover shape, answered as fact-plus-tick;
-no engine change) → 0.9.0 the release gate (scale verified in-game,
-docs) → 1.0.0 freeze and ship.
-The engine is building its side in parallel; its 0.8.0 Scale handover
-is committed (unpushed, awaiting our in-game verification).
-
----
-
-## Working Conventions (follow these)
-
-1. **One stone at a time:** design document → headers → source → tests →
-   docs → green build. A milestone is not done until the docs claim it
-   truthfully — and not verified until proven in-game.
-2. **The four questions:** *Can it be simpler? Does it belong? Do we need
-   it at all? Will this help build living worlds through simulation?*
-3. **The quote ritual:** every `.h`/`.cpp` gets a banner with a reserved
-   line for a joke or quote; the author fills it. Tests get compact
-   headers, no banners.
-4. **Commit style:** concise messages that say *why*, one coherent change
-   per commit, never commit `Build/` artifacts.
-5. **No global state.** Time and tuning are inputs.
-6. **Test rhythm:** pure pieces are unit-tested without the game
-   (translator, serializers, record codec, plan builder, market seed,
-   behaviour table); game-facing pieces are verified in-game via log
-   lines, then the docs flip to verified.
-7. **The verify ritual:** any hardcoded FormID (races, factions, REFRs)
-   is marked and confirmed in xEdit before it is trusted — the race
-   table caught two wrong guesses this way.
-
----
-
-## Open Items (author-side)
-
-- The F4SE-assigned serialization UID — placeholder `'LCEW'` in
-  `src/CoSave.h` (`kSerializationUid`); only needed if the mod later
-  reaches the F4SE plugin registry (the Nexus release).
-- A `Robot` species (no biological needs, its own market rule) — noted in
-  Behaviour.md as the next category to grow.
-
-## The engine's endgame questions — our answers (2026-08-11)
-
-The engine's handoff (Core `Docs/AdapterProject.md`, "The endgame
-plan") asks the adapter for verdicts before its 1.0.0 cuts are final.
-Answers:
-
-- **Disease / health mechanic** — **accepted, as fact-plus-tick.** The
-  engine's locked shape (hold-then-recover) is right; the adapter owns
-  a `Health` component at the edge (co-save additive, like `name`),
-  drives the hold and the recovery in its own tick, and expresses the
-  cost through the existing Fatigue need (sick minds tire faster and
-  rest). No `NeedType::Health`, no new goals — health is not a drive,
-  and every cause (radstorm, bad food, wounds, contagion) is already
-  an edge read. Full design: `Docs/Design/Illness.md`. **No engine
-  change needed.**
-- **Threading the tick** — measure first, thread only if the number
-  says so. FixedStep (0.8.0) is the plan; a TickReport log once a
-  minute in-game decides it. Likely: game thread stays.
-- **C ABI / Papyrus natives** — not before 1.0.0. The adapter is the
-  only consumer; the C++ API is the surface.
-- **Networking / replication** — not needed. Single-player mod.
-- **Multi-agent negotiation / deep planning** — deferred, as proposed.
-- **LCE Studio (GUI)** — post-1.0 is fine; the CLI Doctor and the log
-  are enough for now.
-- **Per-fact legacy decay** — only if the soak data or a mechanic
-  demands it; nothing in the 0.9.0 plan needs fading legacies.
-- **MCM / radio audio** — both stay deferred past 1.0.0 (the INI
-  delivers tuning; captions deliver the radio; audio is an asset
-  question).
-- **Point releases, one at a time** — agreed: 0.8.1, 0.8.2, … each a
-  verifiable tag.
-
----
-
-## Canonical Copy
-
-This file is a snapshot. The Living Commonwealth Engine repo owns the
-living document — read it from `C:\LivingCommonwealthEngine\Docs\AdapterProject.md`,
-the single source of truth. When the core ships a new stone, that
-document grows first; re-sync this copy from it.
+keys are stable strings). The adapter owns the durable F4SE co-save
+record (stable type names, versioning): v7 currently, adding sections
+for bonds (v5), stall-keepers (v3), memory world-days (v4), conflict
+gates, and the co-save's additive components (Name, CapPouch, SpeciesTag,
+Pregnancy, BirthDay). Migration: old saves load forward; a future
+component is skipped, never fatal.

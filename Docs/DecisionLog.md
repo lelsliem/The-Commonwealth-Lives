@@ -1702,3 +1702,19 @@ the mod, nothing breaks.
   sees names in the log but no visible actors.
 - The stub is intentional: shipping untested pairing logic without
   the mod's FormIDs would be fragile.
+
+---
+
+## 0058 — 0.7.6–0.7.8 summary: the fight is real, children are born, pairing is code
+
+**Date:** 2026-08-13
+
+The 0.7.6–0.7.8 run closed three stones, all verified in-game:
+
+**0.7.6 — The kick is real.** The vanilla PairedFrontPushKick IDLE records carry conditions (raider-only, RaiderRootBehavior.hkx) and PlayIdle refuses them outside combat. The fix: generate our own unconditional ESP (TheLivingCommonwealthAnims.esp, 380 bytes) that clones the crowd mod's proven recipe — same subrecords, same animation file (MeleeBehavior.hkx), no conditions. Byte-verified against the crowd mod's ESP: all five subrecords (DNAM/ENAM/ANAM/DATA/GNAM) are identical. The adapter resolves it load-order-independent and plays it on the attacker. If the ESP is missing, the adapter falls back to the flinch — nothing crashes. Additionally: push force dropped 8→3 (the tip-over zone), the IsDown guard waits for actors to be on their feet before retaliation, and the stagger was tuned (stagger 2, pushback 25). The push/punch variety experiment was tested and reverted — the kick alone is the proven animation.
+
+**0.7.7 — Birth lifecycle.** The instant-birth model was replaced with a full journey: Pregnancy component (conception day, due day, parent IDs, co-save serialized), BirthDay component (child's birth stamp), growth (SpeciesTag upgrades Child→Human after sim.birth.childhood days), and a species gate (only Human×Human conceive). CheckBirths uses a two-pass approach (collect due mothers, then create children) to prevent iterator invalidation — the first crash on day 261 was RemoveComponent inside ForEachWithComponent. Dead-parent safety skips birth if either parent was destroyed. 9 children born in the first test, 14 more expecting.
+
+**0.7.8 — Visible children pairing.** Runtime PairVisibleChildren scans ProcessLists for HumanChildRace/GhoulChildRace actors, filters already-translated, collects sim-only children (Species::Child, no FormRef), and pairs greedily — one actor per child. Each paired child gets a FormRef + translator entry → walks, trades, bonds. The external mod (Baby Sim - Babies That Grow Up, Nexus 100934) is usable now — its child actors are found by race, not by FormID. Without the mod, the scan finds nothing and does nothing — graceful degradation via sim.birth.visible INI flag (default off). No patch ESP needed.
+
+**Engine needs:** zero new surface for all three stones. The adapter owns everything at the edge. The engine's existing API (CreateEntity, DestroyEntity, Remember, Update, GetComponent<Intent>, the EventBus, co-save) is sufficient.

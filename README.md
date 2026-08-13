@@ -4,29 +4,17 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.7.5-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.7.8-emerald.svg)](Docs/Roadmap.md)
 
-The settlers aren't on quest scripts — they're **hungry**, they **remember**
-where to trade, they walk to **their own settlement's market** when they're
-hungry, and the exchange is physical: caps change hands, the stall-keeper's
-purse grows, trust is earned. The market has **hours** — it closes at night
-and nobody walks to a closed bench — and the day's **weather** is
-remembered. The game does nothing but show the result.
+The settlers aren't on quest scripts — they're **hungry**, they **remember** where to trade, they walk to **their own settlement's market** when they're hungry, and the exchange is physical: caps change hands, the stall-keeper's purse grows, trust is earned. The market has **hours** — it closes at night and nobody walks to a closed bench — and the day's **weather** is remembered. They have **names**, they **argue**, they **fight**, they **bond**, and **children are born**. The game does nothing but show the result.
 
 > A settler goes to market because they are hungry — no script.
 
-That sentence is the test plan. In-game verified end to end: hungry
-settlers decide `MoveTo`, walk to the bench, arrive, trade, and the world
-survives save/load.
+That sentence is the test plan. In-game verified end to end: hungry settlers decide `MoveTo`, walk to the bench, arrive, trade, and the world survives save/load.
 
 ## Roadmap
 
-Where this project is and where it's going: `Docs/Roadmap.md`. Every stone
-through **0.7.5** is in and verified in-game (2026-08-12). The staged run
-to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.7.6 Fight bugs →
-0.7.7 Babies → 0.7.8 Baby & kid items → 0.7.9 bugs & polish → 0.8.0
-Illness & Medicine → 0.9.0 the release gate → 1.0.0 freeze and ship. The
-milestone stones so far:
+Where this project is and where it's going: `Docs/Roadmap.md`. Every stone through **0.7.8** is in and verified in-game (2026-08-13). The staged run to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.7.9 bugs & polish → 0.8.0 Illness & Medicine → 0.9.0 the release gate → 1.0.0 freeze and ship. The milestone stones so far:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -83,6 +71,19 @@ milestone stones so far:
   game's own subtitle queue as bottom-of-screen subtitles only when
   the player is close enough to hear (`sim.subtitle.radius`). Record
   **v7**.
+- **0.7.6** the kick is real — an unconditional IDLE clone
+  (`TheLivingCommonwealthAnims.esp`) delivers paired-push animation on
+  both beats; the fall tips instead of sliding; the IsDown guard waits
+  for actors to be on their feet before the retaliation.
+- **0.7.7** babies — the full birth lifecycle: conception → pregnancy
+  window → birth event → named child → fed by household → growth to
+  Human after `sim.birth.childhood` days. Only Human×Human pairs
+  conceive; the species gate enforces it. Co-save serialized.
+- **0.7.8** visible children — runtime pairing scans for child actors
+  from the external Baby Sim mod and connects them to sim-only children
+  after they grow. Graceful degradation when the mod is absent
+  (`sim.birth.visible`). The adapter owns the pairing; no patch ESP
+  needed.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
 releases published: `0.5.0-beta`, **`0.6.0`**, and **`0.7.0`**
@@ -118,111 +119,55 @@ src/               the plugin: main (lifecycle), Adapter (the world object),
                    durable record), Behaviour (species rules), Market
                    (census + seeding), Movement (the walk), SimRelevant
                    (the settler predicate), Tuning (the INI), WorldFacts
-                   (weather + market hours), Components, BlobCodec
+                   (weather + market hours), Components, BlobCodec,
+                   Birth (pregnancy/growth/pairing), Names (pools + role
+                   names), Dialogue (talk pools), Rows (verbal altercations),
+                   Gossip, Arcs (mediation + grief), Fights (physical
+                   escalation), Bonds (relationship states),
+                   ConflictGates (once-per-day fight/row gate),
+                   Households (shared wallet), Kin (family gate),
+                   Subtitles (on-screen fight lines)
 tests/             the adapter's test harness (links LCE.Core only, no game)
 Docs/              handoff doc, decisions, design, roadmap
 Depends/           local third-party clones — study/build inputs, not committed
 Build/             build output (gitignored)
 ```
 
-## Build
+## Building
 
-Requirements: xmake 3.0+, CMake 3.28+, Visual Studio 2022 (MSVC v143),
-and a checkout of the core at **0.5.0+** at `C:\LivingCommonwealthEngine`
-(override with the `LCE_CORE_PATH` environment variable; the build refuses
-a stale core with a clear message).
+```bash
+# one command — builds the DLL + the test harness
+xmake -y
 
-```bat
-xmake f -m debug
-xmake
-```
-
-The build does three things:
-
-1. Builds **CommonLibF4** from the local clone in `Depends/`.
-2. Builds **LCE.Core** with its own CMake into `Build/core` (the core repo's
-   own `Build/` is never touched).
-3. Links the plugin DLL.
-
-Output: `build/windows/x64/debug/TheLivingCommonwealth.dll`.
-
-## Run (in-game)
-
-1. Install **F4SE** and the **Address Library for F4SE** (the plugin uses
-   the address library; `F4SEPlugin_Version` declares runtime 1.11.221).
-2. Put `TheLivingCommonwealth.dll` in `Data/F4SE/Plugins/` (or install via
-   your mod manager).
-3. Launch through F4SE. The log is
-   `My Games/Fallout4/F4SE/TheLivingCommonwealth.log`. The first lines
-   prove which build ran:
-
-   ```
-   The Living Commonwealth v0.7.5.0
-   The Living Commonwealth v0.7.5.0 loaded (build 973b713).   ← the git short hash
-   ```
-
-   Then the world wakes and the sim lives:
-
-   ```
-   tuning: no config file (...) — defaults. Create it to change the sim's feel.
-   settlement census: 13 worldspaces, 28 workshops known (base 0xc1aeb) — markets are per settlement.
-   The Commonwealth wakes up: 11 settlers became minds.
-   settler 0001CA7D decides MoveTo -> 000250FE (0.20)
-   LCE: settler 0001CA7D sets up the stall at market 000250FE — trade begins when customers come.
-   LCE: settler 0001A4D7 trades with settler 0001CA7D at market 000250FE — fed, 5 caps change hands (38 left, 27 now).
-   co-save: writing 665 entities (169877 bytes).
-   co-save: read 665 entities, 1 stall-keepers — the world will be restored on load.
-   ```
-
-   Distances in walk probes are **game units** (`u`), not meters (200 u ≈ 2.8 m).
-
-## Tuning
-
-One text file next to the DLL, `Data\F4SE\Plugins\TheLivingCommonwealth.ini`.
-The template ships in this repo at `config/TheLivingCommonwealth.ini` — copy
-it alongside the DLL and edit to taste. Unknown keys are ignored; missing,
-empty, or unparsable values keep the default — a broken line never breaks the
-world.
-
-```ini
-; The Living Commonwealth tuning
-sim.memory.fade = 0.2        ; core key: memory fade rate
-sim.jitter = 0.15            ; core key: per-tick decay spread (0 = off)
-sim.hunger.decay = 0.002     ; a few meals a day instead of a constant stream
-sim.fatigue.decay = 0.002
-sim.safety.decay = 0.002
-sim.social.decay = 0.002
-sim.comfort.decay = 0.002
-sim.rest.recovery = 0.2      ; rest restores fatigue, safety, comfort (/s)
-sim.walk.cap = 16            ; how many settlers may walk at once
-sim.sale.warmth = 0.1        ; how much a stall-keeper warms to a customer
-sim.meal.price = 5           ; caps per meal (a broke buyer is still fed)
-market.open.hour = 8         ; the market's hours — closed at night
-market.close.hour = 20
-```
-
-The code's own built-in defaults are the *fast demo* (e.g. `sim.hunger.decay =
-0.1/s` — a meal every few seconds); the shipped template above is the
-living-Commonwealth rhythm — a few meals a day. The log prints every live
-value at launch (`tuning: loaded …` / `tuning: needs — hunger …`), so the
-banner always says which rhythm actually ran.
-
-## Test
-
-```bat
+# run the tests (no game required)
 xmake run TheLivingCommonwealth.Tests
 ```
 
-Runs the adapter's harness (translator tables, seeding, snapshot and
-co-save round-trips — including the stall-keepers section, the
-migration paths, plan builder, market decision, species rules, pouch
-economy, tuning, lifecycle, bonds, households, sleep cycle, names,
-rows, fights, dialogue, and the co-save v7 record) — links LCE.Core
-only, no game required. **23/23 suites green.**
+## Installing
+
+1. Build the DLL (or grab it from a release)
+2. Copy `TheLivingCommonwealth.dll` to your F4SE plugins folder
+   (`Data/F4SE/Plugins/`)
+3. Copy `config/TheLivingCommonwealth.ini` to the same folder
+4. For fights: enable `TheLivingCommonwealthAnims.esp` in your load order
+5. For visible children: install Baby Sim - Babies That Grow Up and set
+   `sim.birth.visible = 1` in the INI
+
+## INI tuning
+
+The `TheLivingCommonwealth.ini` file controls the simulation:
+
+- **Need decay rates**: `sim.hunger.decay`, `sim.fatigue.decay`, etc.
+- **Market hours**: `market.open.hour`, `market.close.hour`
+- **Fight tuning**: `sim.fight.chance`, `sim.fight.push`, `sim.fight.stagger`
+- **Birth lifecycle**: `sim.birth.enabled`, `sim.birth.chance`,
+  `sim.birth.gestation`, `sim.birth.childhood`, `sim.birth.visible`
+- **Name pools**: `names.first.male`, `names.first.female`,
+  `names.first.animal`, `names.last`
+- **Dialogue pools**: `dialogue.greet`, `dialogue.trade`, etc.
+
+Missing or broken lines keep defaults — a broken line never breaks the world.
 
 ## License
 
-GPL-3.0-or-later — the adapter links CommonLibF4 (GPL-3.0 with modding and
-linking exceptions). The core stays MIT. This split is deliberate and
-physical: the adapter lives in its own repo and never shares a tree with the
-core.
+GPL-3.0-or-later (it links CommonLibF4). The core it depends on is MIT.
