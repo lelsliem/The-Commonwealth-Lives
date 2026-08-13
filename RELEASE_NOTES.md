@@ -17,6 +17,28 @@ bench, arrive, trade, and the whole world survives save/load.
 
 ---
 
+## 0.8.0 — Illness & Medicine (2026-08-13)
+
+The Commonwealth gets sick — and the market becomes the cure.
+
+Every settler now carries **health**. A radstorm day, a bad meal, a
+wound from a fight, or the sick passing it to the healthy — four ways
+to fall ill. A sick mind holds at a reduced health while the sickness
+runs, tires faster and rests more, and **coughs** (the game's own
+coughing idle) so you can hear the outbreak. Untreated, a severe
+illness can end a mind — but death is rare and earned, not a meat
+grinder.
+
+**The market cures.** A sick settler with 25 caps buys medicine at the
+stall — the hold ends, recovery begins, and the seller's pouch grows.
+Broke sick settlers rest instead and ride out the illness honestly.
+The whole loop is verified in-game on a natural radstorm day: 73
+medicine buys, 0 deaths.
+
+Everything is tunable from the INI (`sim.illness.*`): contraction
+chances per vector, the hold window, recovery speed, severity growth,
+the medicine price, the cough cadence.
+
 ## 0.7.9 — Bugs & Polish (2026-08-13)
 
 The clean run into Illness. The full codebase audit — every INI default

@@ -45,9 +45,19 @@ namespace TLC::CoSave
             std::type_index Type;
         };
 
-        const std::array<TypeName, 9>& TypeNames()
+        // The table decides what rides the record — every component a
+        // mind carries must be named here or it silently never persists.
+        // The 2026-08-13 audit found three gaps: Pregnancy/BirthDay
+        // (0.7.7) and Health (0.8.0) were registered as serializers but
+        // never named, so an in-progress pregnancy and a mid-hold
+        // illness were both lost on save/load (CompanionTag was also
+        // missing, but it re-derives every second, so the co-save was
+        // never load-bearing for it). Additive: old records never
+        // contained these types, and an unknown name decodes as a
+        // graceful drop.
+        const std::array<TypeName, 13>& TypeNames()
         {
-            static const std::array<TypeName, 9> kTable{
+            static const std::array<TypeName, 13> kTable{
                 TypeName{ "needs", typeid(Needs) },
                 TypeName{ "memory", typeid(Memory) },
                 TypeName{ "relationships", typeid(Relationships) },
@@ -57,6 +67,10 @@ namespace TLC::CoSave
                 TypeName{ "species", typeid(SpeciesTag) },
                 TypeName{ "cappouch", typeid(CapPouch) },
                 TypeName{ "name", typeid(Name) },
+                TypeName{ "companion", typeid(CompanionTag) },
+                TypeName{ "birthday", typeid(BirthDay) },
+                TypeName{ "pregnancy", typeid(Pregnancy) },
+                TypeName{ "health", typeid(Health) },
             };
 
             return kTable;

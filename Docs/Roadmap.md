@@ -12,21 +12,23 @@ Project Roadmap
 
 Status
 
-Current Version : 0.8.0 — Illness & Medicine built and harness-verified
-                   2026-08-13. The 0.7.x run shipped (0.7.9 release live
-                   on GitHub; 0.7.0 as tag `0.7.0`, 0.6.0 as `0.6.0`,
-                   0.5.0 as `0.5.0-beta`). The 0.8.0 package ships once
-                   it is verified in-game.
+Current Version : 0.8.0 — Illness & Medicine complete and verified
+                   in-game 2026-08-13, pushed to GitHub. A natural
+                   radstorm day proved the whole chain: 73 medicine
+                   buys, 4 sick-but-broke resters, 0 deaths. The
+                   market-cure fix (retune + hunger counter-toll) is
+                   committed (`c3e837b`).
 
-Current Stage   : 0.8.0 built — Health component, four contraction
+Current Stage   : 0.8.0 shipped — Health component, four contraction
                    vectors (radstorm, food, wound, contagion), the
-                   hold-then-recover curve, the Fatigue toll, medicine
-                   as the trade stone's second good, and death at the
-                   bottom. 24/24 harness suites green.
+                   hold-then-recover curve, the Fatigue toll + hunger
+                   counter-toll, medicine as the trade stone's second
+                   good, death at the bottom. 24/24 harness suites
+                   green.
 
-Next Milestone  : 0.8.0 in-game verification, then the staged run to
-                   1.0.0 (Docs/Design/ReleasePlan.md):
-                   0.8.0 Illness & Medicine (in-game) →
+Next Milestone  : 0.8.1 — the illness field pass (below), then the
+                   staged run to 1.0.0 (Docs/Design/ReleasePlan.md):
+                   0.8.1 illness field pass →
                    0.9.0 the release gate (scale verified, docs) →
                    1.0.0 freeze and ship
 
@@ -311,6 +313,40 @@ STATUS: BUILT ✅ (harness-verified 2026-08-13) — in-game pending
     vector, defaults tuned so death is rare and earned
 [✓] IllnessTest — six stages (contract, hold/recover, fatal path,
     medicine, fatigue toll, child fragility); 24/24 suites green
+
+═══════════════════════════════════════════════
+
+0.8.1 — The Illness Field Pass
+
+═══════════════════════════════════════════════
+
+STATUS: IN PROGRESS — the co-save audit landed (2026-08-13)
+
+The seams the 0.8.0 in-game verification exposed, closed one at a
+time. Each item is a real field finding from the natural-radstorm
+test (2026-08-13) or a follow-on hardening pass.
+
+[✓] Mid-outbreak co-save — DONE, and it caught a real bug: Health
+    (0.8.0) and Pregnancy/BirthDay (0.7.7) were registered as
+    serializers but never named in the co-save's stable-name table, so
+    a mid-hold illness and an in-progress pregnancy were both lost on
+    save/load (CompanionTag too, harmless — it re-derives). All four
+    names now ride the record; MidOutbreakSaveTest locks the
+    round-trip. 25/25 suites green.
+[ ] Illness economy balance — now that the market cures, verify the
+    numbers hold in normal play: 25 caps per dose, the recovery
+    window, the medicine price vs typical pouch wealth. The day-12
+    test showed 73 buys — confirm the economy doesn't make illness a
+    non-event, and that the broke-rest path is the honest minority.
+[ ] The cough at outbreak scale — MTCoughing every 12 s per sick
+    mind is a flood in a settlement-wide outbreak; verify the rate-
+    limit holds and the tell stays audible without spamming.
+[ ] Illness news cadence — "X is ill" once per sickness is the
+    design, but a 50-sick outbreak must not swamp the radio; confirm
+    the announce set holds at scale.
+[ ] Wound vector sanity — an untreated wound is the only death that
+    should be earned; verify the 40 s rescue window reads right in
+    game (medicine still turns it around).
 
 ═══════════════════════════════════════════════
 

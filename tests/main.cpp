@@ -76,6 +76,7 @@ namespace TLC::Tests
     bool SocietyTest();
     bool KinTest();
     bool CoSaveV7Test();
+    bool MidOutbreakSaveTest();
     bool IllnessTest();
 }
 
@@ -129,6 +130,7 @@ int main()
     Run("SocietyTest", TLC::Tests::SocietyTest);
     Run("KinTest", TLC::Tests::KinTest);
     Run("CoSaveV7Test", TLC::Tests::CoSaveV7Test);
+    Run("MidOutbreakSaveTest", TLC::Tests::MidOutbreakSaveTest);
     Run("IllnessTest", TLC::Tests::IllnessTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
@@ -4553,6 +4555,116 @@ namespace TLC::Tests
         }
 
         return true;
+    }
+
+    bool MidOutbreakSaveTest()
+    {
+        // The mid-outbreak round-trip (0.8.1 hardening): a sickness
+        // caught mid-hold — kind, severity grown partway, the hold
+        // partially spent, health at the reduced amount — must survive
+        // a co-save capture/restore byte-exactly. The live save test
+        // (2026-08-13) showed the world restores; this locks the
+        // illness state itself.
+        EntityRegistry source;
+        RegisterAllSerializers(source);
+
+        const auto sick = source.CreateEntity();
+
+        source.AddComponent<FormRef>(sick, FormRef{ 0x0009B1DBu });
+        source.AddComponent<Name>(sick, Name{ "Bill Sutton" });
+        source.AddComponent<Health>(
+            sick, Health{
+                0.4f,   // holding
+                Sickness{
+                    SicknessKind::Radstorm,
+                    0.58f,      // severity grown partway (seed 0.3 + 0.28)
+                    42u,        // contracted day
+                    137.5f } }  // 162.5 s of the hold spent
+        );
+
+        // The 0.7.7 gap (the audit's second find): a pregnancy in
+        // progress must ride too — it was registered but never named, so
+        // an expecting couple lost the conception on save/load. Same
+        // round-trip, same exactness.
+        const auto expecting = source.CreateEntity();
+
+        source.AddComponent<FormRef>(expecting, FormRef{ 0x00048BA8u });
+        source.AddComponent<BirthDay>(expecting, BirthDay{ 91u });
+        source.AddComponent<Pregnancy>(
+            expecting, Pregnancy{
+                88u,                    // conception day
+                91u,                    // due day
+                0x00048B77u,            // parent A
+                0x00048BA9u } );        // parent B
+
+        const auto snapshot = source.Capture();
+        const auto record = TLC::CoSave::Encode(
+            snapshot, 0x5EEDull, {}, {}, {});
+
+        RegistrySnapshot decoded;
+        std::uint64_t rngState = 0;
+        std::vector<TLC::CoSave::StallKeeperPair> stalls;
+        std::vector<TLC::CoSave::BondPair> bonds;
+        std::vector<TLC::CoSave::ConflictGatePair> gates;
+
+        if (!TLC::CoSave::Decode(
+                record, decoded, rngState, stalls, bonds, gates))
+        {
+            return false;
+        }
+
+        EntityRegistry restored;
+        RegisterAllSerializers(restored);
+        restored.Restore(decoded);
+
+        bool found = false;
+        bool exact = false;
+
+        restored.ForEachWithComponent<Health>(
+            [&](EntityId a_entity, const Health& a_health)
+            {
+                const auto form = restored.GetComponent<FormRef>(a_entity);
+
+                if (form == nullptr || form->FormId != 0x0009B1DBu)
+                {
+                    return;
+                }
+
+                found = true;
+
+                exact = a_health.Value == 0.4f
+                    && a_health.Illness.Kind == SicknessKind::Radstorm
+                    && a_health.Illness.Severity == 0.58f
+                    && a_health.Illness.ContractedDay == 42u
+                    && a_health.Illness.Remaining == 137.5f;
+            });
+
+        bool pregFound = false;
+        bool pregExact = false;
+
+        restored.ForEachWithComponent<Pregnancy>(
+            [&](EntityId a_entity, const Pregnancy& a_preg)
+            {
+                const auto form = restored.GetComponent<FormRef>(a_entity);
+
+                if (form == nullptr || form->FormId != 0x00048BA8u)
+                {
+                    return;
+                }
+
+                pregFound = true;
+
+                const auto birthday = restored.GetComponent<BirthDay>(a_entity);
+
+                pregExact = a_preg.ConceptionDay == 88u
+                    && a_preg.DueDay == 91u
+                    && a_preg.ParentA == 0x00048B77u
+                    && a_preg.ParentB == 0x00048BA9u
+                    && birthday != nullptr
+                    && birthday->Day == 91u;
+            });
+
+        return found && exact && pregFound && pregExact;
     }
 
     bool IllnessTest()

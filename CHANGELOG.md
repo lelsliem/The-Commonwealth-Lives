@@ -9,6 +9,59 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.1 — the co-save audit (2026-08-13)
+
+The mid-outbreak round-trip test caught a real gap: the co-save's
+stable-name table (what rides the record) had not grown since the
+economy stone, so three components registered since then never
+persisted. **Pregnancy/BirthDay (0.7.7)** — an expecting couple lost
+the conception on save/load (the changelog's "co-save serialized"
+claim was false). **Health (0.8.0)** — a mid-hold illness was lost on
+save/load; the sick woke up well. **CompanionTag (0.7.5)** — never
+persisted, but harmless: it re-derives every second from the faction.
+The four stable names now ride (`companion`, `birthday`, `pregnancy`,
+`health`); additive, so old records decode unchanged and unknown names
+drop gracefully. `MidOutbreakSaveTest` locks the round-trip: a
+mid-hold radstorm sickness (value, kind, severity, day, remaining)
+and an in-progress pregnancy (conception, due, parents) restore
+exactly. 25/25 harness suites green.
+
+---
+
+## 0.8.0 — Illness & Medicine: the price of being in the wastes (2026-08-13)
+
+Life in the Commonwealth has a price beyond hunger. Every mind carries a
+**Health** component (co-save additive — a pre-0.8.0 save loads clean
+with full health): radstorms, shared food, wounds from fights, and the
+sick passing it to the healthy can all make a mind sick. Health drops to
+the hold level (0.4) while the sickness runs; severity grows untreated
+(children 2× faster); the sick tire faster and rest more — the visible
+cost is rest, not a stat. **Medicine is the trade stone's second good**:
+a sick mind at the market buys a dose (25 caps, out of the pouch or the
+household's shared wallet), the hold ends, recovery starts early. Broke
+sick minds rest instead — honest: sickness without caps means time, not
+treatment. An untreated, severity-capped illness drains toward death —
+rare, earned, and remembered: the settlement hears who died of
+sickness.
+
+- `c611852` 0.8.0 Illness & Medicine: Health component, four vectors,
+  hold-then-recover, medicine at the stall
+- `f766bc2` Log trims: session archive, probe gate, quiet walks
+- `9ca9e31` Contagion tuned 0.05 → 0.03
+- `c3e837b` **The market-cure fix**: retune + the hunger counter-toll
+
+**Verified in-game on a natural radstorm day:** 73 medicine buys, 4
+sick-but-broke resters, 0 deaths. The retuned curve is non-lethal for
+mild cases (radstorm, food, contagion recover; only an untreated wound
+crosses the death line late), the hunger counter-toll empties the sick
+mind's belly mid-hold so it walks to the market where the medicine
+lives, and the co-save restores a healthy world correctly. The
+108-death day-11 outbreak — the old INI's lethal defaults (0.01/s
+severity over a 120s hold) plus a fatigue coma that parked the sick at
+Rest — is gone.
+
+---
+
 ## 0.7.9 — bugs & polish (2026-08-13)
 
 The clean run into Illness. The codebase audit found **no bugs**: all INI

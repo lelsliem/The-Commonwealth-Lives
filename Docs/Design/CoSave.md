@@ -110,6 +110,19 @@ types cross them, so they are testable without the game (CoSaveTest).
   | `SpeciesTag` (adapter) | `species` |
   | `CapPouch` (adapter) | `cappouch` |
   | `Name` (adapter) | `name` |
+  | `CompanionTag` (adapter) | `companion` |
+  | `BirthDay` (adapter) | `birthday` |
+  | `Pregnancy` (adapter) | `pregnancy` |
+  | `Health` (adapter) | `health` |
+
+  The 2026-08-13 audit found the last four were registered as
+  serializers but never named, so they silently never rode the record:
+  an in-progress pregnancy (0.7.7) and a mid-hold illness (0.8.0) were
+  both lost on save/load, and a CompanionTag (0.7.5) never persisted
+  (harmless — it re-derives every second from the faction). Naming them
+  is additive: old records never contained these types, and an unknown
+  name decodes as a graceful drop. `MidOutbreakSaveTest` locks the
+  round-trip.
 
   The `name` component is additive — it never bumps the record version
   (a new component type is self-describing; an old record simply decodes
