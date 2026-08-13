@@ -69,7 +69,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.7.6 | Fight-feel bug pass | ✅ verified in-game (2026-08-13) |
 | 0.7.7 | Babies | ✅ verified in-game (2026-08-13) |
 | 0.7.8 | Visible children pairing | ✅ verified in-game (2026-08-13) |
-| 0.7.9 | Bugs & polish | 🔲 planned |
+| 0.7.9 | Bugs & polish | ✅ complete (2026-08-13) |
 | 0.8.0 | Illness & Medicine | 🔲 design complete (Illness.md) |
 | 0.9.0 | Release gate | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |

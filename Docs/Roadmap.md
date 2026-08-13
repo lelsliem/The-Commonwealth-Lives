@@ -12,21 +12,17 @@ Project Roadmap
 
 Status
 
-Current Version : 0.7.8 — Birth lifecycle + visible-children pairing
-                   verified in-game 2026-08-13. The 0.7.x run ships
+Current Version : 0.7.9 — bugs & polish complete, codebase
+                   release-ready 2026-08-13. The 0.7.x run ships
                    local only — no release package until 0.8.0
                    (0.7.0 shipped as tag `0.7.0` 2026-08-11, 0.6.0 as
                    `0.6.0`, 0.5.0 as `0.5.0-beta`)
 
-Current Stage   : 0.7.8 verified — birth lifecycle (pregnancy,
-                   gestation, birth, growth) and runtime visible-children
-                   pairing (the adapter scans for child actors from the
-                   external baby mod and pairs sim-only children after
-                   they grow; graceful degradation when the mod is
-                   absent). Species gate: only Human×Human conceive.
-                   23/23 harness suites green.
+Current Stage   : 0.7.9 verified — the codebase audit found no bugs,
+                   all INI defaults match code, all comments accurate,
+                   docs consistent. 23/23 harness suites green.
 
-Next Milestone  : 0.7.9 — bugs & polish, then the staged run to 1.0.0
+Next Milestone  : 0.8.0 — Illness & Medicine, then the staged run to 1.0.0
                    (Docs/Design/ReleasePlan.md):
                    0.7.9 Bugs & polish → 0.8.0 Illness & Medicine →
                    0.9.0 the release gate (scale verified, docs) →
@@ -268,16 +264,17 @@ STATUS: COMPLETE ✅ (verified in-game 2026-08-13)
 [✓] External mod: Baby Sim - Babies That Grow Up (Nexus 100934)
     — usable now, editable on permission
 
+═══════════════════════════════════════════════0.7.9 — Bugs & Polish
 ═══════════════════════════════════════════════
 
-0.7.9 — Bugs & Polish
+STATUS: COMPLETE ✅ (verified 2026-08-13)
 
-═══════════════════════════════════════════════
-
-STATUS: PLANNED
-
-The clean run into Illness — every stone's field feedback folded in,
-docs reconciled, perf sanity at scale.
+[✓] Codebase audit — no bugs, no stale TODOs, all INI defaults
+    match code, all comments reference correct versions
+[✓] Version bump — xmake.lua updated to 0.7.9
+[✓] Docs sweep — Roadmap, README, AdapterProject, DecisionLog
+    all consistent and up to date
+[✓] 23/23 harness suites green, build clean
 
 ═══════════════════════════════════════════════
 

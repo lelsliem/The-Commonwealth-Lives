@@ -1718,3 +1718,29 @@ The 0.7.6–0.7.8 run closed three stones, all verified in-game:
 **0.7.8 — Visible children pairing.** Runtime PairVisibleChildren scans ProcessLists for HumanChildRace/GhoulChildRace actors, filters already-translated, collects sim-only children (Species::Child, no FormRef), and pairs greedily — one actor per child. Each paired child gets a FormRef + translator entry → walks, trades, bonds. The external mod (Baby Sim - Babies That Grow Up, Nexus 100934) is usable now — its child actors are found by race, not by FormID. Without the mod, the scan finds nothing and does nothing — graceful degradation via sim.birth.visible INI flag (default off). No patch ESP needed.
 
 **Engine needs:** zero new surface for all three stones. The adapter owns everything at the edge. The engine's existing API (CreateEntity, DestroyEntity, Remember, Update, GetComponent<Intent>, the EventBus, co-save) is sufficient.
+
+---
+
+## 0059 — 0.7.9: bugs & polish (2026-08-13)
+
+**Date:** 2026-08-13
+
+A clean-up pass over every stone's field feedback. The audit found:
+
+1. **No bugs.** The codebase is clean — no TODO/FIXME/HACK markers
+   beyond the CoSave UID placeholder (a release-time concern). All INI
+   defaults match the code. All comments reference correct versions.
+2. **Version bump.** xmake.lua version updated 0.7.0 → 0.7.9. The
+   banner stamps the git hash, so the log always names the DLL that ran.
+3. **Docs sweep.** Roadmap, README, AdapterProject, and DecisionLog
+   all updated to reflect 0.7.8 as the current verified state. The
+   status table, feature descriptions, and ADR entries are consistent.
+4. **INI is clean.** All comments reference correct version numbers and
+   document what each key does. No stale fight.style or removed keys.
+5. **Source comments are accurate.** Historical references ("0.7.5 field
+   find", "0.7.6 ADR-0051") document when fixes landed — correct and
+   useful. No stale "parked" or "deferred" items that are now done.
+6. **23/23 suites green**, build clean, no warnings.
+
+The codebase is release-ready for 0.7.9. The next milestone is 0.8.0
+(Illness & Medicine).

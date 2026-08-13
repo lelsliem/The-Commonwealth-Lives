@@ -4,7 +4,7 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.7.8-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.7.9-emerald.svg)](Docs/Roadmap.md)
 
 The settlers aren't on quest scripts — they're **hungry**, they **remember** where to trade, they walk to **their own settlement's market** when they're hungry, and the exchange is physical: caps change hands, the stall-keeper's purse grows, trust is earned. The market has **hours** — it closes at night and nobody walks to a closed bench — and the day's **weather** is remembered. They have **names**, they **argue**, they **fight**, they **bond**, and **children are born**. The game does nothing but show the result.
 
