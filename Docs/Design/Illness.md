@@ -88,6 +88,14 @@ and no illness; the component is back-filled on restore.
   Fatigue decay by `sim.illness.fatigueMult` (default 2×) — the sick
   mind tires faster, `Decide` produces Rest more often, and the mind
   slows. That is the visible cost: *a sick settler rests.*
+- **The hunger counter-toll:** the same multiplier shape scales Hunger
+  decay by `sim.illness.hungerMult` (default 2×). The sick empty their
+  bellies faster too, so within the hold they get hungry enough to
+  decide MoveTo — the walk to the market where the medicine lives.
+  Without it, the 2× fatigue toll alone parked the sick at Rest/
+  Explore and the medicine branch never fired (the 2026-08-13 finding:
+  108 died of sickness, zero medicine buys — a day-11 radstorm plus
+  the old lethal severity rate).
 - **Recovering:** when `Remaining` reaches zero (or medicine is taken),
   the hold ends and `Value` climbs at `sim.illness.recovery` (default
   0.05/s) until 1.0. The Fatigue multiplier eases off as health
@@ -103,7 +111,7 @@ and no illness; the component is back-filled on restore.
 | Vector | The read | Tunable |
 |---|---|---|
 | **Radstorm** | A remembered WeatherRadstorm day — exposure rolls per mind that day | `sim.illness.radstormChance` |
-| **Bad food / water** | The market's food quality (a future Trade good); dirty meals | `sim.illness.foodChance` |
+| **Bad food / water** | The market's stores — the arrival meal itself rolls it (the meal that restores Hunger also rolls the food chance) | `sim.illness.foodChance` |
 | **Wounds** | A Combat outcome (0.7.3 Fights) — a fight can infect | `sim.illness.woundChance` |
 | **Contagion** | Proximity to a sick mind — the settlement Groups already exist; the sick echo outward | `sim.illness.contagionChance` |
 
@@ -167,14 +175,15 @@ player hears. Reuses News/captions — nothing new to build.
 ```
 sim.illness.hold = 0.4          ; health while ill
 sim.illness.fatigueMult = 2.0   ; how much faster the sick tire
+sim.illness.hungerMult = 2.0    ; how much faster the sick get hungry
 sim.illness.recovery = 0.05     ; health per second after the hold
-sim.illness.duration = 120      ; the hold window, sim seconds
+sim.illness.duration = 300      ; the hold window, sim seconds
 sim.illness.radstormChance = 0.3
 sim.illness.foodChance = 0.1
 sim.illness.woundChance = 0.15
-sim.illness.contagionChance = 0.05
+sim.illness.contagionChance = 0.03
 sim.illness.medicinePrice = 25  ; caps; 0 = no medicine anywhere
-sim.illness.severityRate = 0.01 ; severity growth per second untreated
+sim.illness.severityRate = 0.002 ; severity growth per second untreated
 sim.illness.childMult = 2.0     ; children fall sicker, faster
 ```
 
@@ -188,6 +197,8 @@ sim.illness.childMult = 2.0     ; children fall sicker, faster
   walks normally again.
 - **Medicine:** a sick mind with caps buys at the stall — caps leave
   the pouch, recovery starts early; a broke sick mind rests instead.
+  The hunger counter-toll is what gets a sick mind to the market at
+  all (the 2026-08-13 fix).
 - **Death:** untreated severe sickness books a death, gossips, and
   never restores.
 - **Co-save:** save mid-illness, reload — the sick mind is still sick,

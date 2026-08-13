@@ -31,12 +31,25 @@ namespace TLC
         // 2.0 = twice as fast — the visible cost is rest, not a stat.
         float FatigueMult = 2.0f;
 
+        // How much faster the sick get hungry: Hunger decay × this
+        // while ill. The counter to the fatigue coma: a sick mind tires
+        // faster *and* empties its belly faster, so within the hold it
+        // gets hungry enough to walk to the market — where the medicine
+        // lives. Without it, the 2× fatigue toll parked the sick at
+        // Rest/Explore and the market-cure branch never fired (the
+        // 2026-08-13 finding: 108 deaths, zero medicine buys).
+        float HungerMult = 2.0f;
+
         // Health per second once the hold ends (recovery starts).
         float Recovery = 0.05f;
 
         // The hold window, sim seconds. Long enough to feel like an
-        // illness; short enough to watch a full cycle in a session.
-        float Duration = 120.0f;
+        // illness and to span a meal cycle (so the sick get hungry
+        // mid-hold and can seek the market); short enough that a full
+        // cycle is watchable in a session. 300 s = the tuned length —
+        // at the default 0.002/s hunger decay × the 2× toll, hunger
+        // empties at 250 s, mid-hold.
+        float Duration = 300.0f;
 
         // Contraction chances, per vector. Radstorms expose per radstorm
         // day; food and wounds roll at the event; contagion spreads from
@@ -55,8 +68,15 @@ namespace TLC
         float MedicinePrice = 25.0f;
 
         // Severity growth per second while untreated. Severity drives
-        // the fatigue toll's ease-off and, at the top, death.
-        float SeverityRate = 0.01f;
+        // the fatigue toll's ease-off and, at the top, death. 0.002 is
+        // the tuned rate: over the 300 s hold it grows 0.6, so the
+        // mild vectors (radstorm 0.3, contagion 0.25, food 0.2) stay
+        // under the death line and recover, while a wound (0.5) crosses
+        // it late — the death that must be earned. The old 0.01/s was
+        // lethal for everyone (1.2 growth > any seed ≥ −0.2): the
+        // 2026-08-13 day-11 outbreak killed 108 of the 96+ who fell
+        // ill.
+        float SeverityRate = 0.002f;
 
         // Children are more fragile: their severity grows this many
         // times faster.
@@ -193,6 +213,32 @@ namespace TLC
             1.0f - healthFraction, 0.0f, 1.0f);
 
         return 1.0f + (a_settings.FatigueMult - 1.0f) * eased;
+    }
+
+    //-------------------------------------------------------------------------
+    // HungerMultiplier — the counter to the fatigue coma (the 2026-08-13
+    // finding: the 2× fatigue toll parked the sick at Rest/Explore, so no
+    // sick mind ever reached the market — 108 died, zero medicine buys).
+    // The sick empty their bellies faster too, so within the hold they get
+    // hungry enough to decide MoveTo — the walk to the market where the
+    // medicine lives. Same shape as FatigueMultiplier: 1.0 when well,
+    // HungerMult while ill, easing off as health recovers.
+    //-------------------------------------------------------------------------
+    inline float HungerMultiplier(
+        const Health& a_health, const IllnessSettings& a_settings)
+    {
+        if (a_health.Illness.Kind == SicknessKind::None)
+        {
+            return 1.0f;
+        }
+
+        const auto healthFraction =
+            (a_health.Value - a_settings.Hold) / (1.0f - a_settings.Hold);
+
+        const auto eased = std::clamp(
+            1.0f - healthFraction, 0.0f, 1.0f);
+
+        return 1.0f + (a_settings.HungerMult - 1.0f) * eased;
     }
 
     //-------------------------------------------------------------------------

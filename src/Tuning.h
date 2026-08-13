@@ -491,6 +491,8 @@ namespace TLC::Tuning
             read("sim.illness.hold", settings.Illness.Hold);
         settings.Illness.FatigueMult =
             read("sim.illness.fatigueMult", settings.Illness.FatigueMult);
+        settings.Illness.HungerMult =
+            read("sim.illness.hungerMult", settings.Illness.HungerMult);
         settings.Illness.Recovery =
             read("sim.illness.recovery", settings.Illness.Recovery);
         settings.Illness.Duration =

@@ -4516,6 +4516,29 @@ namespace TLC
                     MindLabelForm(formId), previous);
             }
         }
+
+        // The illness stone's food vector (0.8.0): the settlement's
+        // stores are not always clean — the meal itself rolls the food
+        // chance. A mild vector (seed 0.2): over the tuned hold it stays
+        // under the death line, so a bad meal is a nasty cold, not a
+        // death sentence.
+        if (m_Settings.IllnessEnabled
+            && m_Settings.Illness.FoodChance > 0.0f)
+        {
+            const auto foodRoll = m_Rng.NextFloat(0.0f, 1.0f);
+            auto eaterHealth = m_Registry.GetComponent<Health>(a_entity);
+
+            if (eaterHealth
+                && TLC::Contract(
+                    *eaterHealth, SicknessKind::Food, 0.2f, CurrentDay(),
+                    m_Settings.Illness,
+                    m_Settings.Illness.FoodChance, foodRoll))
+            {
+                REX::INFO(
+                    "illness: {} took ill from the settlement's stores.",
+                    MindLabelForm(formId));
+            }
+        }
     }
 
     void Adapter::SeedMarket(bool a_announce)
@@ -5077,6 +5100,32 @@ namespace TLC
                             {
                                 need.Value -= need.DecayRate
                                     * (mult - 1.0f) * a_deltaSeconds;
+                            }
+                        }
+                    }
+                }
+
+                // The counter to the fatigue coma (0.8.0 fix): the sick
+                // empty their bellies faster too — Hunger decays at the
+                // multiplied rate. Within the hold they get hungry enough
+                // to decide MoveTo, so the walk to the market (and the
+                // medicine) actually happens. Without it, the 2× fatigue
+                // toll parked the sick at Rest/Explore and the medicine
+                // branch never fired (the 2026-08-13 finding: 108 died,
+                // zero medicine buys).
+                const auto hungerMult =
+                    HungerMultiplier(a_health, m_Settings.Illness);
+
+                if (hungerMult > 1.0f)
+                {
+                    if (auto needs = m_Registry.GetComponent<Needs>(a_entity))
+                    {
+                        for (auto& need : needs->List)
+                        {
+                            if (need.Type == NeedType::Hunger)
+                            {
+                                need.Value -= need.DecayRate
+                                    * (hungerMult - 1.0f) * a_deltaSeconds;
                             }
                         }
                     }
