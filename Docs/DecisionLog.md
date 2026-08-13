@@ -1587,3 +1587,51 @@ load-order independent via TESDataHandler::LookupFormID and plays it on
 the attacker — the kick finally plays, on the first shove AND the
 retaliation, and the receipt flips to "paired push". Missing ESP falls
 back to the vanilla pair, then the flinch — nothing crashes.
+
+### ADR-0053 — The save "CTD" was post-save, not the co-save
+
+**Date:** 2026-08-12
+
+**Symptom:** Saving during the 0.7.5 fight loop crashed to desktop; the
+co-save hook's "writing 635 entities..." line was the log's last line, so
+the serialization path looked guilty.
+
+**Forensics (not speculation — files, not logs):** the Windows event log
+had no Fallout crash entry; the F4SE log's last line was "cleared save
+path", which is F4SE's *final* save-phase line — the plugin callbacks,
+event registrations, persistent storage, and delay functor all wrote
+first. The produced files prove it: Save508's .f4se sidecar is 276,495
+bytes (our 275,437-byte co-save record + ~1KB of F4SE overhead, exactly
+right) and the .fos is a full 17.25MB with a valid FO4_SAVEGAMEk header
+and a footer identical to the previous good save. **The save completed;
+the crash landed after it — in the game's post-save work, the known
+vanilla crash class when saving mid-knockdown/ragdoll.** The fight loop
+leaves actors falling/getting up at the exact moment of the save.
+
+**Decision:** the co-save is exonerated; no serialization change. The
+player-facing rule is "don't save mid-fight" — the game itself can crash
+writing an actor that is mid-ragdoll, and no plugin code runs there. The
+fight-feel fixes (0.7.6) aim to shorten the knockdown window, which
+narrows the exposure too. If a save-mid-fight crash reappears *outside*
+the fight loop, reopen this ADR.
+
+### ADR-0054 — The kick's ESP must be in the load order
+
+**Date:** 2026-08-12
+
+**Root cause of "one kick, then ghost pushes":** the ESP was never
+enabled. The profile's plugins.txt (23:17) lists only
+*Baby Sim - Babies That Grow Up.esp; TheLivingCommonwealthAnims.esp sat
+in the mod folder but was never added to the load order, so PlayIdle
+resolved nothing and every beat fell back to the flinch — the "kick"
+was the stagger flinch, and the "ghost pushes" were the knock impulse
+(sim.fight.push = 5 in the player's INI, above the 0.7.6 default of 3)
+sliding actors without any visible push. The ESP itself is
+byte-identical to the crowd mod's proven record (all five subrecords —
+DNAM/ENAM/ANAM/DATA/GNAM — SAME), verified against PushAwayCompanions.esp
+before install.
+
+**Action:** the player refreshes MO2, adds TheLivingCommonwealthAnims.esp
+to the load order, and re-runs the force-fight loop — the receipt should
+read "paired push" and a real kick plays on both beats for the first
+time.
