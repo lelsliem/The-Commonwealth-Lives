@@ -5198,6 +5198,24 @@ namespace TLC
                 MindLabelForm(formId));
 
             PushNews(MindLabelForm(formId) + " died of sickness.");
+
+            // The body (0.8.1 field pass): sickness must actually take
+            // the body — the game actor dies (the corpse appears; the
+            // 0.8.2 burial stone disposes of it later). This is the one
+            // death the adapter causes itself — a player kill or a
+            // raider's already put the actor down, but illness never
+            // touched the actor, so the mind died and the body walked
+            // on, re-entered the sim, and "died of sickness" again
+            // minutes later (the 2026-08-13 outbreak: four children
+            // booked dead, then each caught it again within seconds of
+            // their own death). Self as attacker, lethal damage — no
+            // one to blame, the settlement stays calm.
+            if (auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(formId))
+            {
+                actor->KillImpl(actor, 9999.0f, true, false);
+            }
+
             RemoveMind(formId, true);
         }
 

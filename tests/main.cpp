@@ -4889,6 +4889,76 @@ namespace TLC::Tests
             }
         }
 
+        //-------------------------------------------------------------------------
+        // 7. The 0.8.1 field finding — fragility must not be a death
+        //    sentence. A child's common vectors (radstorm, contagion,
+        //    food at the shipped seeds) run the full hold and recover
+        //    by rest alone; only a wound crosses the death line. At
+        //    ChildMult 2.0 every untreated childhood illness was fatal
+        //    (any seed ≥ 0.2 reached the cap inside the hold) while
+        //    children can't reach the market's medicine — four children
+        //    "died" in one outbreak, then re-entered and caught it
+        //    again. The tuned default must make the common cold a
+        //    child's recovery, and the wound its earned death.
+        {
+            // A contagion-child (seed 0.25): the whole hold, no
+            // medicine — recover, never die.
+            Health child;
+            Contract(
+                child, SicknessKind::Contagion, 0.25f, 100,
+                settings, 1.0f, 0.0f);
+
+            auto state = 0;
+
+            // Run the full hold plus the recovery climb (health needs
+            // (1 - Hold) / Recovery ≈ 12 s to return once the hold
+            // ends) — the child must come out whole.
+            const auto maxT = settings.Duration + 60.0f;
+
+            for (auto t = 0.0f; t < maxT; t += 10.0f)
+            {
+                state = TickIllness(child, 10.0f, settings, true);
+
+                if (state == 2)
+                {
+                    return false;   // a common cold must not kill a child
+                }
+
+                if (state == 0)
+                {
+                    break;          // recovered
+                }
+            }
+
+            if (state != 0 || child.Illness.Kind != SicknessKind::None)
+            {
+                return false;
+            }
+
+            // A wound-child (seed 0.5): the earned death — it crosses
+            // the line late and drains.
+            Health wounded;
+            Contract(
+                wounded, SicknessKind::Wound, 0.5f, 100,
+                settings, 1.0f, 0.0f);
+
+            auto died = false;
+
+            for (auto t = 0.0f; t < settings.Duration * 1.5f; t += 10.0f)
+            {
+                if (TickIllness(wounded, 10.0f, settings, true) == 2)
+                {
+                    died = true;
+                    break;
+                }
+            }
+
+            if (!died)
+            {
+                return false;   // a wound is the child's earned death
+            }
+        }
+
         return true;
     }
 

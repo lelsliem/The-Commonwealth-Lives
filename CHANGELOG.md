@@ -30,6 +30,33 @@ outbreak is one story, not a wall of sound and a wall of names.
 - Both are new INI keys + IllnessSettings fields; the code defaults
   match the INI. 26/26 harness suites green.
 
+### 0.8.1 — the field finding: sickness takes the body, and children survive the cold (2026-08-13)
+
+Watching the first full-load-order outbreak (day 12, 179 cases, 51
+medicine buys) caught two real bugs:
+
+- **Sickness never took the body.** The illness death booked the sim
+  death but never killed the game actor — a player kill or a raider's
+  already puts the actor down, but illness is the one death the
+  adapter causes itself. The mind died, the body walked on,
+  re-entered the sim, and "died of sickness" again minutes later
+  (four booked deaths, each caught it again within seconds of its
+  own). The illness death now kills the actor — self as attacker,
+  lethal damage, no one to blame — so the corpse appears (the 0.8.2
+  burial stone disposes of it later) and the dead stay dead.
+- **Child fragility was a death sentence.** At `childMult 2.0` every
+  untreated childhood illness was fatal — any seed ≥ 0.2 crossed the
+  death line inside the hold (a child's radstorm: 0.3 + 0.004×300 =
+  1.5) — and children can't reach the market's medicine (no pouch,
+  no walk). All four of today's deaths were children, at the exact
+  contagion-child curve (0.25 + 0.004×227 = 1.16). Retuned to
+  **1.1**: the common vectors stay under the line (radstorm 0.96,
+  contagion 0.91, food 0.86) so rest cures them; only a wound
+  crosses it (1.16), and a child can't earn a wound in a brawl.
+  Childhood death is effectively gone — death stays rare and earned.
+  IllnessTest stage 7 locks the property: a contagion-child runs the
+  hold and recovers; a wound-child earns its death.
+
 ## 0.8.1 — the co-save audit (2026-08-13)
 
 The mid-outbreak round-trip test caught a real gap: the co-save's

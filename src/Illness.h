@@ -79,8 +79,17 @@ namespace TLC
         float SeverityRate = 0.002f;
 
         // Children are more fragile: their severity grows this many
-        // times faster.
-        float ChildMult = 2.0f;
+        // times faster. 1.1 (0.8.1 field pass) is the tuned value: at
+        // 2.0 every untreated childhood illness was fatal — any seed ≥
+        // 0.2 crosses the death line inside the hold (a child's
+        // radstorm: 0.3 + 0.004×300 = 1.5) and children can't reach
+        // the market's medicine (no pouch, no walk — the 0.8.3 family
+        // stone will give them a path). At 1.1 the common vectors stay
+        // under the line (radstorm 0.96, contagion 0.91, food 0.86) so
+        // rest cures them; only a wound crosses it (1.16), and a
+        // child can't earn a wound in a brawl — childhood death is
+        // effectively gone, which is the point: death rare and earned.
+        float ChildMult = 1.1f;
 
         // Severity at or above this while untreated can end a mind.
         float DeathSeverity = 1.0f;

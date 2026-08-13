@@ -184,7 +184,8 @@ sim.illness.woundChance = 0.15
 sim.illness.contagionChance = 0.03
 sim.illness.medicinePrice = 25  ; caps; 0 = no medicine anywhere
 sim.illness.severityRate = 0.002 ; severity growth per second untreated
-sim.illness.childMult = 2.0     ; children fall sicker, faster
+sim.illness.childMult = 1.1     ; children a touch sicker — rest still
+                                ; cures the cold (0.8.1 retune)
 sim.illness.coughInterval = 12  ; the per-mind cough tell, seconds
 sim.illness.coughGlobal = 4     ; one cough anywhere per window (0.8.1)
 sim.illness.newsMax = 4         ; "X is ill" names per news window (0.8.1)
@@ -211,6 +212,27 @@ two ways a settlement-wide sickness floods the player's senses.
 
 Both are pure pacing — no new mechanics, no engine surface, both
 INI-tunable (0 disables).
+
+### The second finding — the body and the children (0.8.1)
+
+The same outbreak exposed two deeper flaws, both fixed:
+
+1. **Sickness now takes the body.** The illness death booked the sim
+   death but never killed the game actor — the one death the adapter
+   causes itself (a player kill or a raider's already puts the actor
+   down). The mind died, the body walked on, re-entered the sim, and
+   "died" again minutes later. The death now kills the actor (self as
+   attacker — no one to blame, the settlement stays calm), the corpse
+   appears, and the 0.8.2 burial stone disposes of it later.
+2. **Child fragility retuned to 1.1.** At 2.0 every untreated
+   childhood illness was fatal (any seed ≥ 0.2 crossed the death line
+   inside the hold — a child's radstorm reaches 1.5) while children
+   can't reach the medicine (no pouch, no market walk — the 0.8.3
+   family-care stone gives them a path later). At 1.1 the common
+   vectors recover by rest (radstorm 0.96, contagion 0.91, food
+   0.86); only a wound crosses the line, and a child can't earn one
+   in a brawl. Childhood death is effectively gone — death stays
+   rare and earned. IllnessTest stage 7 locks both halves.
 
 ## Verification
 

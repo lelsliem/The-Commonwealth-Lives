@@ -326,9 +326,9 @@ STATUS: BUILT ✅ (harness-verified 2026-08-13) — in-game pending
 
 ═══════════════════════════════════════════════
 
-STATUS: IN PROGRESS — the co-save audit, the cough gate, and the
-radio pacing landed (2026-08-13); the balance and the wound window
-wait on an in-game session.
+STATUS: IN PROGRESS — the co-save audit, the cough gate, the radio
+pacing, the illness kill, and the child retune landed (2026-08-13);
+the balance and the wound window wait on an in-game session.
 
 [✓] Mid-outbreak co-save — DONE, and it caught a real bug: Health
     (0.8.0) and Pregnancy/BirthDay (0.7.7) were registered as
@@ -352,6 +352,18 @@ wait on an in-game session.
     feed at once. Burst pacing (`sim.illness.newsMax` 4 per
     `newsInterval` 10 s) lets an outbreak unfold as a radio story;
     each mind still announces exactly once.
+[✓] Sickness takes the body — DONE: the illness death booked the
+    sim death but never killed the game actor (the one death the
+    adapter causes itself), so the mind died and the body walked on,
+    re-entered, and died again. The death now kills the actor (self-
+    attacker, lethal) — the corpse appears (0.8.2 buries it), the
+    dead stay dead.
+[✓] Child fragility retuned — DONE: at childMult 2.0 every untreated
+    childhood illness was fatal (any seed ≥ 0.2 crossed the line in
+    the hold) and children can't buy medicine — all four outbreak
+    deaths were children. Retuned to 1.1: rest cures the common
+    vectors; only a wound (unreachable by a child in a brawl) is
+    fatal. IllnessTest stage 7 locks it.
 [ ] Wound vector sanity — an untreated wound is the only death that
     should be earned; verify the 40 s rescue window reads right in
     game (medicine still turns it around).
