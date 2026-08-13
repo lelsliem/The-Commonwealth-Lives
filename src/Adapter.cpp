@@ -1110,9 +1110,9 @@ namespace TLC
         }
 
         REX::INFO(
-            "illness: the market day turns — {} shelf{} refill{} to full stock.",
+            "illness: the market day turns — {} {} refill{} to full stock.",
             m_MedicineStock.size(),
-            m_MedicineStock.size() == 1 ? "" : "s",
+            m_MedicineStock.size() == 1 ? "shelf" : "shelves",
             m_MedicineStock.size() == 1 ? "s" : "");
     }
 
