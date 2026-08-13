@@ -137,6 +137,34 @@ trade: Jun Long returns from Starlight with food for the settlement.
 
 ---
 
+## Reconciliation — the engine's Roads sample (2026-08-13)
+
+The engine's 0.8.3 Roads sample (SAMPLE 10) proved a better model
+for the connective layer than this doc's simple blocked-road gate:
+**a road is a LegacyStore fact — its Weight IS its condition.**
+Traffic maintains the road it travels (LeaveLegacy with a higher
+weight), weather and neglect wear every road (the world's own tick),
+caravans read the books and prefer the best-maintained route, and a
+wrecked road is eventually forgotten from the world's books.
+
+What this changes in this design, at audit time:
+
+1. **Routes are legacy facts, not a gate flag.** Each settlement-pair
+   road (`road:<a>:<b>`) is a fact whose weight is its condition;
+   the courier's pick weighs condition against distance instead of a
+   binary "blocked or not."
+2. **The caravan maintains the road it walks.** The courier's arrival
+   re-pushes the route's weight higher — traffic is love, and the
+   road remembers it. A neglected settlement's road decays; a busy
+   one's stays open.
+3. **Weather wears every road** (the world's tick decays weights) —
+   the radstorm that already keeps people in also roughens the roads
+   that night.
+4. **Zero new engine surface stands** — the adapter already owns
+   LeaveLegacy/ReadLegacy (0.7.0 death legacies); a road is just
+   another legacy fact. Same ledger, same courier, same audit
+   decision — this section is the shape it should take if taken.
+
 ## The build decision
 
 This stone is **designed and ready, not scheduled**. The 0.8.6a
