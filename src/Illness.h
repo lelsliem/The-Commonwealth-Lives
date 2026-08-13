@@ -40,11 +40,15 @@ namespace TLC
 
         // Contraction chances, per vector. Radstorms expose per radstorm
         // day; food and wounds roll at the event; contagion spreads from
-        // the sick to their settlement at this rate per second.
+        // the sick to their settlement at this rate per second. 0.05
+        // turned a settlement over in under a minute (the 2026-08-13
+        // day-11 outbreak: 43 new cases in ~45 s); 0.03 is the tuned
+        // middle — a visible outbreak that still takes a day, not a
+        // minute, to run through a settlement.
         float RadstormChance = 0.3f;
         float FoodChance = 0.1f;
         float WoundChance = 0.15f;
-        float ContagionChance = 0.05f;
+        float ContagionChance = 0.03f;
 
         // Caps for a dose of medicine at the stall. 0 = no medicine
         // anywhere — a sick settlement suffers honestly.
