@@ -65,6 +65,12 @@ namespace TLC
         // death. The window between the cap and the end is the rescue
         // window — medicine or rest can still turn it around.
         float DeathDrain = 0.01f;
+
+        // The cough (0.8.0 polish): the visible tell. While a mind is
+        // ill it coughs — the game's own MTCoughing idle — at this
+        // interval (sim seconds). 0 disables the tell (an illness that
+        // only lives in the log and the fatigue toll).
+        float CoughInterval = 12.0f;
     };
 
     //-------------------------------------------------------------------------

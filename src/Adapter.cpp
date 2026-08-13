@@ -3786,6 +3786,7 @@ namespace TLC
         m_ArrivedAt.clear();
         m_MarketAttendance.clear();
         m_LastWander.clear();
+        m_LastCough.clear();
         m_RecentDeaths.clear();
         m_GriefAnnounced.clear();
         m_IllnessAnnounced.clear();
@@ -5034,6 +5035,7 @@ namespace TLC
         // is rest — the mind tires faster and Decide produces Rest more
         // often). Deaths at the bottom are collected and removed after
         // the loop — RemoveMind during iteration is never safe.
+        const auto now = std::chrono::steady_clock::now();
         std::vector<std::uint32_t> dead;
 
         m_Registry.ForEachWithComponent<Health>(
@@ -5075,6 +5077,47 @@ namespace TLC
                             {
                                 need.Value -= need.DecayRate
                                     * (mult - 1.0f) * a_deltaSeconds;
+                            }
+                        }
+                    }
+                }
+
+                // The cough (0.8.0 polish): the visible tell. An ill
+                // mind plays the game's MTCoughing idle (0xEA85C — the
+                // clean, condition-free vanilla record, the cough Mass
+                // Fusion uses) at the tuned interval. The tell is a
+                // sound the player can hear, not a stat to read — and
+                // it stops the moment the mind is well (the result
+                // gate: only the still-ill path gets here). Rate-limited
+                // per mind, and only for loaded actors — the sim child
+                // has no game body to cough.
+                if (m_Settings.Illness.CoughInterval > 0.0f
+                    && a_health.Illness.Kind != SicknessKind::None)
+                {
+                    const auto coughIt = m_LastCough.find(a_entity);
+
+                    if (coughIt == m_LastCough.end()
+                        || now - coughIt->second
+                            >= std::chrono::duration<float>(
+                                m_Settings.Illness.CoughInterval))
+                    {
+                        m_LastCough[a_entity] = now;
+
+                        const auto formId = m_Translator.FormFor(a_entity);
+
+                        if (formId != 0)
+                        {
+                            if (auto* actor =
+                                    RE::TESForm::GetFormByID<RE::Actor>(
+                                        formId))
+                            {
+                                if (auto* cough =
+                                        RE::TESForm::GetFormByID<RE::TESIdleForm>(
+                                            0x000EA85C))
+                                {
+                                    actor->currentProcess->PlayIdle(
+                                        *actor, cough, nullptr);
+                                }
                             }
                         }
                     }
@@ -5973,9 +6016,10 @@ namespace TLC
                 it = m_Walks.erase(it);
                 continue;
             }
-            else if (now - session.LastProbe >= std::chrono::seconds(2)
+            else if (m_Settings.LogWalkProbes
+                && now - session.LastProbe >= std::chrono::seconds(5)
                 && (session.LastDistance < 0.0f
-                    || std::fabs(d - session.LastDistance) >= 1.0f))
+                    || std::fabs(d - session.LastDistance) >= 5.0f))
             {
                 session.LastProbe = now;
                 session.LastDistance = d;

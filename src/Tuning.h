@@ -346,6 +346,14 @@ namespace TLC::Tuning
         // game thread (the 22k-line session that preceded the silent
         // freeze).
         float LogDecisionEvery = 1.0f;
+
+        // The walk probe gate (0.8.0 polish): the per-walker "d = ..."
+        // probe is the log's biggest single contributor (2.2k lines of a
+        // 12k session). On while the sim is in development — the probe is
+        // the verification eyes — and off for release (the arrival and
+        // session-end lines stay; only the 2-second progress heartbeats
+        // go).
+        bool LogWalkProbes = true;
     };
 
     inline AdapterSettings AdapterSettingsFrom(
@@ -471,6 +479,8 @@ namespace TLC::Tuning
             read("sim.birth.childhood", settings.BirthChildhood);
         settings.BirthVisible =
             readBool("sim.birth.visible", settings.BirthVisible);
+        settings.LogWalkProbes =
+            readBool("sim.log.probes", settings.LogWalkProbes);
 
         // The illness stone (0.8.0). The curve and the vectors are all
         // INI keys — a broken line keeps the default, never breaks the
@@ -503,6 +513,8 @@ namespace TLC::Tuning
             "sim.illness.deathSeverity", settings.Illness.DeathSeverity);
         settings.Illness.DeathDrain = read(
             "sim.illness.deathDrain", settings.Illness.DeathDrain);
+        settings.Illness.CoughInterval = read(
+            "sim.illness.coughInterval", settings.Illness.CoughInterval);
 
         settings.NewsEnabled =
             readBool("sim.news.enabled", settings.NewsEnabled);

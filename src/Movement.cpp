@@ -131,7 +131,13 @@ namespace TLC::Movement
             return false;
         }
 
-        REX::INFO(
+        // Debug, not info (0.8.0 polish): the issued line fires once per
+        // walk, and in a 600-mind restored world that is 2.2k lines of a
+        // 12k session. The decision line already names the walker and the
+        // target; the probe/arrival lines carry the progress. At DEBUG it
+        // stays visible while the sim is in development and vanishes when
+        // the release log level drops to info.
+        REX::DEBUG(
             "LCE: WalkTo — command-mode travel package issued for target {:#x}.",
             a_target->GetFormID());
         return true;

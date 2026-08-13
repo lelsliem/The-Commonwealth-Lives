@@ -18,7 +18,29 @@
 #include <LCE/Logging/Logger.h>
 #include <LCE/Simulation/Entity/RegistrySnapshot.h>
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#include <shlobj.h>
+
+// Windows.h defines ERROR (0) and other macros that collide with the
+// REX:: namespace — restore the REX names after the headers.
+#ifdef ERROR
+#undef ERROR
+#endif
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
+
+#include <algorithm>
+#include <chrono>
 #include <cstddef>
+#include <filesystem>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -162,6 +184,71 @@ namespace
 //-------------------------------------------------------------------------
 F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
 {
+    // The session log (0.8.0 polish): F4SE opens
+    // Documents/My Games/Fallout4/F4SE/TheLivingCommonwealth.log with a
+    // truncating sink, so every launch already starts fresh — but the
+    // previous session's 12k-line wall was gone with it. Archive it
+    // first (timestamped) and keep a small cap of old sessions, so a
+    // long test run never grows into a multi-MB file and the last few
+    // sessions survive for archaeology. Pure file renaming — no game
+    // state touched, runs before F4SE::Init opens the sink.
+    if (PWSTR documents = nullptr; SUCCEEDED(SHGetKnownFolderPath(
+            FOLDERID_Documents, KF_FLAG_DEFAULT, nullptr, &documents)))
+    {
+        const auto freeDocs = std::unique_ptr<wchar_t[], decltype(&CoTaskMemFree)>(
+            documents, CoTaskMemFree);
+
+        const std::filesystem::path logDir =
+            std::filesystem::path(documents)
+            / "My Games" / "Fallout4" / "F4SE";
+        const std::filesystem::path logFile = logDir / "TheLivingCommonwealth.log";
+
+        if (std::filesystem::exists(logFile))
+        {
+            const auto stamp = std::chrono::system_clock::to_time_t(
+                std::chrono::system_clock::now());
+
+            std::tm tm{};
+            localtime_s(&tm, &stamp);
+
+            char stampText[32]{};
+            std::strftime(stampText, sizeof(stampText), "%Y%m%d-%H%M%S", &tm);
+
+            std::error_code ec;
+            std::filesystem::rename(
+                logFile,
+                logDir / ("TheLivingCommonwealth-" + std::string(stampText) + ".log"),
+                ec);
+        }
+
+        // The cap: keep the newest kSessionLogCap archived sessions.
+        constexpr std::size_t kSessionLogCap = 6;
+        std::vector<std::filesystem::path> archived;
+
+        for (const auto& entry : std::filesystem::directory_iterator(
+                 logDir, std::filesystem::directory_options::skip_permission_denied))
+        {
+            const auto name = entry.path().filename().string();
+
+            if (name.rfind("TheLivingCommonwealth-", 0) == 0
+                && name.ends_with(".log"))
+            {
+                archived.push_back(entry.path());
+            }
+        }
+
+        if (archived.size() > kSessionLogCap)
+        {
+            std::sort(archived.begin(), archived.end());
+
+            for (std::size_t i = 0; i < archived.size() - kSessionLogCap; ++i)
+            {
+                std::error_code ec;
+                std::filesystem::remove(archived[i], ec);
+            }
+        }
+    }
+
     // Init wires the F4SE interfaces and the log sink (msvc + file). The
     // log name is kept free of spaces so the file stays clean. The
     // trampoline is where the Tick hooks' branches are allocated — a few

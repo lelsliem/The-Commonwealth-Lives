@@ -744,6 +744,16 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             std::chrono::steady_clock::time_point>
             m_LastWander;
 
+        // When each mind last coughed (0.8.0 polish): the sick tell —
+        // an ill mind plays the game's MTCoughing idle at the
+        // sim.illness.coughInterval. Rate-limited like the wander so
+        // the command isn't a per-frame flood; cleared at EndWorld with
+        // the rest of the per-mind timers.
+        std::unordered_map<
+            LCE::Simulation::EntityId,
+            std::chrono::steady_clock::time_point>
+            m_LastCough;
+
         // The world's names (0.7.0 Stone 1): every name this world has
         // assigned — procedural names drawn from the lists and game names
         // from the actors — so no two minds share one. Rebuilt at world
