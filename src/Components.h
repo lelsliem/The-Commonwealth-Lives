@@ -75,6 +75,42 @@ namespace TLC
     //-------------------------------------------------------------------------
 
     //-------------------------------------------------------------------------
+    // BirthDay — the sim-day a child was born. Used by the growth
+    // system (0.7.7) to track how old a child is and when it should
+    // grow into an adult. Carried by every sim-only child; adults have
+    // no need for it.
+    //-------------------------------------------------------------------------
+    struct BirthDay
+    {
+        std::uint64_t Day = 0;
+    };
+
+    //-------------------------------------------------------------------------
+    // Pregnancy (0.7.7 — the birth lifecycle). A spouse household's
+    // journey from conception to birth. The adapter owns this component;
+    // the engine never sees it. Stored on the mother entity and
+    // persisted in the co-save like any named component. A child without
+    // a Pregnancy record is a pre-0.7.7 birth (sim-only, already alive).
+    //-------------------------------------------------------------------------
+    struct Pregnancy
+    {
+        // The sim-day the couple conceived (the world-day stamp at
+        // conception). Used to compute the due day and the gestation
+        // progress bar for the news feed.
+        std::uint64_t ConceptionDay = 0;
+
+        // The sim-day the child is due (conception + gestation days).
+        // On this day the birth event fires.
+        std::uint64_t DueDay = 0;
+
+        // The parents' entity IDs — the mother carries this component;
+        // the father is the other spouse. Both are needed so the child
+        // can bond to both and the household can be identified.
+        std::uint64_t ParentA = 0;
+        std::uint64_t ParentB = 0;
+    };
+
+    //-------------------------------------------------------------------------
     // SeedPouch — a human mind's born wealth: a deterministic pouch from
     // the entity id (the IdJitter span pattern), so a saved mind's purse
     // survives restore exactly. 40 ± 20 caps: a few meals, not a fortune.

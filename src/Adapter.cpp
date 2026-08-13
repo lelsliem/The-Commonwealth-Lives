@@ -1203,10 +1203,63 @@ namespace TLC
 
     void Adapter::RunBirth()
     {
-        // The eligible households: every spouse pair with two real
-        // actors — a child is born to a couple that exists in the game.
-        // The child itself is sim-only: no form, no game actor, just a
-        // mind the household feeds.
+        // Phase 1: check for due births — pregnancies that have reached
+        // their due day. Each produces a child mind and a news line.
+        const auto newborns = Birth::CheckBirths(
+            m_Registry, m_Settings.Rates, CurrentDay());
+
+        for (const auto& child : newborns)
+        {
+            // Name the child (0.7.0 identity stone).
+            const auto mother = FindMother(child);
+            const auto father = FindFather(child);
+
+            std::string family;
+
+            if (const auto parentName =
+                    m_Registry.GetComponent<Name>(mother))
+            {
+                family = std::string(TLC::Names::FamilyOf(parentName->Full));
+            }
+
+            const auto childGender = TLC::Names::GenderOf(child);
+
+            const auto childName = family.empty()
+                ? TLC::Names::GenerateUnique(
+                    m_UsedNames, child, m_Names, childGender)
+                : TLC::Names::ChildName(
+                    family, child, m_Names, childGender);
+
+            m_Registry.AddComponent<Name>(child, Name{ childName });
+            m_UsedNames.insert(childName);
+
+            // Inherit memories from both parents (0.7.0 legacy).
+            const auto accept =
+                [](const LCE::Simulation::MemoryEvent& a_event)
+                {
+                    return a_event.Other.IsValid();
+                };
+
+            LCE::Simulation::InheritMemory(
+                m_Registry, child, mother, m_CoreTuning,
+                LCE::Simulation::WorldTime{ CurrentDay() }, accept);
+            LCE::Simulation::InheritMemory(
+                m_Registry, child, father, m_CoreTuning,
+                LCE::Simulation::WorldTime{ CurrentDay() }, accept);
+
+            REX::INFO(
+                "birth: a child is born to {} and {} — {}, a new mind, "
+                "fed by the household.",
+                MindLabel(mother), MindLabel(father),
+                MindLabel(child));
+
+            PushNews(
+                "a child was born to " + MindLabel(mother) + " and "
+                + MindLabel(father) + " — " + childName + ".");
+        }
+
+        // Phase 2: roll for new conceptions among eligible couples.
+        // One roll per eligible pair per day; the chance is tunable.
         std::vector<std::pair<LCE::Simulation::EntityId,
             LCE::Simulation::EntityId>> couples;
 
@@ -1227,78 +1280,93 @@ namespace TLC
             }
         }
 
-        if (couples.empty())
+        for (const auto& [parentA, parentB] : couples)
         {
-            return;
-        }
+            // Roll: the LCG provides a uniform [0,1) float.
+            const auto roll =
+                static_cast<float>(m_Rng.Next() & 0xFFFFFF)
+                / static_cast<float>(0xFFFFFF);
 
-        // One birth per day: the household the Rng draws. The household
-        // already lives in the sim — the bond book and the shared pouch
-        // know where its home settlement is, and the child eats there
-        // for free.
-        const auto index = m_Rng.Next() % couples.size();
-        const auto& [parentA, parentB] = couples[index];
-
-        const auto child = Birth::Create(
-            m_Registry, parentA, parentB, m_Settings.Rates);
-
-        if (!child.IsValid())
-        {
-            return;
-        }
-
-        // The identity stone (0.7.0 Stone 1): the child carries the
-        // household's family name — a first name drawn deterministically
-        // from the child's id, the family name from the parents' ("the
-        // Lees" stay the Lees). A procedural parent falls back to a
-        // plain procedural name.
-        std::string family;
-
-        if (const auto parentName =
-                m_Registry.GetComponent<Name>(parentA))
-        {
-            family = std::string(TLC::Names::FamilyOf(parentName->Full));
-        }
-
-        const auto childGender = TLC::Names::GenderOf(child);
-
-        const auto childName = family.empty()
-            ? TLC::Names::GenerateUnique(
-                m_UsedNames, child, m_Names, childGender)
-            : TLC::Names::ChildName(
-                family, child, m_Names, childGender);
-
-        m_Registry.AddComponent<Name>(child, Name{ childName });
-        m_UsedNames.insert(childName);
-
-        // 0.7.0 Legacy (engine stone 11): the child inherits the
-        // parents' memories of the people — the family's knowledge and
-        // grudges, scaled and aged by the core. The world's predicate:
-        // person-facts only (a valid Other — weather facts name no one
-        // and stay behind). The feud travels on the memory channel, the
-        // inherited cold shoulder on the group echo.
-        const auto accept =
-            [](const LCE::Simulation::MemoryEvent& a_event)
+            if (roll >= m_Settings.BirthChance)
             {
-                return a_event.Other.IsValid();
-            };
+                continue;  // no conception this day
+            }
 
-        LCE::Simulation::InheritMemory(
-            m_Registry, child, parentA, m_CoreTuning,
-            LCE::Simulation::WorldTime{ CurrentDay() }, accept);
-        LCE::Simulation::InheritMemory(
-            m_Registry, child, parentB, m_CoreTuning,
-            LCE::Simulation::WorldTime{ CurrentDay() }, accept);
+            const auto mother = Birth::TryConceive(
+                m_Registry, parentA, parentB,
+                m_Settings.BirthChance,
+                m_Settings.BirthGestation,
+                CurrentDay());
 
-        REX::INFO(
-            "birth: a child is born to {} and {} — {}, a new mind, "
-            "fed by the household.",
-            MindLabel(parentA), MindLabel(parentB),
-            MindLabel(child));
+            if (mother.IsValid())
+            {
+                REX::INFO(
+                    "birth: {} and {} are expecting — due on day {}.",
+                    MindLabel(parentA), MindLabel(parentB),
+                    CurrentDay()
+                        + static_cast<std::uint64_t>(
+                            m_Settings.BirthGestation));
 
-        PushNews(
-            "a child was born to " + MindLabel(parentA) + " and "
-            + MindLabel(parentB) + " — " + childName + ".");
+                PushNews(
+                    MindLabel(parentA) + " and "
+                    + MindLabel(parentB) + " are expecting a child.");
+            }
+        }
+    }
+
+    //-------------------------------------------------------------------------
+    // FindMother / FindFather — given a child entity, look up its
+    // parents from the Pregnancy record that created it (or from the
+    // Relationships component if the Pregnancy was already consumed).
+    //-------------------------------------------------------------------------
+    LCE::Simulation::EntityId Adapter::FindMother(
+        LCE::Simulation::EntityId a_child) const
+    {
+        // The Relationships component stores both parents.
+        const auto rels =
+            m_Registry.GetComponent<LCE::Simulation::Relationships>(a_child);
+
+        if (rels != nullptr)
+        {
+            // The parent with the stronger bond is the mother
+            // (convention — both are equal in the sim).
+            LCE::Simulation::EntityId best;
+            float bestStrength = -1.0f;
+
+            for (const auto& [eid, rel] : rels->ByEntity)
+            {
+                if (rel.Disposition > bestStrength)
+                {
+                    bestStrength = rel.Disposition;
+                    best = eid;
+                }
+            }
+
+            return best;
+        }
+
+        return {};
+    }
+
+    LCE::Simulation::EntityId Adapter::FindFather(
+        LCE::Simulation::EntityId a_child) const
+    {
+        const auto mother = FindMother(a_child);
+        const auto rels =
+            m_Registry.GetComponent<LCE::Simulation::Relationships>(a_child);
+
+        if (rels != nullptr)
+        {
+            for (const auto& [eid, rel] : rels->ByEntity)
+            {
+                if (eid != mother)
+                {
+                    return eid;
+                }
+            }
+        }
+
+        return {};
     }
 
     void Adapter::OnBondChange(
@@ -4941,6 +5009,31 @@ namespace TLC
         // their household — no walk, no market, just a full bowl.
         Birth::FeedChildren(
             m_Registry, static_cast<float>(a_deltaSeconds));
+
+        // The child's growth (0.7.7): children age into adults after
+        // sim.birth.childhood sim-days. The growth check runs daily.
+        {
+            static std::uint64_t lastGrowthDay = 0;
+            const auto today = CurrentDay();
+
+            if (today != lastGrowthDay)
+            {
+                lastGrowthDay = today;
+
+                const auto grew = Birth::GrowChildren(
+                    m_Registry, m_Settings.BirthChildhood, today);
+
+                if (grew > 0)
+                {
+                    REX::INFO(
+                        "birth: {} children grew into adults.", grew);
+
+                    PushNews(
+                        std::to_string(grew)
+                        + " children grew up in the Commonwealth.");
+                }
+            }
+        }
 
         // The sleep cycle (0.6.0): a mind rests while its last decision
         // was Rest — or while the engine silenced it because the need it

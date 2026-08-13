@@ -1,11 +1,11 @@
-//=============================================================================//
+//=============================================================================
 //                                                                             //
 //   The Living Commonwealth — Fallout 4 adapter for the Living Commonwealth   //
 //   Engine (LCE).                                                             //
 //                                                                             //
 //   Every mind is born once — even a settlement's.                            //
 //                                                                             //
-//=============================================================================//
+//=============================================================================
 
 #pragma once
 
@@ -28,21 +28,23 @@ namespace TLC
     // evict it: Lifecycle::Diff classifies the *census*, never the
     // registry, so a mind with no form is simply never scanned.
     //
-    // Gated by sim.birth.enabled (default 0) and one birth per sim day —
-    // the adapter's choice of *which* household is its edge; this module
-    // is the pure act of being born.
+    // 0.7.7 adds the pregnancy window: conception → gestation → birth →
+    // growth. A bonded spouse pair conceives on a day-roll
+    // (sim.birth.chance), the Pregnancy component tracks the journey, the
+    // birth fires on the due day, and the child grows into an adult mind
+    // after sim.birth.childhood days.
     //-------------------------------------------------------------------------
     namespace Birth
     {
         using namespace LCE::Simulation;
 
-        //-------------------------------------------------------------------------
+        //---------------------------------------------------------------------
         // Create — a child mind of a_spouseA and a_spouseB. Seeded like
         // any mind (needs, memory, goals) plus a warm relationship to
         // both parents — and the parents warm to the child. No FormRef:
         // the child has no game actor, and the co-save serializes it as
         // a component-carrying entity like any other.
-        //-------------------------------------------------------------------------
+        //---------------------------------------------------------------------
         [[nodiscard]]
         inline EntityId Create(
             EntityRegistry& a_registry,
@@ -85,12 +87,160 @@ namespace TLC
             return id;
         }
 
-        //-------------------------------------------------------------------------
+        //---------------------------------------------------------------------
+        // TryConceive — roll for conception on a bonded spouse pair. If
+        // the roll succeeds and neither parent already carries a
+        // Pregnancy, create one on the mother (the parent whose entity
+        // ID is lower — deterministic). Returns the mother's entity ID
+        // if conception occurred, or {}.
+        //---------------------------------------------------------------------
+        [[nodiscard]]
+        inline EntityId TryConceive(
+            EntityRegistry& a_registry,
+            EntityId a_parentA,
+            EntityId a_parentB,
+            float a_chance,
+            float a_gestation,
+            std::uint64_t a_currentDay)
+        {
+            if (!a_parentA.IsValid() || !a_parentB.IsValid())
+            {
+                return {};
+            }
+
+            // Don't conceive if either parent already has a pregnancy.
+            if (a_registry.GetComponent<Pregnancy>(a_parentA) != nullptr
+                || a_registry.GetComponent<Pregnancy>(a_parentB) != nullptr)
+            {
+                return {};
+            }
+
+            // Deterministic mother: the lower entity ID.
+            const auto mother = a_parentA.Value() <= a_parentB.Value()
+                ? a_parentA : a_parentB;
+            const auto father = mother == a_parentA
+                ? a_parentB : a_parentA;
+
+            const auto dueDay = static_cast<std::uint64_t>(
+                a_currentDay + static_cast<std::uint64_t>(a_gestation));
+
+            Pregnancy preg;
+            preg.ConceptionDay = a_currentDay;
+            preg.DueDay = dueDay;
+            preg.ParentA = a_parentA.Value();
+            preg.ParentB = a_parentB.Value();
+
+            a_registry.AddComponent<Pregnancy>(mother, std::move(preg));
+
+            return mother;
+        }
+
+        //---------------------------------------------------------------------
+        // CheckBirths — scan for pregnancies that have reached their due
+        // day. For each, create the child mind and remove the Pregnancy
+        // component from the mother. Returns the newly created child
+        // entity IDs (may be empty).
+        //---------------------------------------------------------------------
+        inline std::vector<EntityId> CheckBirths(
+            EntityRegistry& a_registry,
+            const NeedRates& a_rates,
+            std::uint64_t a_currentDay)
+        {
+            std::vector<EntityId> newborns;
+
+            a_registry.ForEachWithComponent<Pregnancy>(
+                [&](EntityId a_mother, Pregnancy& a_preg)
+                {
+                    if (a_currentDay < a_preg.DueDay)
+                    {
+                        return;  // not due yet
+                    }
+
+                    const auto parentA =
+                        EntityId{ a_preg.ParentA };
+                    const auto parentB =
+                        EntityId{ a_preg.ParentB };
+
+                    const auto child = Create(
+                        a_registry, parentA, parentB, a_rates);
+
+                    if (child.IsValid())
+                    {
+                        // Stamp the birth day on the child so growth
+                        // can track its age.
+                        a_registry.AddComponent<BirthDay>(
+                            child, BirthDay{ a_currentDay });
+
+                        newborns.push_back(child);
+                    }
+
+                    // Pregnancy is consumed — remove it.
+                    a_registry.RemoveComponent<Pregnancy>(a_mother);
+                });
+
+            return newborns;
+        }
+
+        //---------------------------------------------------------------------
+        // GrowChildren — scan for children whose BirthDay has aged past
+        // sim.birth.childhood. Upgrade their SpeciesTag from Child to
+        // Human so the adapter treats them as full walking minds (they
+        // walk to market, trade, bond, feud). Returns how many children
+        // grew.
+        //---------------------------------------------------------------------
+        inline std::size_t GrowChildren(
+            EntityRegistry& a_registry,
+            float a_childhood,
+            std::uint64_t a_currentDay)
+        {
+            std::size_t count = 0;
+
+            a_registry.ForEachWithComponent<BirthDay>(
+                [&](EntityId a_entity, BirthDay& a_birth)
+                {
+                    const auto age = static_cast<float>(
+                        a_currentDay - a_birth.Day);
+
+                    if (age < a_childhood)
+                    {
+                        return;  // still a child
+                    }
+
+                    const auto species =
+                        a_registry.GetComponent<SpeciesTag>(a_entity);
+
+                    if (species == nullptr
+                        || species->Value != Species::Child)
+                    {
+                        return;  // already grown or not a child
+                    }
+
+                    // Grow up: Child → Human. The child already has
+                    // Needs, Goals, Memory, Relationships — the only
+                    // change is the species tag so the adapter's
+                    // species split treats it as a full mind.
+                    species->Value = Species::Human;
+
+                    // Give it a starting pouch so it can trade.
+                    if (a_registry.GetComponent<CapPouch>(a_entity)
+                        == nullptr)
+                    {
+                        a_registry.AddComponent<CapPouch>(
+                            a_entity, CapPouch{ SeedPouch(a_entity) });
+                    }
+
+                    ++count;
+                });
+
+            return count;
+        }
+
+        //---------------------------------------------------------------------
         // FeedChildren — one tick of the child's life: every sim-only
         // child (no FormRef — there is no game actor to walk or eat) is
         // fed by the household: Hunger recovers toward full at the
         // settlement's pace. Returns how many children were fed.
-        //-------------------------------------------------------------------------
+        //---------------------------------------------------------------------
         inline std::size_t FeedChildren(
             EntityRegistry& a_registry, float a_delta)
         {

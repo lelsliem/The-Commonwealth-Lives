@@ -586,6 +586,12 @@ namespace TLC
         // the birth. Gated by sim.birth.enabled (default 0).
         void RunBirth();
 
+        // Find a child's parents from its Relationships component.
+        LCE::Simulation::EntityId FindMother(
+            LCE::Simulation::EntityId a_child) const;
+        LCE::Simulation::EntityId FindFather(
+            LCE::Simulation::EntityId a_child) const;
+
         // One pair's disposition in a given direction, 0 when unknown.
         float DispositionOf(
             LCE::Simulation::EntityId a_from,

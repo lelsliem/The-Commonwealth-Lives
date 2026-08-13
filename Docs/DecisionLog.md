@@ -1635,3 +1635,39 @@ before install.
 to the load order, and re-runs the force-fight loop — the receipt should
 read "paired push" and a real kick plays on both beats for the first
 time.
+
+### ADR-0056: Birth Lifecycle — Pregnancy Window, Gestation, Growth (0.7.7)
+
+**Decision.**
+The birth lifecycle is now a journey, not an instant event. Three new
+adapter-owned components drive it:
+
+1. **Pregnancy** — conception day, due day, parent IDs. Stored on the
+   mother entity; co-save serialized via `MakePregnancySerializer`.
+2. **BirthDay** — the sim-day a child was born. Used by growth to
+   track age. Co-save serialized via `MakeBirthDaySerializer`.
+3. **Growth** — `SpeciesTag` upgrades from `Child` to `Human` after
+   `sim.birth.childhood` sim-days, plus a starter `CapPouch`.
+
+The tick sequence each sim-day:
+1. `CheckBirths` scans pregnancies at their due day → creates child
+   minds, stamps `BirthDay`, removes the `Pregnancy`.
+2. `RunBirth` rolls `sim.birth.chance` per eligible couple →
+   `TryConceive` creates a `Pregnancy` on the mother.
+3. `GrowChildren` upgrades children past `sim.birth.childhood`.
+
+New INI keys: `sim.birth.chance` (0.05), `sim.birth.gestation` (3),
+`sim.birth.childhood` (10). Co-save gains two additive named
+components (no record-version bump).
+
+**Rationale.**
+The instant-birth model was a proof of concept. A pregnancy window
+gives the world time to notice (the "expecting" news line fires at
+conception), the birth is an event with a receipt, and growth is a
+visible transition — the child walks to market as a full mind.
+
+**Trade-offs.**
+- Multiple births per day are possible (one roll per couple); the
+  chance default (0.05) keeps it rare.
+- Growth is purely sim-side — the visible actor half waits on 0.7.8.
+- The mother is deterministic (lower entity ID), so save/load is stable.

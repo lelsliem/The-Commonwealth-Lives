@@ -203,6 +203,23 @@ namespace TLC::Tuning
         // living in the co-save.
         bool BirthEnabled = false;
 
+        // The conception chance (0.7.7): each eligible spouse pair
+        // rolls once per sim day; this is the probability [0,1]. 0.05
+        // means ~1 birth per 20 couple-days — a slow trickle, not a
+        // baby boom. Higher values flood settlements quickly.
+        float BirthChance = 0.05f;
+
+        // The gestation window (0.7.7): sim-days between conception
+        // and birth. Short enough to watch a full cycle in testing
+        // (set to 1 for instant births); long enough to feel like a
+        // pregnancy at the default (3 = ~3 in-game days).
+        float BirthGestation = 3.0f;
+
+        // The childhood duration (0.7.7): sim-days a child stays a
+        // child before growing into a walking adult mind. Longer than
+        // gestation — a childhood is a life, not a window.
+        float BirthChildhood = 10.0f;
+
         // The conflict source (0.7.0 Stone 2): the temper line. A mind
         // whose temperament (Behaviour.h TemperOf, ~0.8–1.2 around 1.0)
         // is at or above this blames the stall-keeper when a hungry
@@ -430,6 +447,12 @@ namespace TLC::Tuning
             readBool("sim.arc.mediation", settings.MediationEnabled);
         settings.BirthEnabled =
             readBool("sim.birth.enabled", settings.BirthEnabled);
+        settings.BirthChance =
+            read("sim.birth.chance", settings.BirthChance);
+        settings.BirthGestation =
+            read("sim.birth.gestation", settings.BirthGestation);
+        settings.BirthChildhood =
+            read("sim.birth.childhood", settings.BirthChildhood);
         settings.NewsEnabled =
             readBool("sim.news.enabled", settings.NewsEnabled);
 

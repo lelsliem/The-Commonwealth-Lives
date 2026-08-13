@@ -288,6 +288,50 @@ namespace TLC
             };
         }
 
+        ComponentSerializer<BirthDay> MakeBirthDaySerializer()
+        {
+            return {
+                [](const BirthDay& bd)
+                {
+                    Codec::Writer writer;
+                    writer.U64(bd.Day);
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+                    return BirthDay{ reader.U64() };
+                }
+            };
+        }
+
+        ComponentSerializer<Pregnancy> MakePregnancySerializer()
+        {
+            return {
+                [](const Pregnancy& preg)
+                {
+                    Codec::Writer writer;
+                    writer.U64(preg.ConceptionDay);
+                    writer.U64(preg.DueDay);
+                    writer.U64(preg.ParentA);
+                    writer.U64(preg.ParentB);
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+
+                    return Pregnancy{
+                        reader.U64(),
+                        reader.U64(),
+                        reader.U64(),
+                        reader.U64()
+                    };
+                }
+            };
+        }
+
         ComponentSerializer<Name> MakeNameSerializer()
         {
             return {
@@ -387,6 +431,8 @@ namespace TLC
         registry.RegisterSerializer<CompanionTag>(
             MakeCompanionTagSerializer());
         registry.RegisterSerializer<CapPouch>(MakeCapPouchSerializer());
+        registry.RegisterSerializer<BirthDay>(MakeBirthDaySerializer());
+        registry.RegisterSerializer<Pregnancy>(MakePregnancySerializer());
         registry.RegisterSerializer<Name>(MakeNameSerializer());
 
         // The registry-level legacy store — the co-save's v6 section.
