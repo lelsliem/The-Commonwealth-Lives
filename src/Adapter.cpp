@@ -2857,8 +2857,9 @@ namespace TLC
              }
          }
 
-         if (!m_Kin.empty())
+         if (!m_Kin.empty() && m_Kin.size() != m_LastKinLogged)
          {
+             m_LastKinLogged = m_Kin.size();
              REX::INFO(
                  "kin: {} family {} gated from romance — the world's families stay family.",
                  m_Kin.size(), m_Kin.size() == 1 ? "pair" : "pairs");

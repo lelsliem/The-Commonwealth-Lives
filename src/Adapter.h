@@ -347,6 +347,13 @@ namespace TLC
         // deferral lines in five minutes).
         std::chrono::steady_clock::time_point m_LastCapLog{};
 
+        // The kin-gate summary's last logged pair count. RebuildKin runs
+        // every second (the 1-second reconcile) and the count is stable
+        // while the same families are loaded — logging every pass wrote
+        // 224 identical lines in four minutes (the 2026-08-13 field
+        // finding). Log only when the count changes.
+        std::size_t m_LastKinLogged = std::numeric_limits<std::size_t>::max();
+
         // The arcs and birth run on a day cadence (0.6.0 Stones 5–6):
         // mediation once per day for each feud, birth at most once per
         // day, each tracked by the day it last ran. Initialized to the
