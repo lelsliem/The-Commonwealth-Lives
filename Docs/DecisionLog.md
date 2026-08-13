@@ -1744,3 +1744,67 @@ A clean-up pass over every stone's field feedback. The audit found:
 
 The codebase is release-ready for 0.7.9. The next milestone is 0.8.0
 (Illness & Medicine).
+
+---
+
+## ADR-0058: Illness & Medicine — the price of being in the wastes (0.8.0)
+
+**Status:** Accepted, built, harness-verified 2026-08-13.
+
+**The decision.** Every mind carries a `Health` component (1.0 healthy,
+0.0 dead) with a `Sickness` (kind, severity, contracted day, hold
+remaining). The curve is hold-then-recover: on contraction health drops
+to the hold level (sim.illness.hold) and holds while the sickness runs
+(sim.illness.duration); severity grows while untreated (children at
+sim.illness.childMult); after the window, health climbs back at the
+recovery rate. The visible cost is **rest** — a sick mind's Fatigue
+decays at sim.illness.fatigueMult, easing off as health recovers, so
+the sick tire faster and Decide produces Rest more often.
+
+**The vectors** (all pure rolls through the adapter's Rng):
+- Radstorm days (sim.illness.radstormChance)
+- Shared food at the market (sim.illness.foodChance)
+- Wounds from fights (sim.illness.woundChance)
+- Contagion — the sick spread it to their settlement per second
+  (sim.illness.contagionChance)
+
+**Medicine is the trade stone's second good.** A sick mind at the
+market buys a dose (sim.illness.medicinePrice) — caps leave the pouch
+or the shared household wallet, the seller's grows — and the hold ends,
+recovery starts early. A broke sick mind rests instead: honest — illness
+without caps means time, not treatment.
+
+**Death is rare and earned.** Untreated severity at or above
+sim.illness.deathSeverity drains health toward zero
+(sim.illness.deathDrain) — the rescue window. If nothing turns it
+around, the mind is
+removed with the same bookkeeping a kill books: never restores, the
+settlement hears "died of sickness."
+
+**Why this shape.**
+1. **A stat, not a script.** The core already decays needs and produces
+   intents; Health rides the same substrate, so the sick *behave* — they
+   rest, they skip the market, they buy medicine — with no new engine
+   surface.
+2. **The rescue window makes medicine matter.** Without the drain, a
+   sickness is a cosmetic timer; with it, the market visit can actually
+   save a life, and the economy stone gains its second good.
+3. **Rest is the cure, caps are the shortcut.** The sleep cycle
+   (0.6.0) already restores Fatigue; the fatigue toll means a sick mind
+   both rests more and — after medicine or the window — recovers.
+
+**Serialization.** `Health` is an adapter-named component riding the
+co-save like every other (additive — a pre-0.8.0 save restores with
+Value 1.0 and no sickness). No record bump: the component serializer is
+self-describing.
+
+**Tuning.** `sim.illness.*` covers the whole curve and every vector; a
+broken line keeps the default, never breaks the world (the standing
+contract). Defaults aim at "rarely sick, never unfairly dead": a mild
+case survives its own hold, and only an untreated severity cap can end
+a mind.
+
+**Proof.** IllnessTest — six stages: contract (roll, miss, no stacking),
+hold-then-recover walked in 1 s steps (a mild case survives its hold),
+the fatal path, medicine's rescue, the fatigue toll's ease-off, and the
+child severity multiplier. **24/24 suites green.**

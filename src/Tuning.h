@@ -10,6 +10,7 @@
 #pragma once
 
 #include "Behaviour.h"
+#include "Illness.h"
 #include "WorldFacts.h"
 
 #include "LCE/Config/Configuration.h"
@@ -226,6 +227,14 @@ namespace TLC::Tuning
         // and bonds like any mind. When off (the default) or the mod
         // is absent, children stay sim-only (0.7.7 behavior).
         bool BirthVisible = false;
+
+        // The illness stone (0.8.0 — Illness & Medicine): the whole
+        // curve and every vector. The adapter owns a Health component
+        // per mind (co-save additive); these keys tune the price of
+        // being in the wastes.
+        bool IllnessEnabled = true;
+        IllnessSettings Illness;
+
 
         // The conflict source (0.7.0 Stone 2): the temper line. A mind
         // whose temperament (Behaviour.h TemperOf, ~0.8–1.2 around 1.0)
@@ -462,6 +471,39 @@ namespace TLC::Tuning
             read("sim.birth.childhood", settings.BirthChildhood);
         settings.BirthVisible =
             readBool("sim.birth.visible", settings.BirthVisible);
+
+        // The illness stone (0.8.0). The curve and the vectors are all
+        // INI keys — a broken line keeps the default, never breaks the
+        // world (the standing contract).
+        settings.IllnessEnabled =
+            readBool("sim.illness.enabled", settings.IllnessEnabled);
+        settings.Illness.Hold =
+            read("sim.illness.hold", settings.Illness.Hold);
+        settings.Illness.FatigueMult =
+            read("sim.illness.fatigueMult", settings.Illness.FatigueMult);
+        settings.Illness.Recovery =
+            read("sim.illness.recovery", settings.Illness.Recovery);
+        settings.Illness.Duration =
+            read("sim.illness.duration", settings.Illness.Duration);
+        settings.Illness.RadstormChance = read(
+            "sim.illness.radstormChance", settings.Illness.RadstormChance);
+        settings.Illness.FoodChance = read(
+            "sim.illness.foodChance", settings.Illness.FoodChance);
+        settings.Illness.WoundChance = read(
+            "sim.illness.woundChance", settings.Illness.WoundChance);
+        settings.Illness.ContagionChance = read(
+            "sim.illness.contagionChance", settings.Illness.ContagionChance);
+        settings.Illness.MedicinePrice = read(
+            "sim.illness.medicinePrice", settings.Illness.MedicinePrice);
+        settings.Illness.SeverityRate = read(
+            "sim.illness.severityRate", settings.Illness.SeverityRate);
+        settings.Illness.ChildMult = read(
+            "sim.illness.childMult", settings.Illness.ChildMult);
+        settings.Illness.DeathSeverity = read(
+            "sim.illness.deathSeverity", settings.Illness.DeathSeverity);
+        settings.Illness.DeathDrain = read(
+            "sim.illness.deathDrain", settings.Illness.DeathDrain);
+
         settings.NewsEnabled =
             readBool("sim.news.enabled", settings.NewsEnabled);
 

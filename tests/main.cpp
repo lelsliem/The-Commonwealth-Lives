@@ -76,6 +76,7 @@ namespace TLC::Tests
     bool SocietyTest();
     bool KinTest();
     bool CoSaveV7Test();
+    bool IllnessTest();
 }
 
 namespace
@@ -128,6 +129,7 @@ int main()
     Run("SocietyTest", TLC::Tests::SocietyTest);
     Run("KinTest", TLC::Tests::KinTest);
     Run("CoSaveV7Test", TLC::Tests::CoSaveV7Test);
+    Run("IllnessTest", TLC::Tests::IllnessTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -4548,6 +4550,228 @@ namespace TLC::Tests
         if (v5Decoded.Legacy.has_value() || !v5Gates.empty())
         {
             return false;   // v5 predates both the legacy and the gates
+        }
+
+        return true;
+    }
+
+    bool IllnessTest()
+    {
+        const IllnessSettings settings;   // the code's own defaults
+
+        //-------------------------------------------------------------------------
+        // 1. Contract — a roll under the chance falls ill (health drops
+        //    to the hold, the sickness is set); a miss stays well; an
+        //    already-ill mind never stacks.
+        //-------------------------------------------------------------------------
+        {
+            Health health;
+
+            if (!Contract(
+                    health, SicknessKind::Food, 0.2f, 100,
+                    settings, 0.1f, 0.05f))
+            {
+                return false;   // roll under the chance — ill
+            }
+
+            if (health.Value != settings.Hold
+                || health.Illness.Kind != SicknessKind::Food
+                || health.Illness.ContractedDay != 100
+                || health.Illness.Remaining != settings.Duration)
+            {
+                return false;
+            }
+
+            // A miss stays well.
+            Health healthy;
+            if (Contract(
+                    healthy, SicknessKind::Radstorm, 0.1f, 101,
+                    settings, 0.3f, 0.9f))
+            {
+                return false;
+            }
+
+            if (healthy.Value != 1.0f
+                || healthy.Illness.Kind != SicknessKind::None)
+            {
+                return false;
+            }
+
+            // Already ill — no stacking: the second contract refuses
+            // and leaves the first illness untouched.
+            if (Contract(
+                    health, SicknessKind::Wound, 0.9f, 102,
+                    settings, 1.0f, 0.0f))
+            {
+                return false;
+            }
+
+            if (health.Illness.Kind != SicknessKind::Food)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. TickIllness — hold then recover. During the hold window the
+        //    health holds at the reduced amount and severity climbs;
+        //    after the window the health climbs back to whole.
+        //-------------------------------------------------------------------------
+        {
+            Health health;
+            Contract(
+                health, SicknessKind::Food, 0.0f, 100,
+                settings, 1.0f, 0.0f);
+
+            // Mid-hold: still ill, severity grew, health still held.
+            const auto mid = TickIllness(
+                health, settings.Duration * 0.5f, settings, false);
+
+            if (mid != 1 || health.Value != settings.Hold
+                || health.Illness.Severity <= 0.0f)
+            {
+                return false;
+            }
+
+            // Walk the hold out in small steps: severity crosses the
+            // death cap before the window ends (0.01/s × 120 s = 1.2),
+            // so the tail of the hold drains health — the rescue
+            // window. The window ends before the drain can kill, and
+            // recovery climbs back to whole. Tick in 1 s steps so the
+            // rescue actually resolves; one giant step would apply the
+            // whole drain in a single tick (correct, but then the test
+            // would be testing a death, not a recovery).
+            int state = 1;
+            int ticks = 0;
+            for (; ticks < 10000 && state == 1; ++ticks)
+            {
+                state = TickIllness(health, 1.0f, settings, false);
+            }
+
+            if (state == 2)
+            {
+                return false;   // mild case must survive its own hold
+            }
+
+            if (state != 0 || health.Value != 1.0f
+                || health.Illness.Kind != SicknessKind::None)
+            {
+                return false;   // healed — well again
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. The fatal path — untreated severity at the cap drains health
+        //    toward zero: the rescue window. TickIllness reports 2 (died)
+        //    and the sickness clears (dead, not sick).
+        //-------------------------------------------------------------------------
+        {
+            Health health;
+            Contract(
+                health, SicknessKind::Wound, 1.0f, 100,
+                settings, 1.0f, 0.0f);
+
+            int state = 1;
+            int steps = 0;
+            for (; steps < 100000 && state == 1; ++steps)
+            {
+                state = TickIllness(health, 1.0f, settings, false);
+            }
+
+            if (state != 2 || health.Value != 0.0f
+                || health.Illness.Kind != SicknessKind::None)
+            {
+                return false;   // the fatal path resolved
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 4. Medicine — a dose ends the hold: recovery starts now and the
+        //    severity-cap drain stops (the rescue path). A well mind
+        //    can't waste a dose.
+        //-------------------------------------------------------------------------
+        {
+            Health health;
+            Contract(
+                health, SicknessKind::Wound, 1.0f, 100,
+                settings, 1.0f, 0.0f);
+
+            if (!TakeMedicine(health, settings))
+            {
+                return false;
+            }
+
+            // After the dose the severity stays capped but Remaining is
+            // gone — the next tick recovers instead of draining.
+            const auto after = TickIllness(health, 1.0f, settings, false);
+
+            if (after != 1 || health.Value <= settings.Hold)
+            {
+                return false;
+            }
+
+            Health well;
+            if (TakeMedicine(well, settings))
+            {
+                return false;   // nothing to treat
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 5. The fatigue toll — 1.0 when well, FatigueMult while holding,
+        //    easing back toward 1.0 as health recovers.
+        //-------------------------------------------------------------------------
+        {
+            if (FatigueMultiplier(Health{}, settings) != 1.0f)
+            {
+                return false;   // well — no toll
+            }
+
+            Health health;
+            Contract(
+                health, SicknessKind::Contagion, 0.0f, 100,
+                settings, 1.0f, 0.0f);
+
+            // Holding at the floor — the full toll.
+            if (FatigueMultiplier(health, settings)
+                != settings.FatigueMult)
+            {
+                return false;
+            }
+
+            // Part-way back — eased off but not gone.
+            health.Value = (settings.Hold + 1.0f) * 0.5f;
+            const auto eased = FatigueMultiplier(health, settings);
+
+            if (eased <= 1.0f || eased >= settings.FatigueMult)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 6. Children are more fragile — their severity climbs at the
+        //    child multiplier.
+        //-------------------------------------------------------------------------
+        {
+            Health child;
+            Contract(
+                child, SicknessKind::Contagion, 0.0f, 100,
+                settings, 1.0f, 0.0f);
+
+            Health adult;
+            Contract(
+                adult, SicknessKind::Contagion, 0.0f, 100,
+                settings, 1.0f, 0.0f);
+
+            TickIllness(child, 10.0f, settings, true);
+            TickIllness(adult, 10.0f, settings, false);
+
+            if (child.Illness.Severity
+                != adult.Illness.Severity * settings.ChildMult)
+            {
+                return false;
+            }
         }
 
         return true;

@@ -595,6 +595,37 @@ namespace TLC
         // 0.7.8: pair sim-only children with visible game actors.
         void PairVisibleChildren();
 
+        // The illness stone (0.8.0 — Illness & Medicine). Three passes,
+        // all in the per-second block and the per-tick loop:
+        //
+        //   ApplyIllness          — the per-tick curve: hold-then-recover
+        //                           for every ill mind, the Fatigue
+        //                           multiplier while ill, and death at
+        //                           the bottom (RemoveMind + news).
+        //   ApplyIllnessVectors   — the per-second contraction pass:
+        //                           a radstorm day exposes every mind
+        //                           (once that day), and the sick echo
+        //                           outward — each ill mind's settlement
+        //                           peers roll the contagion chance.
+        //   IllnessNews           — the once-per-sickness announce: X is
+        //                           ill / X recovered, spoken once, not
+        //                           every frame of the hold.
+        //
+        // Medicine rides the market arrival (ReportArrival): a sick
+        // human with caps buys a dose instead of a meal — the caps
+        // leave the pouch, the hold ends, recovery starts. Pure logic
+        // in Illness.h; this is the edge.
+        void ApplyIllness(float a_deltaSeconds);
+        void ApplyIllnessVectors();
+        void IllnessNews();
+
+        // The illness day gates (session state): radstorm exposure
+        // rolls once per radstorm day, and the announce set is per
+        // (mind, kind) so a restored illness announces once.
+        std::uint64_t m_LastRadstormExposureDay =
+            std::numeric_limits<std::uint64_t>::max();
+        std::unordered_set<std::uint64_t> m_IllnessAnnounced;
+
         // One pair's disposition in a given direction, 0 when unknown.
         float DispositionOf(
             LCE::Simulation::EntityId a_from,

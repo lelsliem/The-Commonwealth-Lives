@@ -12,19 +12,21 @@ Project Roadmap
 
 Status
 
-Current Version : 0.7.9 — bugs & polish complete, codebase
-                   release-ready 2026-08-13. The 0.7.x run ships
-                   local only — no release package until 0.8.0
-                   (0.7.0 shipped as tag `0.7.0` 2026-08-11, 0.6.0 as
-                   `0.6.0`, 0.5.0 as `0.5.0-beta`)
+Current Version : 0.8.0 — Illness & Medicine built and harness-verified
+                   2026-08-13. The 0.7.x run shipped (0.7.9 release live
+                   on GitHub; 0.7.0 as tag `0.7.0`, 0.6.0 as `0.6.0`,
+                   0.5.0 as `0.5.0-beta`). The 0.8.0 package ships once
+                   it is verified in-game.
 
-Current Stage   : 0.7.9 verified — the codebase audit found no bugs,
-                   all INI defaults match code, all comments accurate,
-                   docs consistent. 23/23 harness suites green.
+Current Stage   : 0.8.0 built — Health component, four contraction
+                   vectors (radstorm, food, wound, contagion), the
+                   hold-then-recover curve, the Fatigue toll, medicine
+                   as the trade stone's second good, and death at the
+                   bottom. 24/24 harness suites green.
 
-Next Milestone  : 0.8.0 — Illness & Medicine, then the staged run to 1.0.0
-                   (Docs/Design/ReleasePlan.md):
-                   0.7.9 Bugs & polish → 0.8.0 Illness & Medicine →
+Next Milestone  : 0.8.0 in-game verification, then the staged run to
+                   1.0.0 (Docs/Design/ReleasePlan.md):
+                   0.8.0 Illness & Medicine (in-game) →
                    0.9.0 the release gate (scale verified, docs) →
                    1.0.0 freeze and ship
 
@@ -282,11 +284,33 @@ STATUS: COMPLETE ✅ (verified 2026-08-13)
 
 ═══════════════════════════════════════════════
 
-STATUS: DESIGN COMPLETE (Docs/Design/Illness.md)
+STATUS: BUILT ✅ (harness-verified 2026-08-13) — in-game pending
 
-Health component (adapter-owned, hold-then-recover), radstorm/food/
-wound/contagion vectors, the sick rest more (Fatigue multiplier),
-medicine is the trade stone's second good, untreated sickness can die.
+[✓] Health component (adapter-owned, co-save additive): 1.0 healthy,
+    0.0 dead, carries the Sickness (kind, severity, contracted day,
+    hold remaining)
+[✓] The hold-then-recover curve (pure Illness.h): contraction drops
+    health to the hold and it holds while the sickness runs; severity
+    grows while untreated (children faster); at the cap the tail of
+    the hold drains toward death — the rescue window; recovery climbs
+    back at the recovery rate
+[✓] Four contraction vectors: radstorm days, food (shared meals),
+    wounds (fights), and contagion (the sick spread it in their
+    settlement)
+[✓] The visible cost is rest — Fatigue decay multiplied while ill,
+    easing off as health recovers, so the sick tire faster and Decide
+    produces Rest more often
+[✓] Medicine — the trade stone's second good: a sick mind at the
+    market buys a dose (caps leave the pouch or shared wallet), the
+    hold ends, recovery starts early; a broke sick mind rests instead
+[✓] Death at the bottom — a severity-capped, untreated illness can
+    drain health to zero; the mind is removed with the same
+    bookkeeping a kill books (never restores), the settlement hears
+    "died of sickness"
+[✓] Tuning — sim.illness.* INI keys for the whole curve and every
+    vector, defaults tuned so death is rare and earned
+[✓] IllnessTest — six stages (contract, hold/recover, fatal path,
+    medicine, fatigue toll, child fragility); 24/24 suites green
 
 ═══════════════════════════════════════════════
 

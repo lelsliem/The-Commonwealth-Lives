@@ -332,6 +332,36 @@ namespace TLC
             };
         }
 
+        ComponentSerializer<Health> MakeHealthSerializer()
+        {
+            return {
+                [](const Health& health)
+                {
+                    Codec::Writer writer;
+                    writer.F(health.Value);
+                    writer.U32(static_cast<std::uint32_t>(
+                        health.Illness.Kind));
+                    writer.F(health.Illness.Severity);
+                    writer.U64(health.Illness.ContractedDay);
+                    writer.F(health.Illness.Remaining);
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+
+                    return Health{
+                        reader.F(),
+                        Sickness{
+                            static_cast<SicknessKind>(reader.U32()),
+                            reader.F(),
+                            reader.U64(),
+                            reader.F() } };
+                }
+            };
+        }
+
         ComponentSerializer<Name> MakeNameSerializer()
         {
             return {
@@ -433,6 +463,7 @@ namespace TLC
         registry.RegisterSerializer<CapPouch>(MakeCapPouchSerializer());
         registry.RegisterSerializer<BirthDay>(MakeBirthDaySerializer());
         registry.RegisterSerializer<Pregnancy>(MakePregnancySerializer());
+        registry.RegisterSerializer<Health>(MakeHealthSerializer());
         registry.RegisterSerializer<Name>(MakeNameSerializer());
 
         // The registry-level legacy store — the co-save's v6 section.

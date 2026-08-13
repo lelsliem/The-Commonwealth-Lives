@@ -69,6 +69,10 @@ namespace TLC
             a_registry.AddComponent<Goals>(id, SeededGoals(Species::Child));
             a_registry.AddComponent<Memory>(id, Memory{});
 
+            // The illness stone (0.8.0): a child is born healthy like
+            // any mind; children fall sicker, faster (the ChildMult).
+            a_registry.AddComponent<Health>(id, Health{});
+
             Relationships relationships;
             relationships.ByEntity[a_parentA] = Relationship{ 0.5f, 0.3f };
             relationships.ByEntity[a_parentB] = Relationship{ 0.5f, 0.3f };

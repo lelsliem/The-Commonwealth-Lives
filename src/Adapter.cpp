@@ -2104,6 +2104,11 @@ namespace TLC
             m_UsedNames.insert(fullName);
         }
 
+        // The illness stone (0.8.0): every mind is born healthy. The
+        // component is additive in the co-save — a pre-health save
+        // restores with Value 1.0 and no sickness (the safe default).
+        m_Registry.AddComponent<Health>(id, Health{});
+
         m_Translator.Add(formId, id);
     }
 
@@ -3193,6 +3198,29 @@ namespace TLC
             return;
         }
 
+        // The illness stone (0.8.0): a fight can infect — the victim
+        // rolls the wound chance. A wound is nastier than a chill: the
+        // severity is seeded higher, so an untreated wound can reach
+        // the death line while a mild radstorm cold recovers.
+        if (m_Settings.IllnessEnabled
+            && m_Settings.Illness.WoundChance > 0.0f)
+        {
+            const auto woundRoll = m_Rng.NextFloat(0.0f, 1.0f);
+            const auto victimHealth =
+                m_Registry.GetComponent<Health>(a_victim);
+
+            if (victimHealth
+                && TLC::Contract(
+                    *victimHealth, SicknessKind::Wound, 0.5f, a_day,
+                    m_Settings.Illness,
+                    m_Settings.Illness.WoundChance, woundRoll))
+            {
+                REX::INFO(
+                    "illness: {} took a wound and fell ill.",
+                    MindLabel(a_victim));
+            }
+        }
+
         // The punch lands (0.7.5 polish): the victim is shoved back
         // from the aggressor — the game's own knockback (AIProcess::
         // KnockExplosion, REL::ID-resolved against the installed
@@ -3760,6 +3788,9 @@ namespace TLC
         m_LastWander.clear();
         m_RecentDeaths.clear();
         m_GriefAnnounced.clear();
+        m_IllnessAnnounced.clear();
+        m_LastRadstormExposureDay =
+            std::numeric_limits<std::uint64_t>::max();
         m_PendingDeaths.clear();
         m_SeenAlive.clear();
         m_UsedNames.clear();
@@ -4265,6 +4296,51 @@ namespace TLC
         {
             if (traded)
             {
+                // The illness stone (0.8.0): a sick mind at the market
+                // buys medicine instead of a meal — the trade stone's
+                // second good. Caps leave the pouch (or the household's
+                // shared wallet), the hold ends, recovery starts early.
+                // A broke sick mind rests instead — honest: sickness
+                // without caps means time, not treatment.
+                auto buyerHealth =
+                    m_Registry.GetComponent<Health>(a_entity);
+
+                if (buyerHealth
+                    && buyerHealth->Illness.Kind != SicknessKind::None
+                    && m_Settings.Illness.MedicinePrice > 0.0f)
+                {
+                    const auto price = static_cast<std::uint32_t>(
+                        m_Settings.Illness.MedicinePrice);
+
+                    auto buyerPouch =
+                        Households::PouchOf(m_Registry, m_Bonds, a_entity);
+                    auto sellerPouch =
+                        Households::PouchOf(m_Registry, m_Bonds, counterparty);
+
+                    if (buyerPouch && sellerPouch
+                        && buyerPouch->Caps >= price)
+                    {
+                        buyerPouch->Caps -= price;
+                        sellerPouch->Caps += price;
+
+                        TakeMedicine(*buyerHealth, m_Settings.Illness);
+
+                        REX::INFO(
+                            "illness: {} buys medicine from {} for {} caps — the hold ends, recovery begins.",
+                            MindLabelForm(formId),
+                            MindLabelForm(m_Translator.FormFor(counterparty)),
+                            price);
+
+                        PushNews(MindLabelForm(formId) + " bought medicine.");
+                    }
+                    else
+                    {
+                        REX::INFO(
+                            "illness: {} is sick but broke — they rest instead of buying medicine.",
+                            MindLabelForm(formId));
+                    }
+                }
+
                 // The buyer's half of the exchange: a meal at the bench
                 // is company. ReportOutcome above built trust (Trade is
                 // the core's reliability channel); Remember(Social)
@@ -4944,6 +5020,234 @@ namespace TLC
             });
     }
 
+    void Adapter::ApplyIllness(float a_deltaSeconds)
+    {
+        using namespace LCE::Simulation;
+
+        if (!m_Settings.IllnessEnabled)
+        {
+            return;
+        }
+
+        // The per-tick curve: every ill mind holds or recovers, and the
+        // Fatigue multiplier takes its toll while ill (the visible cost
+        // is rest — the mind tires faster and Decide produces Rest more
+        // often). Deaths at the bottom are collected and removed after
+        // the loop — RemoveMind during iteration is never safe.
+        std::vector<std::uint32_t> dead;
+
+        m_Registry.ForEachWithComponent<Health>(
+            [&](EntityId a_entity, Health& a_health)
+            {
+                // The species-aware toll: a child's severity grows
+                // faster (sim.illness.childMult).
+                const auto tag =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                const auto result = TickIllness(
+                    a_health, a_deltaSeconds, m_Settings.Illness,
+                    tag != nullptr && tag->Value == Species::Child);
+
+                if (result == 2)
+                {
+                    if (const auto formId = m_Translator.FormFor(a_entity); formId != 0)
+                    {
+                        dead.push_back(formId);
+                    }
+
+                    return;
+                }
+
+                // The visible cost while ill: the Fatigue need decays
+                // at the multiplied rate — a sick mind tires faster and
+                // rests more (the sleep cycle's recovery answers it).
+                // The multiplier eases off as health recovers.
+                const auto mult =
+                    FatigueMultiplier(a_health, m_Settings.Illness);
+
+                if (mult > 1.0f)
+                {
+                    if (auto needs = m_Registry.GetComponent<Needs>(a_entity))
+                    {
+                        for (auto& need : needs->List)
+                        {
+                            if (need.Type == NeedType::Fatigue)
+                            {
+                                need.Value -= need.DecayRate
+                                    * (mult - 1.0f) * a_deltaSeconds;
+                            }
+                        }
+                    }
+                }
+            });
+
+        for (const auto formId : dead)
+        {
+            // The death path (0.8.0): the same bookkeeping a kill books —
+            // the world keeps its books, the dead never restore. The
+            // cause is named so the settlement knows the price of the
+            // wastes.
+            REX::INFO(
+                "illness: {} died of sickness — the wastes claim another.",
+                MindLabelForm(formId));
+
+            PushNews(MindLabelForm(formId) + " died of sickness.");
+            RemoveMind(formId, true);
+        }
+
+        // The once-per-sickness announce (the radio's story): a mind
+        // that just fell ill, or just recovered, says so once — the
+        // announce set is per (mind, kind) so a restored illness
+        // announces once, and the recovered line rides the recovery.
+        IllnessNews();
+    }
+
+    void Adapter::ApplyIllnessVectors()
+    {
+        using namespace LCE::Simulation;
+
+        if (!m_Settings.IllnessEnabled)
+        {
+            return;
+        }
+
+        const auto day = CurrentDay();
+
+        // The radstorm vector: a radstorm day exposes every mind once
+        // that day (the day gate — exposure rolls per mind per radstorm
+        // day, not every second of it). The weather fact is global, so
+        // the whole settlement rolls; the chance (sim.illness.radstorm-
+        // Chance) decides how many fall ill.
+        if (m_Radstorm && day != m_LastRadstormExposureDay)
+        {
+            m_LastRadstormExposureDay = day;
+
+            m_Registry.ForEachWithComponent<Health>(
+                [&](EntityId a_entity, Health& a_health)
+                {
+                    const auto roll = m_Rng.NextFloat(0.0f, 1.0f);
+
+                    if (Contract(
+                            a_health, SicknessKind::Radstorm, 0.3f, day,
+                            m_Settings.Illness,
+                            m_Settings.Illness.RadstormChance, roll))
+                    {
+                        REX::INFO(
+                            "illness: {} is ill — the radstorm's bite (day {}).",
+                            MindLabel(a_entity), day);
+                    }
+                });
+        }
+
+        // The contagion vector: the sick echo outward — each ill mind's
+        // settlement peers (the Groups membership, the same settlement
+        // the conflict source's echo rides) roll the contagion chance
+        // each second. One roll per healthy peer per second: a
+        // settlement with a sick member slowly passes it around.
+        //
+        // Collect the ill first (the sick's settlement set), then roll
+        // for every peer in those settlements — the scan is bounded,
+        // and the sick are few.
+        std::unordered_set<GroupId> sickSettlements;
+        std::vector<EntityId> sick;
+
+        m_Registry.ForEachWithComponent<Health>(
+            [&](EntityId a_entity, const Health& a_health)
+            {
+                if (a_health.Illness.Kind == SicknessKind::None)
+                {
+                    return;
+                }
+
+                sick.push_back(a_entity);
+
+                if (const auto groups =
+                        m_Registry.GetComponent<Groups>(a_entity))
+                {
+                    for (const auto& group : groups->Memberships)
+                    {
+                        sickSettlements.insert(group);
+                    }
+                }
+            });
+
+        if (sick.empty() || sickSettlements.empty())
+        {
+            return;
+        }
+
+        m_Registry.ForEachWithComponent<Health>(
+            [&](EntityId a_entity, Health& a_health)
+            {
+                if (a_health.Illness.Kind != SicknessKind::None)
+                {
+                    return;   // already ill
+                }
+
+                // Only peers of the sick settlements roll.
+                const auto groups =
+                    m_Registry.GetComponent<Groups>(a_entity);
+
+                if (!groups)
+                {
+                    return;
+                }
+
+                bool sharesSettlement = false;
+
+                for (const auto& group : groups->Memberships)
+                {
+                    if (sickSettlements.contains(group))
+                    {
+                        sharesSettlement = true;
+                        break;
+                    }
+                }
+
+                if (!sharesSettlement)
+                {
+                    return;
+                }
+
+                const auto roll = m_Rng.NextFloat(0.0f, 1.0f);
+
+                if (Contract(
+                        a_health, SicknessKind::Contagion, 0.25f, day,
+                        m_Settings.Illness,
+                        m_Settings.Illness.ContagionChance, roll))
+                {
+                    REX::INFO(
+                        "illness: {} caught it from the settlement (day {}).",
+                        MindLabel(a_entity), day);
+                }
+            });
+    }
+
+    void Adapter::IllnessNews()
+    {
+        // The radio's story (0.8.0): once per sickness, the settlement
+        // hears who is ill and who recovered. The announce set is keyed
+        // per (mind, kind) — a restored illness announces once, and the
+        // set clears on EndWorld (a fresh world announces fresh).
+        m_Registry.ForEachWithComponent<Health>(
+            [this](LCE::Simulation::EntityId a_entity, const Health& a_health)
+            {
+                if (a_health.Illness.Kind == SicknessKind::None)
+                {
+                    return;
+                }
+
+                const auto key =
+                    (a_entity.Value() << 4)
+                    ^ static_cast<std::uint64_t>(a_health.Illness.Kind);
+
+                if (m_IllnessAnnounced.insert(key).second)
+                {
+                    PushNews(MindLabel(a_entity) + " is ill.");
+                }
+            });
+    }
+
     void Adapter::Tick(double a_deltaSeconds)
     {
         if (!m_Started)
@@ -5068,6 +5372,12 @@ namespace TLC
             // weather. Pushed on the same cadence as the seed — silent
             // unless a door changes.
             PushWorldFacts();
+
+            // The illness vectors (0.8.0): a radstorm day exposes every
+            // mind (once that day), and the sick echo outward to their
+            // settlement peers. Runs after the weather push so the
+            // radstorm flag is current.
+            ApplyIllnessVectors();
 
             // 0.6.0 Stone 5 — the arcs, on a day cadence: mediation for
             // every feud the settlement has heard of, once per day; and
@@ -5214,6 +5524,12 @@ namespace TLC
                     m_Settings.RestRecovery,
                     static_cast<float>(a_deltaSeconds));
             });
+
+        // The illness curve (0.8.0): hold-then-recover, the Fatigue
+        // toll while ill (a sick mind tires faster and Decide produces
+        // Rest more often), and death at the bottom. Runs before Update
+        // so this tick's decisions see the sick mind's drained Fatigue.
+        ApplyIllness(static_cast<float>(a_deltaSeconds));
 
         // The core's stateless tick: needs decay, memory fade, goal
         // urgency, then one Intent per mind. All of it on the game thread,

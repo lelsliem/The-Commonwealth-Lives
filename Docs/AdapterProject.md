@@ -70,14 +70,14 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.7.7 | Babies | ✅ verified in-game (2026-08-13) |
 | 0.7.8 | Visible children pairing | ✅ verified in-game (2026-08-13) |
 | 0.7.9 | Bugs & polish | ✅ complete (2026-08-13) |
-| 0.8.0 | Illness & Medicine | 🔲 design complete (Illness.md) |
+| 0.8.0 | Illness & Medicine | ✅ built, harness-verified (2026-08-13) — in-game pending |
 | 0.9.0 | Release gate | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **23/23 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **24/24 suites green.**
 
 ---
 

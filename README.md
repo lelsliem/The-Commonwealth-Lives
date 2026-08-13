@@ -4,9 +4,9 @@
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
 [![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.7.9-emerald.svg)](Docs/Roadmap.md)
+[![Version](https://img.shields.io/badge/Version-0.8.0-emerald.svg)](Docs/Roadmap.md)
 
-The settlers aren't on quest scripts — they're **hungry**, they **remember** where to trade, they walk to **their own settlement's market** when they're hungry, and the exchange is physical: caps change hands, the stall-keeper's purse grows, trust is earned. The market has **hours** — it closes at night and nobody walks to a closed bench — and the day's **weather** is remembered. They have **names**, they **argue**, they **fight**, they **bond**, and **children are born**. The game does nothing but show the result.
+The settlers aren't on quest scripts — they're **hungry**, they **remember** where to trade, they walk to **their own settlement's market** when they're hungry, and the exchange is physical: caps change hands, the stall-keeper's purse grows, trust is earned. The market has **hours** — it closes at night and nobody walks to a closed bench — and the day's **weather** is remembered. They have **names**, they **argue**, they **fight**, they **bond**, **children are born**, and the wastes can make them **sick** — they buy medicine when they can afford it, rest when they can't, and a severity-capped illness can end them. The game does nothing but show the result.
 
 > A settler goes to market because they are hungry — no script.
 
@@ -14,7 +14,7 @@ That sentence is the test plan. In-game verified end to end: hungry settlers dec
 
 ## Roadmap
 
-Where this project is and where it's going: `Docs/Roadmap.md`. Every stone through **0.7.8** is in and verified in-game (2026-08-13). The staged run to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.7.9 bugs & polish → 0.8.0 Illness & Medicine → 0.9.0 the release gate → 1.0.0 freeze and ship. The milestone stones so far:
+Where this project is and where it's going: `Docs/Roadmap.md`. Every stone through **0.7.9** is in and verified (0.7.x fully in-game; 0.8.0 Illness & Medicine built and harness-verified, in-game test pending). The staged run to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.8.0 Illness & Medicine (in-game) → 0.9.0 the release gate → 1.0.0 freeze and ship. The milestone stones so far:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.
@@ -84,12 +84,22 @@ Where this project is and where it's going: `Docs/Roadmap.md`. Every stone throu
   after they grow. Graceful degradation when the mod is absent
   (`sim.birth.visible`). The adapter owns the pairing; no patch ESP
   needed.
+- **0.7.9** bugs & polish — a full codebase audit: no bugs, no stale
+  comments, all INI defaults match code, docs consistent.
+- **0.8.0** Illness & Medicine — every mind carries a **Health**
+  component (co-save additive). Radstorms, shared food, wounds, and
+  contagion can make a mind sick: health drops to the hold level while
+  the sickness runs, severity grows untreated (children faster), the
+  sick tire faster and rest more, and a **dose of medicine** (the
+  trade stone's second good) ends the hold early. An untreated,
+  severity-capped illness can drain health to zero — death is rare,
+  earned, and remembered. Tuned via `sim.illness.*`.
 
 **Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
 releases published: `0.5.0-beta`, **`0.6.0`**, and **`0.7.0`**
 (2026-08-11, notes in [RELEASE_NOTES.md](RELEASE_NOTES.md)). The
-0.7.x run ships **local only** — no release package until **0.8.0**.
-Nexus comes later.
+0.7.x run shipped as the **0.7.9** release (2026-08-13); 0.8.0 ships
+once it is verified in-game. Nexus comes later.
 
 ## What this is
 

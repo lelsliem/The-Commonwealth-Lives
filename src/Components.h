@@ -111,6 +111,45 @@ namespace TLC
     };
 
     //-------------------------------------------------------------------------
+    // SicknessKind — which illness a mind carries (0.8.0 Illness). A
+    // label for the log and news; the mechanics (hold, severity,
+    // recovery) are the Health component's. None is the well state.
+    //-------------------------------------------------------------------------
+    enum class SicknessKind : std::uint32_t
+    {
+        None = 0,
+        Radstorm,
+        Food,
+        Wound,
+        Contagion
+    };
+
+    //-------------------------------------------------------------------------
+    // Sickness — the illness itself (0.8.0 Illness). Carried inside
+    // Health; Kind == None means well.
+    //-------------------------------------------------------------------------
+    struct Sickness
+    {
+        SicknessKind Kind = SicknessKind::None;
+        float Severity = 0.0f;         // 0..1 — how bad, drives the fatigue toll
+        std::uint64_t ContractedDay = 0; // the world day it began
+        float Remaining = 0.0f;        // seconds of the hold window left
+    };
+
+    //-------------------------------------------------------------------------
+    // Health — a mind's health, the illness stone (0.8.0). 1.0 is
+    // healthy, 0.0 is dead. The hold-then-recover curve lives in
+    // Illness.h (pure); this component rides the co-save like any named
+    // adapter component (additive — a pre-health save restores with
+    // Value 1.0 and no sickness).
+    //-------------------------------------------------------------------------
+    struct Health
+    {
+        float Value = 1.0f;
+        Sickness Illness;
+    };
+
+    //-------------------------------------------------------------------------
     // SeedPouch — a human mind's born wealth: a deterministic pouch from
     // the entity id (the IdJitter span pattern), so a saved mind's purse
     // survives restore exactly. 40 ± 20 caps: a few meals, not a fortune.
