@@ -26,15 +26,17 @@ Current Stage   : 0.8.0 shipped — Health component, four contraction
                    good, death at the bottom. 24/24 harness suites
                    green.
 
-Next Milestone  : the 0.8.x run to the release gate
+Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
                    (Docs/Design/Run080.md):
                    0.8.1 illness field pass (in progress) →
                    0.8.2 burial → 0.8.3 sick household →
-                   0.8.4 MCM → 0.8.5 player's stage →
-                   0.8.6 scale → 0.8.7 trust → 0.8.8 docs →
-                   0.8.9 bugs & polish →
-                   0.9.0 the release gate (verify, not build) →
-                   1.0.0 freeze and ship
+                   0.8.4 MCM → 0.8.5a random interactions
+                   (the trial) → 0.8.6a the audit →
+                   0.8.6b redefine & loose ends →
+                   0.8.6c scale in the field →
+                   0.9.1a dialog → 0.9.1b timings & weights →
+                   0.9.1c babies implemented → 0.9.2a animations →
+                   0.9.2b final touches → 0.9.2c beta on Nexus
 
 ═══════════════════════════════════════════════
 
@@ -414,95 +416,118 @@ as a soft dependency and a small Papyrus surface on the adapter side.
 
 ═══════════════════════════════════════════════
 
-0.8.5 — The Player's Stage · news where the player is
+0.8.5a — Random Interactions · the trial
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED (0.9.0's news-polish item, pulled forward)
+STATUS: PLANNED (a trial, not a promise)
 
-The news feed prioritizes the player's settlement: what happens where
-the player stands comes first, the wider Commonwealth second, and the
-throttle stays sane at 600 minds (one headline per beat, never a
-wall). The radio is the storyteller — this makes it *about* the
-player's people.
+Settlers interact with each other unprompted — not only when hunger
+drives them to a bench. The trial first: watch what the existing sim
+already produces (person-market trades, bench rows, Socialize,
+proximity), run test trials, and implement only what succeeds. If
+the trial fails, it closes as a documented finding and the run moves
+on.
 
-- Verify: standing in Sanctuary, the headlines are Sanctuary's;
-  the feed never floods during a mass event
-
-═══════════════════════════════════════════════
-
-0.8.6 — Scale in the Field · the hard gate, measured
+- Verify: two settlers who cross paths sometimes greet, talk, or
+  trade without a hunger drive; rate-limited, never spammy
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED (0.9.0's hard gate, pulled forward)
+0.8.6a — The Audit
 
-The engine proved 5000 minds round-trip and year-long soaks; the
-adapter must prove a normal save with hundreds of settlers ticks
-inside a frame budget. The engine's `TickReport` (once a minute)
-measures it; a release that chugs at 600 minds is dead on arrival.
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+ReleasePlan's cut list revisited against what now exists — the hands
+pillar, pex scenes, MCM (built in 0.8.4 — re-assess), audio radio,
+provisioner naming, and anything the field tests flagged as noise.
+Each item is a decision, not an accident.
+
+0.8.6b — Redefine & Loose Ends
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+Apply the audit: scope redefined to what the beta actually needs;
+the loose ends from 0.8.1–0.8.5a closed; the docs reconciled with
+the cuts.
+
+0.8.6c — Scale in the Field
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The hard gate, measured: a normal save with hundreds of settlers
+must tick inside a frame budget (`TickReport` once a minute). A beta
+that chugs at 600 minds is dead on arrival.
 
 - Verify: a restored 600+ mind save holds frame time over a long
-  session; any hotspot found is fixed or gated behind a knob
+  session
 
 ═══════════════════════════════════════════════
 
-0.8.7 — The Trust Story · remove-the-DLL is safe
-
-═══════════════════════════════════════════════
-
-STATUS: PLANNED (0.9.0's trust item, pulled forward)
-
-Remove-the-DLL behavior documented and proven: the co-save rides in
-the save, the save still loads without the mod, clean migration, no
-stale-record corruption. The save/load proof is the mod's reputation.
-
-- Verify: load a saved world with the DLL removed, then reinstall —
-  nothing corrupts, nothing explodes, the world resumes
-
-═══════════════════════════════════════════════
-
-0.8.8 — Player Docs · the mod-page copy
-
-═══════════════════════════════════════════════
-
-STATUS: PLANNED (0.9.0's docs item, pulled forward)
-
-A real README: what it does, install, tune, known limits,
-compatibility notes (Sim Settlements and other renaming mods,
-place-anywhere, baby mod), the settings cheat-sheet. The mod-page
-copy the release will use.
-
-═══════════════════════════════════════════════
-
-0.8.9 — Bugs & Polish · the clean run into the gate
+0.9.1a — Dialog: more random lines
 
 ═══════════════════════════════════════════════
 
 STATUS: PLANNED
 
-The named sweep, not a bucket: every field note from 0.8.2–0.8.8
-folded back in, the docs reconciled, warnings cleared, the harness at
-full green. The standing rule — each fix lands with its ADR and its
-log receipt.
+The pools grow for the interactions 0.8.5a proved — new greets,
+gossip, trades, and banter, feeding the seeded picker. Pools are
+data; no new machinery.
 
-═══════════════════════════════════════════════
-
-0.9.0 — The Release Gate (verify, not build)
-
-═══════════════════════════════════════════════
-
-STATUS: PLANNED — the verify, not build, gate. The four gate items
-were built in the 0.8.x run (scale 0.8.6, trust 0.8.7, docs 0.8.8,
-news 0.8.5); 0.9.0 re-verifies all four together in one long session
-and signs them off. Nothing ships before it.
-
-═══════════════════════════════════════════════
-
-1.0.0 — Freeze and Ship
+0.9.1b — Timings & Weights
 
 ═══════════════════════════════════════════════
 
 STATUS: PLANNED
 
-The show is complete — people visibly living — and the stage holds.
+The new interactions' cadence and probability, tuned in INI
+(`sim.interact.*`): when a crossing becomes a greeting, a chat, a
+row, or a trade; the per-day and per-mind rate limits.
+
+0.9.1c — Babies, implemented
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The birth journey made visible/real: the baby-mod integration as a
+soft/optional dependency (permission requested), bottles/cribs as
+walk targets, the market selling baby goods, the whole journey
+co-save-safe.
+
+0.9.2a — Animations
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The interactions get bodies: the ESP/idle pattern proven by the kick
+(0.7.6) extends to the new interactions — greeting gestures, chat
+stances, the altercation's shove — with graceful fallback when the
+ESP is absent.
+
+0.9.2b — Final Touches
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The clean run before the beta: every field note folded in, docs
+reconciled, warnings cleared, harness at full green, the README
+written for players, the release package assembled.
+
+0.9.2c — Beta on Nexus
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The first public release: the beta ships on Nexus with the release
+description and changelog; GitHub stays the source; beta feedback
+feeds the post-beta run.
