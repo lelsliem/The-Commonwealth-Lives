@@ -9,9 +9,12 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
-## 0.8.2 — the burial: the settlement lays its own to rest (2026-08-13)
+## 0.8.2 — the burial: the settlement lays its own to rest (2026-08-13, verified 2026-08-14)
 
-ADR-0023's planned stone, built. The sim's death path was complete in
+ADR-0023's planned stone, built and verified in-game: a kill in
+Sanctuary grieved (5 minds sought company), the corpse was laid to
+rest on schedule (`burials: the settlement laid Nico Jackson to
+rest.`), and the ledger entry cleared on the next co-save write. The sim's death path was complete in
 the books (death fact, grief, legacy) but the game corpse stayed in
 the settlement cell forever — no cell reset there. Now the corpse is
 laid to rest once the mourning window passes.

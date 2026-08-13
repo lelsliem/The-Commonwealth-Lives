@@ -29,7 +29,7 @@ Current Stage   : 0.8.0 shipped — Health component, four contraction
 Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
                    (Docs/Design/Run080.md):
                    0.8.1 illness field pass (shipped) →
-                   0.8.2 burial (built, awaiting in-game verify) →
+                   0.8.2 burial (verified 2026-08-14) →
                    0.8.3 sick household →
                    0.8.4 random interactions (the trial) →
                    0.8.5 MCM → 0.8.6a the audit →
@@ -375,7 +375,8 @@ the balance and the wound window wait on an in-game session.
 
 ═══════════════════════════════════════════════
 
-STATUS: BUILT — awaiting in-game verification (2026-08-13)
+STATUS: VERIFIED in-game (2026-08-14) — corpse disabled on
+schedule, settlement heard it, ledger clears on save
 
 The corpse must not linger forever. The sim's death path is complete
 in the books (death fact, grief, legacy) but the game corpse stays in
