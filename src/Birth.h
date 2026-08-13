@@ -140,43 +140,68 @@ namespace TLC
         // day. For each, create the child mind and remove the Pregnancy
         // component from the mother. Returns the newly created child
         // entity IDs (may be empty).
+        //
+        // Two-pass: collect due mothers first (read-only), then create
+        // children and remove pregnancies.  Removing a component inside
+        // ForEachWithComponent can invalidate the iterator and crash
+        // (the 0.7.7 day-261 CTD).
         //---------------------------------------------------------------------
         inline std::vector<EntityId> CheckBirths(
             EntityRegistry& a_registry,
             const NeedRates& a_rates,
             std::uint64_t a_currentDay)
         {
-            std::vector<EntityId> newborns;
+            // Pass 1: collect due mothers (read-only).
+            struct DueMother
+            {
+                EntityId Mother;
+                EntityId ParentA;
+                EntityId ParentB;
+            };
+
+            std::vector<DueMother> due;
 
             a_registry.ForEachWithComponent<Pregnancy>(
                 [&](EntityId a_mother, Pregnancy& a_preg)
                 {
-                    if (a_currentDay < a_preg.DueDay)
+                    if (a_currentDay >= a_preg.DueDay)
                     {
-                        return;  // not due yet
+                        due.push_back({
+                            a_mother,
+                            EntityId{ a_preg.ParentA },
+                            EntityId{ a_preg.ParentB }});
                     }
-
-                    const auto parentA =
-                        EntityId{ a_preg.ParentA };
-                    const auto parentB =
-                        EntityId{ a_preg.ParentB };
-
-                    const auto child = Create(
-                        a_registry, parentA, parentB, a_rates);
-
-                    if (child.IsValid())
-                    {
-                        // Stamp the birth day on the child so growth
-                        // can track its age.
-                        a_registry.AddComponent<BirthDay>(
-                            child, BirthDay{ a_currentDay });
-
-                        newborns.push_back(child);
-                    }
-
-                    // Pregnancy is consumed — remove it.
-                    a_registry.RemoveComponent<Pregnancy>(a_mother);
                 });
+
+            // Pass 2: create children and consume pregnancies.
+            std::vector<EntityId> newborns;
+
+            for (const auto& entry : due)
+            {
+                // Safety: if either parent was destroyed (e.g. the
+                // player killed them), skip the birth — a child with
+                // one dead parent is a sad story, not a crash.
+                if (a_registry.GetComponent<Needs>(entry.ParentA) == nullptr
+                    || a_registry.GetComponent<Needs>(entry.ParentB) == nullptr)
+                {
+                    a_registry.RemoveComponent<Pregnancy>(
+                        entry.Mother);
+                    continue;
+                }
+
+                const auto child = Create(
+                    a_registry, entry.ParentA, entry.ParentB, a_rates);
+
+                if (child.IsValid())
+                {
+                    a_registry.AddComponent<BirthDay>(
+                        child, BirthDay{ a_currentDay });
+
+                    newborns.push_back(child);
+                }
+
+                a_registry.RemoveComponent<Pregnancy>(entry.Mother);
+            }
 
             return newborns;
         }
