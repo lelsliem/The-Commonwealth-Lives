@@ -236,6 +236,34 @@ namespace TLC
         }
 
         //---------------------------------------------------------------------
+        // PairVisibleChild — (0.7.8) when the external baby mod is
+        // loaded and sim.birth.visible is on, search for an unassigned
+        // child actor in the settlement and pair it with the sim-only
+        // child. The child gets a FormRef and walks the world like any
+        // mind. Returns true if pairing succeeded.
+        //
+        // NOTE: the actual pairing logic depends on the baby mod's
+        // FormIDs, which are not yet available (permission pending).
+        // This is a graceful-degradation stub: when the mod is absent
+        // or BirthVisible is off, children stay sim-only.
+        //---------------------------------------------------------------------
+        inline bool PairVisibleChild(
+            EntityRegistry& a_registry,
+            EntityId a_child,
+            std::uint32_t a_settlementFormId)
+        {
+            // Without the baby mod's FormIDs, we cannot search for
+            // child actors. This is the graceful-degradation path:
+            // the child stays sim-only, the world does not notice.
+            // When permission lands and we know the mod's child
+            // FormIDs, this function will:
+            //   1. Search the settlement for child actors
+            //   2. Pick one not yet assigned to a sim child
+            //   3. Add FormRef + register with the translator
+            return false;
+        }
+
+        //---------------------------------------------------------------------
         // FeedChildren — one tick of the child's life: every sim-only
         // child (no FormRef — there is no game actor to walk or eat) is
         // fed by the household: Hunger recovers toward full at the

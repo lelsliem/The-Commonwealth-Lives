@@ -1671,3 +1671,34 @@ visible transition — the child walks to market as a full mind.
   chance default (0.05) keeps it rare.
 - Growth is purely sim-side — the visible actor half waits on 0.7.8.
 - The mother is deterministic (lower entity ID), so save/load is stable.
+
+### ADR-0057: Visible Children — Graceful Degradation (0.7.8)
+
+**Decision.**
+0.7.8 adds the infrastructure for visible children without depending on
+the external baby mod. A new INI key `sim.birth.visible` (default off)
+controls whether grown children pair with real game actors.
+
+The `PairVisibleChild` function in Birth.h is a graceful-degradation
+stub: when the baby mod ("Baby Sim - Babies That Grow Up") is absent
+or BirthVisible is off, children stay sim-only (0.7.7 behavior). When
+the mod is installed and the flag is on, the adapter will search for
+unassigned child actors in the settlement and pair them — but the
+actual pairing logic is deferred until the mod author's permission
+lands and we know the mod's child FormIDs.
+
+The adapter degrades gracefully: no crash, no visible change, no
+dependency. The children are born, named, fed, and grow — they just
+don't walk the world until 0.7.8's full integration.
+
+**Rationale.**
+The baby mod's permission was requested but not yet granted. Shipping
+the infrastructure now means: (a) the sim-side journey is complete,
+(b) the adapter is ready the moment permission lands, and (c) without
+the mod, nothing breaks.
+
+**Trade-offs.**
+- Children stay sim-only until the mod is integrated — the player
+  sees names in the log but no visible actors.
+- The stub is intentional: shipping untested pairing logic without
+  the mod's FormIDs would be fragile.

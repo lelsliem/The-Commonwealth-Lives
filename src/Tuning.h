@@ -220,6 +220,13 @@ namespace TLC::Tuning
         // gestation — a childhood is a life, not a window.
         float BirthChildhood = 10.0f;
 
+        // The visible-children flag (0.7.8): when on and the external
+        // baby mod ("Baby Sim - Babies That Grow Up") is loaded, a
+        // grown child pairs with a real game actor — it walks, trades,
+        // and bonds like any mind. When off (the default) or the mod
+        // is absent, children stay sim-only (0.7.7 behavior).
+        bool BirthVisible = false;
+
         // The conflict source (0.7.0 Stone 2): the temper line. A mind
         // whose temperament (Behaviour.h TemperOf, ~0.8–1.2 around 1.0)
         // is at or above this blames the stall-keeper when a hungry
@@ -453,6 +460,8 @@ namespace TLC::Tuning
             read("sim.birth.gestation", settings.BirthGestation);
         settings.BirthChildhood =
             read("sim.birth.childhood", settings.BirthChildhood);
+        settings.BirthVisible =
+            readBool("sim.birth.visible", settings.BirthVisible);
         settings.NewsEnabled =
             readBool("sim.news.enabled", settings.NewsEnabled);
 
