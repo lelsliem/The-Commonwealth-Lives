@@ -30,8 +30,8 @@ Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
                    (Docs/Design/Run080.md):
                    0.8.1 illness field pass (in progress) →
                    0.8.2 burial → 0.8.3 sick household →
-                   0.8.4 MCM → 0.8.5a random interactions
-                   (the trial) → 0.8.6a the audit →
+                   0.8.4 random interactions (the trial) →
+                   0.8.5 MCM → 0.8.6a the audit →
                    0.8.6b redefine & loose ends →
                    0.8.6c scale in the field →
                    0.9.1a dialog → 0.9.1b timings & weights →
@@ -398,25 +398,7 @@ family that cares).
 
 ═══════════════════════════════════════════════
 
-0.8.4 — MCM + Settings Manager · the player tunes in-game
-
-═══════════════════════════════════════════════
-
-STATUS: PLANNED (deferred from 0.7.x — Life.md's player-window half)
-
-A Mod Configuration Menu page exposing the tuning keys (hunger
-rhythm, market hours, bond thresholds, births gate, illness curve,
-gossip radius, population cap) so players tune the world in-game;
-the INI stays the source of truth, MCM reads and writes it (or an
-override file), with a restore-defaults button. Requires the MCM mod
-as a soft dependency and a small Papyrus surface on the adapter side.
-
-- Verify: an MCM change survives reload; defaults restore cleanly;
-  no MCM installed → the INI alone still works (soft dependency)
-
-═══════════════════════════════════════════════
-
-0.8.5a — Random Interactions · the trial
+0.8.4 — Random Interactions · the trial
 
 ═══════════════════════════════════════════════
 
@@ -434,6 +416,25 @@ on.
 
 ═══════════════════════════════════════════════
 
+0.8.5 — MCM + Settings Manager · the player tunes in-game
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (deferred from 0.7.x — Life.md's player-window half)
+
+A Mod Configuration Menu page exposing the tuning keys (hunger
+rhythm, market hours, bond thresholds, births gate, illness curve,
+gossip radius, population cap, and the interaction knobs the 0.8.4
+trial defined, if it proved) so players tune the world in-game;
+the INI stays the source of truth, MCM reads and writes it (or an
+override file), with a restore-defaults button. Requires the MCM mod
+as a soft dependency and a small Papyrus surface on the adapter side.
+
+- Verify: an MCM change survives reload; defaults restore cleanly;
+  no MCM installed → the INI alone still works (soft dependency)
+
+═══════════════════════════════════════════════
+
 0.8.6a — The Audit
 
 ═══════════════════════════════════════════════
@@ -441,7 +442,7 @@ on.
 STATUS: PLANNED
 
 ReleasePlan's cut list revisited against what now exists — the hands
-pillar, pex scenes, MCM (built in 0.8.4 — re-assess), audio radio,
+pillar, pex scenes, MCM (built in 0.8.5 — re-assess), audio radio,
 provisioner naming, and anything the field tests flagged as noise.
 Each item is a decision, not an accident.
 
@@ -452,7 +453,7 @@ Each item is a decision, not an accident.
 STATUS: PLANNED
 
 Apply the audit: scope redefined to what the beta actually needs;
-the loose ends from 0.8.1–0.8.5a closed; the docs reconciled with
+the loose ends from 0.8.1–0.8.4 closed; the docs reconciled with
 the cuts.
 
 0.8.6c — Scale in the Field
@@ -476,7 +477,7 @@ that chugs at 600 minds is dead on arrival.
 
 STATUS: PLANNED
 
-The pools grow for the interactions 0.8.5a proved — new greets,
+The pools grow for the interactions 0.8.4 proved — new greets,
 gossip, trades, and banter, feeding the seeded picker. Pools are
 data; no new machinery.
 

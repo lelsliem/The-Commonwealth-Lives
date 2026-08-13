@@ -24,6 +24,7 @@ events), `Identity.md` (0.7.0 — names, conflict source, the radio),
 `RealEvents.md` (0.7.1-0.7.5 — talk, rows, names, trade, fights),
 `FutureStones.md` (0.7.6-0.8.0 — fight-feel, babies, illness),
 `ReleasePlan.md` (the staged path to 1.0.0, including the honest cuts),
+`Run080.md` (the 0.8.x–0.9.x run to the Nexus beta — the working plan),
 `Landscape.md` (the Nexus survey — what exists, what we own, what to
 borrow, what to skip), `RealTest.md` (the live log evidence). Each is
 flipped to **verified in-game** as its stone lands; the ones that aren't
@@ -70,14 +71,16 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.7.7 | Babies | ✅ verified in-game (2026-08-13) |
 | 0.7.8 | Visible children pairing | ✅ verified in-game (2026-08-13) |
 | 0.7.9 | Bugs & polish | ✅ complete (2026-08-13) |
-| 0.8.0 | Illness & Medicine | ✅ built, harness-verified (2026-08-13) — in-game pending |
-| 0.9.0 | Release gate | 🔲 planned |
+| 0.8.0 | Illness & Medicine | ✅ verified in-game (2026-08-13) — natural radstorm, 73 medicine buys, 0 deaths |
+| 0.8.1 | The Illness Field Pass | ◐ in progress — co-save audit landed (Health/Pregnancy/BirthDay/CompanionTag now ride the record); balance, cough, news cadence, wound window remain |
+| 0.8.x–0.9.x | The run to the Nexus beta (Run080.md) | 🔲 0.8.2–0.9.2c planned |
+| 1.0.0 | Freeze and ship | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **24/24 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **25/25 suites green.**
 
 ---
 
@@ -108,6 +111,9 @@ src/Fights.h           physical escalation: paired-push kick, fall,
                        retaliation, once-per-day gate (ConflictGates)
 src/Birth.h            pregnancy window, gestation, birth, growth,
                        visible-children pairing (runtime scan)
+src/Illness.h          the sickness curve — hold, recover, death,
+                       medicine (four vectors: radstorm, food,
+                       wound, contagion)
 src/Bonds.h            relationship states (friend/sweetheart/spouse/
                        rival/enemy), mutual + sticky derivation
 src/Households.h       shared wallet, family bench
@@ -151,5 +157,9 @@ keys are stable strings). The adapter owns the durable F4SE co-save
 record (stable type names, versioning): v7 currently, adding sections
 for bonds (v5), stall-keepers (v3), memory world-days (v4), conflict
 gates, and the co-save's additive components (Name, CapPouch, SpeciesTag,
-Pregnancy, BirthDay). Migration: old saves load forward; a future
-component is skipped, never fatal.
+Pregnancy, BirthDay, Health). The 0.8.1 co-save audit fixed the stable-name
+table itself — Health, Pregnancy/BirthDay, and CompanionTag were registered
+serializers but never named, so mid-hold illness and in-progress pregnancy
+were lost on save/load; all four names now ride the record
+(MidOutbreakSaveTest locks the round-trip). Migration: old saves load
+forward; a future component is skipped, never fatal.
