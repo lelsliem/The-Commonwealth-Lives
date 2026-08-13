@@ -609,7 +609,10 @@ namespace TLC
         //                           peers roll the contagion chance.
         //   IllnessNews           — the once-per-sickness announce: X is
         //                           ill / X recovered, spoken once, not
-        //                           every frame of the hold.
+        //                           every frame of the hold. Burst-paced
+        //                           (sim.illness.newsMax per
+        //                           newsInterval) so an outbreak reads as
+        //                           a radio story, not a wall of names.
         //
         // Medicine rides the market arrival (ReportArrival): a sick
         // human with caps buys a dose instead of a meal — the caps
@@ -625,6 +628,13 @@ namespace TLC
         std::uint64_t m_LastRadstormExposureDay =
             std::numeric_limits<std::uint64_t>::max();
         std::unordered_set<std::uint64_t> m_IllnessAnnounced;
+
+        // The illness radio burst (0.8.1 field pass): the window that
+        // paces "X is ill" announces — when the last window opened and
+        // how many names it has used so far. Reset on EndWorld with the
+        // announce set.
+        std::chrono::steady_clock::time_point m_LastIllnessNews;
+        std::size_t m_IllnessNewsCount = 0;
 
         // One pair's disposition in a given direction, 0 when unknown.
         float DispositionOf(
@@ -753,6 +763,12 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             LCE::Simulation::EntityId,
             std::chrono::steady_clock::time_point>
             m_LastCough;
+
+        // When any mind last coughed (0.8.1 field pass): the global
+        // cough gate — one cough anywhere per sim.illness.coughGlobal
+        // seconds, so a settlement-wide outbreak stays a tell, not a
+        // wall of sound. Cleared at EndWorld with the per-mind timers.
+        std::chrono::steady_clock::time_point m_LastCoughGlobal;
 
         // The world's names (0.7.0 Stone 1): every name this world has
         // assigned — procedural names drawn from the lists and game names

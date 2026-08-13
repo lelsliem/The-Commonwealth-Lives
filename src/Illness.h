@@ -95,6 +95,28 @@ namespace TLC
         // interval (sim seconds). 0 disables the tell (an illness that
         // only lives in the log and the fatigue toll).
         float CoughInterval = 12.0f;
+
+        // The global cough gate (0.8.1 field pass): one cough anywhere
+        // per this many seconds, on top of the per-mind interval. A
+        // settlement-wide outbreak would otherwise be a wall of sound —
+        // 50 sick minds × one idle each is ~4 coughs a second — and
+        // the tell should stay a tell. 0 = no global gate (the per-mind
+        // interval alone).
+        float CoughGlobal = 4.0f;
+
+        // The illness radio (0.8.1 field pass): an outbreak is one
+        // story, not fifty lines. At most this many new "X is ill"
+        // names enter the news feed per NewsInterval window; the rest
+        // wait for the next window, and each mind still announces
+        // exactly once (the per-(mind, kind) announce set guarantees
+        // it). 0 = no illness news at all.
+        float NewsMax = 4.0f;
+
+        // How long each announce window lasts (seconds, real time like
+        // the news cooldown). A 50-sick radstorm day then reads as a
+        // radio story that unfolds — a few names every window — instead
+        // of a wall of names crowding out every other line.
+        float NewsInterval = 10.0f;
     };
 
     //-------------------------------------------------------------------------

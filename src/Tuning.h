@@ -517,6 +517,12 @@ namespace TLC::Tuning
             "sim.illness.deathDrain", settings.Illness.DeathDrain);
         settings.Illness.CoughInterval = read(
             "sim.illness.coughInterval", settings.Illness.CoughInterval);
+        settings.Illness.CoughGlobal = read(
+            "sim.illness.coughGlobal", settings.Illness.CoughGlobal);
+        settings.Illness.NewsMax = read(
+            "sim.illness.newsMax", settings.Illness.NewsMax);
+        settings.Illness.NewsInterval = read(
+            "sim.illness.newsInterval", settings.Illness.NewsInterval);
 
         settings.NewsEnabled =
             readBool("sim.news.enabled", settings.NewsEnabled);

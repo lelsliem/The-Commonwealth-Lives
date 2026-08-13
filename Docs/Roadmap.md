@@ -326,11 +326,9 @@ STATUS: BUILT ✅ (harness-verified 2026-08-13) — in-game pending
 
 ═══════════════════════════════════════════════
 
-STATUS: IN PROGRESS — the co-save audit landed (2026-08-13)
-
-The seams the 0.8.0 in-game verification exposed, closed one at a
-time. Each item is a real field finding from the natural-radstorm
-test (2026-08-13) or a follow-on hardening pass.
+STATUS: IN PROGRESS — the co-save audit, the cough gate, and the
+radio pacing landed (2026-08-13); the balance and the wound window
+wait on an in-game session.
 
 [✓] Mid-outbreak co-save — DONE, and it caught a real bug: Health
     (0.8.0) and Pregnancy/BirthDay (0.7.7) were registered as
@@ -344,12 +342,16 @@ test (2026-08-13) or a follow-on hardening pass.
     window, the medicine price vs typical pouch wealth. The day-12
     test showed 73 buys — confirm the economy doesn't make illness a
     non-event, and that the broke-rest path is the honest minority.
-[ ] The cough at outbreak scale — MTCoughing every 12 s per sick
-    mind is a flood in a settlement-wide outbreak; verify the rate-
-    limit holds and the tell stays audible without spamming.
-[ ] Illness news cadence — "X is ill" once per sickness is the
-    design, but a 50-sick outbreak must not swamp the radio; confirm
-    the announce set holds at scale.
+[✓] The cough at outbreak scale — DONE: the per-mind rate limit
+    held but a 50-sick settlement was ~4 overlapping coughs a second.
+    The global gate (`sim.illness.coughGlobal`, default 4 s) caps one
+    cough anywhere per window on top of the per-mind interval — the
+    tell stays audible, the wall of sound is gone.
+[✓] Illness news cadence — DONE: the once-per-sickness announce set
+    was correct, but a radstorm day dumped all 50–87 names into the
+    feed at once. Burst pacing (`sim.illness.newsMax` 4 per
+    `newsInterval` 10 s) lets an outbreak unfold as a radio story;
+    each mind still announces exactly once.
 [ ] Wound vector sanity — an untreated wound is the only death that
     should be earned; verify the 40 s rescue window reads right in
     game (medicine still turns it around).

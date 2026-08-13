@@ -86,10 +86,12 @@ trade: Jun Long returns from Starlight with food for the settlement.
 ## The seams
 
 - **Pure vs. edge** — the ledger math (budget, ran-dry, top-up) is
-  pure and testable (a LedgerTest: a settlement feeds its people →
-  no caravan; feeds fewer → caravan fires; caravan spends → budget
-  tops); the walk issue and the census read live at the edge
-  (Adapter.cpp).
+  pure and **already locked**: `src/TradeLedger.h` + `TradeLedgerTest`
+  (0.8.1, 26/26 green) pin the floor, the meal draw, the ran-dry
+  read, the one-courier gate, and the never-into-debt cost clamp
+  before the stone is ever built — the audit starts from a pinned
+  contract, not a blank page. The walk issue and the census read
+  live at the edge (Adapter.cpp) when the stone is scheduled.
 - **The co-save** — the ledger rides the adapter's record (additive,
   like `cappouch`): a stable name + serializer, no format bump, old
   saves back-fill. In-flight caravan state persists so a caravan

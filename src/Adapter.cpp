@@ -3787,9 +3787,12 @@ namespace TLC
         m_MarketAttendance.clear();
         m_LastWander.clear();
         m_LastCough.clear();
+        m_LastCoughGlobal = std::chrono::steady_clock::time_point{};
         m_RecentDeaths.clear();
         m_GriefAnnounced.clear();
         m_IllnessAnnounced.clear();
+        m_LastIllnessNews = std::chrono::steady_clock::time_point{};
+        m_IllnessNewsCount = 0;
         m_LastRadstormExposureDay =
             std::numeric_limits<std::uint64_t>::max();
         m_PendingDeaths.clear();
@@ -5138,19 +5141,30 @@ namespace TLC
                 // sound the player can hear, not a stat to read — and
                 // it stops the moment the mind is well (the result
                 // gate: only the still-ill path gets here). Rate-limited
-                // per mind, and only for loaded actors — the sim child
-                // has no game body to cough.
+                // per mind and globally (0.8.1 field pass: a
+                // settlement-wide outbreak would otherwise be a wall of
+                // sound — 50 sick minds × one idle each is 4 coughs a
+                // second). Only for loaded actors — the sim child has
+                // no game body to cough.
                 if (m_Settings.Illness.CoughInterval > 0.0f
                     && a_health.Illness.Kind != SicknessKind::None)
                 {
+                    const auto globallyOpen =
+                        m_Settings.Illness.CoughGlobal <= 0.0f
+                        || now - m_LastCoughGlobal
+                            >= std::chrono::duration<float>(
+                                m_Settings.Illness.CoughGlobal);
+
                     const auto coughIt = m_LastCough.find(a_entity);
 
-                    if (coughIt == m_LastCough.end()
-                        || now - coughIt->second
-                            >= std::chrono::duration<float>(
-                                m_Settings.Illness.CoughInterval))
+                    if (globallyOpen
+                        && (coughIt == m_LastCough.end()
+                            || now - coughIt->second
+                                >= std::chrono::duration<float>(
+                                    m_Settings.Illness.CoughInterval)))
                     {
                         m_LastCough[a_entity] = now;
+                        m_LastCoughGlobal = now;
 
                         const auto formId = m_Translator.FormFor(a_entity);
 
@@ -5320,7 +5334,29 @@ namespace TLC
         // The radio's story (0.8.0): once per sickness, the settlement
         // hears who is ill and who recovered. The announce set is keyed
         // per (mind, kind) — a restored illness announces once, and the
-        // set clears on EndWorld (a fresh world announces fresh).
+        // set clears on EndWorld (a fresh world announces fresh). The
+        // burst pacing (0.8.1 field pass): an outbreak is one story,
+        // not fifty lines — at most sim.illness.newsMax new names enter
+        // the feed per sim.illness.newsInterval window, so a 50-sick
+        // radstorm day reads as a radio story that unfolds, not a wall
+        // of names crowding out every other line. The rest wait for the
+        // next window; each mind still announces exactly once.
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now - m_LastIllnessNews
+            >= std::chrono::duration<float>(
+                m_Settings.Illness.NewsInterval))
+        {
+            m_LastIllnessNews = now;
+            m_IllnessNewsCount = 0;
+        }
+
+        if (m_IllnessNewsCount
+            >= static_cast<std::size_t>(m_Settings.Illness.NewsMax))
+        {
+            return;
+        }
+
         m_Registry.ForEachWithComponent<Health>(
             [this](LCE::Simulation::EntityId a_entity, const Health& a_health)
             {
@@ -5333,8 +5369,12 @@ namespace TLC
                     (a_entity.Value() << 4)
                     ^ static_cast<std::uint64_t>(a_health.Illness.Kind);
 
-                if (m_IllnessAnnounced.insert(key).second)
+                if (m_IllnessAnnounced.insert(key).second
+                    && m_IllnessNewsCount
+                        < static_cast<std::size_t>(
+                            m_Settings.Illness.NewsMax))
                 {
+                    ++m_IllnessNewsCount;
                     PushNews(MindLabel(a_entity) + " is ill.");
                 }
             });

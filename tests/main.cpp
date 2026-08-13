@@ -23,6 +23,7 @@
 #include "Fights.h"
 #include "Rows.h"
 #include "Serialization.h"
+#include "TradeLedger.h"
 #include "Translator.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
@@ -78,6 +79,7 @@ namespace TLC::Tests
     bool CoSaveV7Test();
     bool MidOutbreakSaveTest();
     bool IllnessTest();
+    bool TradeLedgerTest();
 }
 
 namespace
@@ -132,6 +134,7 @@ int main()
     Run("CoSaveV7Test", TLC::Tests::CoSaveV7Test);
     Run("MidOutbreakSaveTest", TLC::Tests::MidOutbreakSaveTest);
     Run("IllnessTest", TLC::Tests::IllnessTest);
+    Run("TradeLedgerTest", TLC::Tests::TradeLedgerTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -4884,6 +4887,80 @@ namespace TLC::Tests
             {
                 return false;
             }
+        }
+
+        return true;
+    }
+
+    bool TradeLedgerTest()
+    {
+        using namespace TradeLedger;
+
+        //-------------------------------------------------------------------------
+        // 1. NextBudget — the stall serves what it fed yesterday, never
+        //    below the floor (a settlement that fed nobody still has a
+        //    little to offer).
+        //-------------------------------------------------------------------------
+        if (NextBudget(30, 1) != 30
+            || NextBudget(0, 1) != 1
+            || NextBudget(2, 5) != 5)
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // 2. AfterMeal / IsDry — meals draw the budget down to zero, and
+        //    a dry stall stays dry (never negative, never into debt).
+        //-------------------------------------------------------------------------
+        {
+            auto budget = NextBudget(30, 1);
+            budget = AfterMeal(budget);
+
+            if (budget != 29 || IsDry(budget))
+            {
+                return false;
+            }
+
+            auto dry = NextBudget(1, 1);   // one meal left...
+            dry = AfterMeal(dry);          // ...and it is served
+
+            if (!IsDry(dry) || AfterMeal(dry) != 0)
+            {
+                return false;
+            }
+        }
+
+        //-------------------------------------------------------------------------
+        // 3. CaravanTopUp — the courier's return refills tomorrow's
+        //    budget, empty or not.
+        //-------------------------------------------------------------------------
+        if (CaravanTopUp(0, 25) != 25
+            || CaravanTopUp(10, 25) != 35)
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // 4. CanSendCaravan — one courier at a time: only a settlement
+        //    that ran dry yesterday with no courier already on the road
+        //    (a famine can't spawn a caravan army).
+        //-------------------------------------------------------------------------
+        if (!CanSendCaravan(true, false)
+            || CanSendCaravan(false, false)
+            || CanSendCaravan(true, true))
+        {
+            return false;
+        }
+
+        //-------------------------------------------------------------------------
+        // 5. CaravanCost — the keeper spends what the hoard covers,
+        //    never into debt.
+        //-------------------------------------------------------------------------
+        if (CaravanCost(40, 40) != 40
+            || CaravanCost(10, 40) != 10
+            || CaravanCost(0, 40) != 0)
+        {
+            return false;
         }
 
         return true;

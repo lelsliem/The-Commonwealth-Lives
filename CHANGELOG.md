@@ -9,6 +9,27 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.1 — the illness field pass: the tell and the radio (2026-08-13)
+
+Two scale fixes the day-12 outbreak exposed — a settlement-wide
+outbreak is one story, not a wall of sound and a wall of names.
+
+- **The global cough gate** (`sim.illness.coughGlobal`, default 4):
+  the cough was rate-limited per mind only, so 50 sick minds played
+  ~4 overlapping MTCoughing idles a second. Now one cough anywhere
+  per 4 s, on top of the per-mind interval (12 s) — the tell stays
+  audible, the cacophony is gone. A mind that is globally gated does
+  not lose its own interval.
+- **Burst-paced illness news** (`sim.illness.newsMax` 4 +
+  `sim.illness.newsInterval` 10): the announce set already fired
+  each "X is ill" exactly once, but a 50–87-case radstorm day
+  dumped them all into the feed at once, crowding out every other
+  line on the radio. Now at most 4 new names enter the feed per
+  10 s window; the rest wait for the next window, and each mind
+  still announces exactly once. 0 = no illness news.
+- Both are new INI keys + IllnessSettings fields; the code defaults
+  match the INI. 26/26 harness suites green.
+
 ## 0.8.1 — the co-save audit (2026-08-13)
 
 The mid-outbreak round-trip test caught a real gap: the co-save's

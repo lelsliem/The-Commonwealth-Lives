@@ -185,7 +185,32 @@ sim.illness.contagionChance = 0.03
 sim.illness.medicinePrice = 25  ; caps; 0 = no medicine anywhere
 sim.illness.severityRate = 0.002 ; severity growth per second untreated
 sim.illness.childMult = 2.0     ; children fall sicker, faster
+sim.illness.coughInterval = 12  ; the per-mind cough tell, seconds
+sim.illness.coughGlobal = 4     ; one cough anywhere per window (0.8.1)
+sim.illness.newsMax = 4         ; "X is ill" names per news window (0.8.1)
+sim.illness.newsInterval = 10   ; the news window, seconds (0.8.1)
 ```
+
+## The 0.8.1 field pass — the tell and the radio at scale
+
+The day-12 outbreak proved the chain (73 buys, 0 deaths) and showed
+two ways a settlement-wide sickness floods the player's senses.
+
+1. **The cough was a wall of sound.** Rate-limited per mind only, 50
+   sick minds played ~4 overlapping MTCoughing idles a second. The
+   global gate (`sim.illness.coughGlobal`, default 4 s) allows one
+   cough anywhere per window on top of the per-mind interval — a
+   lone sick settler still coughs every 12 s, a sick settlement
+   coughs once every few seconds. The tell stays a tell.
+2. **The radio was a wall of names.** The announce set was honest
+   (each mind announces exactly once) but a radstorm day dumped all
+   50–87 lines into the feed at once, crowding out every other story.
+   Burst pacing (`sim.illness.newsMax` 4 per `newsInterval` 10 s)
+   lets an outbreak unfold as a radio story; the un-announced wait
+   for the next window and still announce exactly once.
+
+Both are pure pacing — no new mechanics, no engine surface, both
+INI-tunable (0 disables).
 
 ## Verification
 
