@@ -194,6 +194,14 @@ namespace TLC::Tuning
         // restless.
         float GriefDecay = 0.01f;
 
+        // The mourning window (0.8.2 burial stone): how many world days
+        // the settlement leaves a body before laying it to rest. The
+        // game corpse otherwise stays in the settlement cell forever
+        // (no cell reset there). Measured in whole world days — the
+        // sweep compares the ledger's death day against the current
+        // day, so a fractional value effectively rounds up.
+        std::uint64_t BurialDays = 3;
+
         // The feud arc (0.6.0 Stone 5): whether a settlement that has
         // heard of a feud may try to mediate it (once per pair per day).
         bool MediationEnabled = true;
@@ -408,6 +416,10 @@ namespace TLC::Tuning
 
         settings.GriefDecay =
             read("sim.arc.grief.decay", settings.GriefDecay);
+
+        settings.BurialDays = static_cast<std::uint64_t>(
+            read("sim.death.burialDays",
+                 static_cast<double>(settings.BurialDays)));
         settings.SlightTemper =
             read("sim.slight.temper", settings.SlightTemper);
 

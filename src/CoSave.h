@@ -56,7 +56,10 @@ namespace TLC::CoSave
     // additive; an old record simply decodes without it and names are
     // back-filled on restore). Older versions are migrated forward on
     // load, never dropped.
-    inline constexpr std::uint32_t kRecordVersion = 7;
+    // v8 (the burial stone) added the per-world burial section after
+    // the gates - the dead and the day they died, so a corpse is laid
+    // to rest once the mourning window passes, even across save/load.
+    inline constexpr std::uint32_t kRecordVersion = 8;
 
     // A market's stall-keeper, in the durable form: the market's
     // workbench FormID and the keeper's actor FormID — form ids, not
@@ -93,6 +96,19 @@ namespace TLC::CoSave
         std::uint64_t FightDay = 0;
     };
 
+    // A burial, in the durable form (v8): the dead actor's FormID and
+    // the world day they died. Form ids are stable across sessions
+    // (entity ids are session-local). The adapter records one at death
+    // and the burial sweep disables the corpse ref once the mourning
+    // window (`sim.death.burialDays`) passes — even if the window
+    // expires while the game is away. The adapter translates at the
+    // edges (BurialsForSave / RestoreBurials).
+    struct BurialEntry
+    {
+        std::uint32_t FormId = 0;
+        std::uint64_t DiedDay = 0;
+    };
+
     // Encodes a registry snapshot as the durable record bytes: stable
     // component names (never std::type_index), the core's snapshot version
     // layered underneath, the record's own version, and the Rng state (v2)
@@ -103,7 +119,8 @@ namespace TLC::CoSave
         std::uint64_t a_rngState,
         const std::vector<StallKeeperPair>& a_stallKeepers,
         const std::vector<BondPair>& a_bonds,
-        const std::vector<ConflictGatePair>& a_gates);
+        const std::vector<ConflictGatePair>& a_gates,
+        const std::vector<BurialEntry>& a_burials);
 
     // Decodes record bytes back into a snapshot. Returns false — the load
     // is refused, never half-applied — when the record version is newer
@@ -125,5 +142,6 @@ namespace TLC::CoSave
         std::uint64_t& a_rngState,
         std::vector<StallKeeperPair>& a_stallKeepers,
         std::vector<BondPair>& a_bonds,
-        std::vector<ConflictGatePair>& a_gates);
+        std::vector<ConflictGatePair>& a_gates,
+        std::vector<BurialEntry>& a_burials);
 }

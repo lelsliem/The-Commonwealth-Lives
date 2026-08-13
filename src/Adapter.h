@@ -155,7 +155,8 @@ namespace TLC
             std::uint64_t a_rngState,
             std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
             std::vector<TLC::CoSave::BondPair> a_bonds,
-            std::vector<TLC::CoSave::ConflictGatePair> a_gates);
+            std::vector<TLC::CoSave::ConflictGatePair> a_gates,
+            std::vector<TLC::CoSave::BurialEntry> a_burials);
 
         // The stall-keepers in durable form — (market FormID, keeper
         // FormID) pairs, translated from the session-local entity ids via
@@ -181,6 +182,14 @@ namespace TLC
         // of the core's snapshot.
         [[nodiscard]] std::vector<TLC::CoSave::ConflictGatePair>
         ConflictGatesForSave() const;
+
+        // The burials in durable form — (dead form id, day died),
+        // straight from the ledger (form ids are already stable across
+        // sessions; there is nothing to translate). The co-save persists
+        // this (v8) so a corpse is laid to rest once the mourning window
+        // passes, even if the window expires while the game is away.
+        [[nodiscard]] std::vector<TLC::CoSave::BurialEntry>
+        BurialsForSave() const;
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -891,12 +900,38 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // world's entity ids).
         std::vector<TLC::CoSave::ConflictGatePair> m_PendingGates;
 
+        // The burials the co-save held for this save (v8), riding with
+        // m_PendingRestore; consumed by ApplyRestore (which restores the
+        // ledger directly — form ids need no translation).
+        std::vector<TLC::CoSave::BurialEntry> m_PendingBurials;
+
         // Rebuilds m_StallKeepers from durable (market, keeper) FormID
         // pairs after a restore — the market entity and the keeper entity
         // both resolve via the rebuilt translator (their FormRefs rode
         // the snapshot), so this works even for actors not yet loaded.
         void RestoreStallKeepers(
             const std::vector<TLC::CoSave::StallKeeperPair>& a_stallKeepers);
+
+        // The burial ledger (0.8.2): dead form id -> the world day they
+        // died. Recorded at death; the per-second sweep buries each once
+        // its mourning window (sim.death.burialDays) passes — disabling
+        // the corpse ref and telling the settlement. Form ids, not
+        // entity ids (a dead mind's entity is destroyed; its actor's
+        // form id is what the game world still holds). Persisted in the
+        // co-save (v8) so the window keeps ticking across save/load.
+        std::unordered_map<std::uint32_t, std::uint64_t> m_Burials;
+
+        // The 0.8.2 burial sweep: for every ledger entry whose mourning
+        // window has passed, disable the corpse ref (the game corpse
+        // stays in the settlement cell forever otherwise — no cell reset
+        // there) and announce the burial. Runs on the per-second
+        // reconcile, so a corpse is buried within a second of its
+        // window expiring — even one whose death predates this session
+        // (a restored ledger entry).
+        void BurialSweep();
+
+        void RestoreBurials(
+            const std::vector<TLC::CoSave::BurialEntry>& a_burials);
 
         // The world-level randomness (engine stone 07): passed to Update
         // so every entity's needs decay at its own per-tick rate

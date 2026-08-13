@@ -802,13 +802,15 @@ namespace TLC
         std::uint64_t a_rngState,
         std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
         std::vector<TLC::CoSave::BondPair> a_bonds,
-        std::vector<TLC::CoSave::ConflictGatePair> a_gates)
+        std::vector<TLC::CoSave::ConflictGatePair> a_gates,
+        std::vector<TLC::CoSave::BurialEntry> a_burials)
     {
         m_PendingRestore = std::move(a_snapshot);
         m_PendingRngState = a_rngState;
         m_PendingStallKeepers = std::move(a_stallKeepers);
         m_PendingBonds = std::move(a_bonds);
         m_PendingGates = std::move(a_gates);
+        m_PendingBurials = std::move(a_burials);
     }
 
     std::vector<TLC::CoSave::StallKeeperPair> Adapter::StallKeepersForSave() const
@@ -969,6 +971,107 @@ namespace TLC
                 "gates: {} feud gate{} restored from the co-save.",
                 m_ConflictGates.size(),
                 m_ConflictGates.size() == 1 ? "" : "s");
+        }
+    }
+
+    std::vector<TLC::CoSave::BurialEntry>
+    Adapter::BurialsForSave() const
+    {
+        // The ledger is already durable: form ids are stable across
+        // sessions (entity ids are session-local, but a burial's key is
+        // the dead actor's game form id — the thing the corpse ref
+        // resolves by). Nothing to translate; the co-save carries it as
+        // (form id, day died) pairs (v8).
+        std::vector<TLC::CoSave::BurialEntry> result;
+        result.reserve(m_Burials.size());
+
+        for (const auto& [formId, day] : m_Burials)
+        {
+            result.push_back(TLC::CoSave::BurialEntry{ formId, day });
+        }
+
+        return result;
+    }
+
+    void Adapter::RestoreBurials(
+        const std::vector<TLC::CoSave::BurialEntry>& a_burials)
+    {
+        m_Burials.clear();
+
+        for (const auto& burial : a_burials)
+        {
+            m_Burials[burial.FormId] = burial.DiedDay;
+        }
+
+        if (!m_Burials.empty())
+        {
+            REX::INFO(
+                "burials: {} corpse{} in the co-save's burial book — the window keeps ticking.",
+                m_Burials.size(),
+                m_Burials.size() == 1 ? " is" : "s are");
+        }
+    }
+
+    void Adapter::BurialSweep()
+    {
+        const auto day = CurrentDay();
+
+        for (auto it = m_Burials.begin(); it != m_Burials.end();)
+        {
+            const auto [formId, diedDay] = *it;
+
+            // The mourning window: the settlement leaves the body where
+            // it fell until the dead are given their due. Still inside
+            // it — wait.
+            if (day < diedDay
+                + static_cast<std::uint64_t>(
+                    m_Settings.BurialDays))
+            {
+                ++it;
+                continue;
+            }
+
+            // The corpse ref: the game's own actor, still in the cell.
+            // The census's IsActorDead reads the death markers the same
+            // way; here the ref itself is the body — disable it, and the
+            // cell no longer holds the dead.
+            auto* corpse = RE::TESForm::GetFormByID<RE::TESObjectREFR>(formId);
+
+            if (corpse == nullptr)
+            {
+                // The body is gone — cleaned up by the game, or its
+                // cell never loaded. Either way there is nothing to
+                // bury; the book is settled.
+                REX::INFO(
+                    "burials: {} is already gone — nothing to lay to rest.",
+                    MindLabelForm(formId));
+                it = m_Burials.erase(it);
+                continue;
+            }
+
+            // The name, before the disable: the corpse ref still speaks
+            // its override name (the identity stone wrote it), and the
+            // translator has already forgotten the dead — so the
+            // display name is the only honest source left. Wrapped in a
+            // std::string: GetDisplayFullName returns a const char* —
+            // null when the ref has no name — and the empty check
+            // below needs a real string.
+            const auto deadName =
+                std::string(corpse->GetDisplayFullName()
+                                ? corpse->GetDisplayFullName()
+                                : "");
+
+            corpse->Disable();
+
+            const auto graveLabel =
+                deadName.empty() ? MindLabelForm(formId) : deadName;
+
+            REX::INFO(
+                "burials: the settlement laid {} to rest.", graveLabel);
+
+            PushNews(graveLabel + " was laid to rest.");
+
+            it = m_Burials.erase(it);
         }
     }
 
@@ -1891,6 +1994,12 @@ namespace TLC
         // a pair whose actor is missing is simply free again.
         RestoreConflictGates(m_PendingGates);
 
+        // The burial book (v8): a death whose mourning window hasn't
+        // passed — or one whose window passed while the game was away —
+        // is still on the books after reload. The per-second sweep
+        // below buries the due ones within a second of the world waking.
+        RestoreBurials(m_PendingBurials);
+
         // The household stone (v3? no — derived, ADR-0013): a restored
         // marriage re-establishes its shared pouch silently. The loud
         // events fired in OnBondChange when the pair crossed the line in
@@ -2447,6 +2556,16 @@ namespace TLC
             // who is mourned. Recorded before the destroy, consulted by
             // the announce, cleared on EndWorld.
             m_RecentDeaths[entity.Value()] = a_formId;
+
+            // The burial book (0.8.2): the dead and the day they died.
+            // The corpse stays in the settlement cell forever otherwise
+            // (no cell reset there), so the adapter lays it to rest once
+            // the mourning window passes. The sweep reads the game's own
+            // death markers the same way the census does — the ledger is
+            // form ids, stable across sessions, so a death whose window
+            // expires while the game is away is still buried on the
+            // next load.
+            m_Burials[a_formId] = CurrentDay();
 
             // 0.7.0 Legacy (engine stones 10–12): what the dead leaves
             // behind. The household's heir — the spouse — receives the
@@ -3783,6 +3902,7 @@ namespace TLC
         m_StallKeepers.clear();
         m_Bonds.clear();
         m_ConflictGates.clear();
+        m_Burials.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
         m_MarketAttendance.clear();
@@ -5484,6 +5604,13 @@ namespace TLC
             // BEFORE the bond pass so a freshly-loaded family pair is
             // already gated when their dispositions reconcile.
             RebuildKin();
+
+            // The burial sweep (0.8.2): lay the due dead to rest. Runs
+            // here — the same per-second cadence as the kin gate — so a
+            // corpse is buried within a second of its mourning window
+            // expiring, including restored ones whose window passed
+            // while the game was away.
+            BurialSweep();
 
             // The test hook's brawl loop (0.7.5): a pinned pair fights
             // on its own timer — spectating and verifying the fight

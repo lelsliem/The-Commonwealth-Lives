@@ -110,7 +110,8 @@ namespace TLC::CoSave
         std::uint64_t a_rngState,
         const std::vector<StallKeeperPair>& a_stallKeepers,
         const std::vector<BondPair>& a_bonds,
-        const std::vector<ConflictGatePair>& a_gates)
+        const std::vector<ConflictGatePair>& a_gates,
+        const std::vector<BurialEntry>& a_burials)
     {
         Codec::Writer writer;
 
@@ -216,6 +217,21 @@ namespace TLC::CoSave
             writer.U64(gate.FightDay);
         }
 
+        // v8 (the burial stone): the per-world burial section — the
+        // dead's form id and the day they died, as (form id, day)
+        // tuples, stable across sessions. Present only in v8+ records;
+        // older records end after the gates, and a corpse whose death
+        // predates the burial book is simply left to the game (it may
+        // already be cleaned up) — honest for a save made before the
+        // stone existed.
+        writer.U32(static_cast<std::uint32_t>(a_burials.size()));
+
+        for (const auto& burial : a_burials)
+        {
+            writer.U32(burial.FormId);
+            writer.U64(burial.DiedDay);
+        }
+
         return writer.Bytes;
     }
 
@@ -225,7 +241,8 @@ namespace TLC::CoSave
         std::uint64_t& a_rngState,
         std::vector<StallKeeperPair>& a_stallKeepers,
         std::vector<BondPair>& a_bonds,
-        std::vector<ConflictGatePair>& a_gates)
+        std::vector<ConflictGatePair>& a_gates,
+        std::vector<BurialEntry>& a_burials)
     {
         Codec::Reader reader{ a_record };
 
@@ -511,6 +528,45 @@ namespace TLC::CoSave
                 }
 
                 a_gates.push_back(gate);
+            }
+        }
+
+        // v8 (the burial stone): the per-world burial section follows
+        // the gates. Older records have no section — the caller's burial
+        // list stands empty, and a corpse whose death predates the book
+        // is left to the game (a safe default, like a missing component).
+        // A malformed entry (a zero form id) is skipped, not fatal — same
+        // tolerance as an unknown component name; truncation is still a
+        // refusal.
+        a_burials.clear();
+
+        if (recordVersion >= 8)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto burialCount = reader.U32();
+            a_burials.reserve(burialCount);
+
+            for (std::uint32_t i = 0; i < burialCount; ++i)
+            {
+                if (reader.Remaining() < 12)   // 4 + 8
+                {
+                    return false;
+                }
+
+                BurialEntry burial;
+                burial.FormId = reader.U32();
+                burial.DiedDay = reader.U64();
+
+                if (burial.FormId == 0)
+                {
+                    continue;   // malformed — skipped, never half-applied
+                }
+
+                a_burials.push_back(burial);
             }
         }
 

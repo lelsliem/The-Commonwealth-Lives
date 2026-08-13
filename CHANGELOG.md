@@ -9,7 +9,31 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
-## 0.8.1 — the illness field pass: the tell and the radio (2026-08-13)
+## 0.8.2 — the burial: the settlement lays its own to rest (2026-08-13)
+
+ADR-0023's planned stone, built. The sim's death path was complete in
+the books (death fact, grief, legacy) but the game corpse stayed in
+the settlement cell forever — no cell reset there. Now the corpse is
+laid to rest once the mourning window passes.
+
+- **The burial book (co-save v8).** Each death is recorded as (dead
+  form id, day died) — form ids, stable across sessions, so the
+  window keeps ticking across save/load. A death whose window
+  expires while the game is away is still buried on the next load;
+  a corpse already cleaned up by the game settles the book without
+  a scene.
+- **The sweep.** On the per-second reconcile, any burial past
+  `sim.death.burialDays` (default 3, INI) disables the corpse ref
+  (the game's own `TESObjectREFR::Disable()`), logs `the settlement
+  laid X to rest`, and pushes the news line — the settlement heard
+  it.
+- **The round-trip is locked.** CoSaveTest now carries a burial
+  through Encode → Decode and checks it comes back exactly;
+  harness 26/26.
+
+---
+
+## 0.8.1 — the illness field pass: the tell and the radio (2026-08-13, shipped)
 
 - **The kin-gate summary logs on change, not every second** (2026-08-13,
   evening): `RebuildKin` runs on the 1-second reconcile and printed
