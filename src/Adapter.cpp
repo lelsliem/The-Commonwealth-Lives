@@ -1383,6 +1383,117 @@ namespace TLC
         return {};
     }
 
+    //-------------------------------------------------------------------------
+    // PairVisibleChildren (0.7.8): scan ProcessLists for child-race
+    // actors not yet translated, and pair them with sim-only children
+    // that have no FormRef. Each pair gives the child a game actor —
+    // it walks, trades, and bonds like any mind.
+    //-------------------------------------------------------------------------
+    void Adapter::PairVisibleChildren()
+    {
+        const auto* processLists = RE::ProcessLists::GetSingleton();
+
+        if (processLists == nullptr)
+        {
+            return;
+        }
+
+        // Child race FormIDs from Fallout4.esm (verified in xEdit).
+        constexpr std::uint32_t kHumanChildRace = 0x0011D83F;
+        constexpr std::uint32_t kGhoulChildRace = 0x0011EB96;
+
+        // Collect unpaired child-race actors.
+        std::vector<std::uint32_t> freeActors;
+
+        for (const auto* list : processLists->allProcesss)
+        {
+            if (!list)
+            {
+                continue;
+            }
+
+            for (const auto& handle : *list)
+            {
+                const auto* actor = handle.get().get();
+
+                if (actor == nullptr || actor->IsDead(true))
+                {
+                    continue;
+                }
+
+                if (actor->race == nullptr)
+                {
+                    continue;
+                }
+
+                const auto raceId = actor->race->GetFormID();
+
+                if (raceId != kHumanChildRace
+                    && raceId != kGhoulChildRace)
+                {
+                    continue;
+                }
+
+                const auto formId = actor->GetFormID();
+
+                // Skip actors already paired.
+                if (m_Translator.EntityFor(formId).IsValid())
+                {
+                    continue;
+                }
+
+                freeActors.push_back(formId);
+            }
+        }
+
+        if (freeActors.empty())
+        {
+            return;
+        }
+
+        // Collect sim-only children (no FormRef, Species::Child).
+        std::vector<LCE::Simulation::EntityId> simChildren;
+
+        m_Registry.ForEachWithComponent<SpeciesTag>(
+            [&](LCE::Simulation::EntityId a_entity,
+                SpeciesTag& a_tag)
+            {
+                if (a_tag.Value != Species::Child)
+                {
+                    return;
+                }
+
+                if (m_Registry.GetComponent<FormRef>(a_entity) != nullptr)
+                {
+                    return;  // already paired
+                }
+
+                simChildren.push_back(a_entity);
+            });
+
+        // Pair them up: one actor per child, greedily.
+        const auto count = std::min(freeActors.size(), simChildren.size());
+
+        for (std::size_t i = 0; i < count; ++i)
+        {
+            const auto formId = freeActors[i];
+            const auto child = simChildren[i];
+
+            m_Registry.AddComponent<FormRef>(child, FormRef{ formId });
+            m_Translator.Add(formId, child);
+
+            REX::INFO(
+                "birth: sim child {} paired with game actor {:#010x}.",
+                MindLabel(child), formId);
+        }
+
+        if (count > 0)
+        {
+            REX::INFO(
+                "birth: {} children paired with visible actors.", count);
+        }
+    }
+
     void Adapter::OnBondChange(
         LCE::Simulation::EntityId a_entityA,
         LCE::Simulation::EntityId a_entityB,
@@ -5045,6 +5156,14 @@ namespace TLC
                     PushNews(
                         std::to_string(grew)
                         + " children grew up in the Commonwealth.");
+
+                    // 0.7.8 visible children: pair newly-grown
+                    // children with real game actors if the baby
+                    // mod is loaded and the flag is on.
+                    if (m_Settings.BirthVisible)
+                    {
+                        PairVisibleChildren();
+                    }
                 }
             }
         }

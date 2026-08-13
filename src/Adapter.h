@@ -592,6 +592,9 @@ namespace TLC
         LCE::Simulation::EntityId FindFather(
             LCE::Simulation::EntityId a_child) const;
 
+        // 0.7.8: pair sim-only children with visible game actors.
+        void PairVisibleChildren();
+
         // One pair's disposition in a given direction, 0 when unknown.
         float DispositionOf(
             LCE::Simulation::EntityId a_from,

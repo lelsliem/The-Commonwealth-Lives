@@ -33,6 +33,10 @@ namespace TLC
     // (sim.birth.chance), the Pregnancy component tracks the journey, the
     // birth fires on the due day, and the child grows into an adult mind
     // after sim.birth.childhood days.
+    //
+    // 0.7.8 adds visible children: when the external baby mod is loaded
+    // and sim.birth.visible is on, a grown child pairs with a real game
+    // actor — it walks, trades, and bonds like any mind.
     //-------------------------------------------------------------------------
     namespace Birth
     {
@@ -267,26 +271,18 @@ namespace TLC
         // child. The child gets a FormRef and walks the world like any
         // mind. Returns true if pairing succeeded.
         //
-        // NOTE: the actual pairing logic depends on the baby mod's
-        // FormIDs, which are not yet available (permission pending).
-        // This is a graceful-degradation stub: when the mod is absent
-        // or BirthVisible is off, children stay sim-only.
+        // The baby mod ("Baby Sim - Babies That Grow Up") provides
+        // child actors via a leveled list (Cyber_KidsThatGrewUp). At
+        // runtime, we scan ProcessLists for actors with the HumanChildRace
+        // or GhoulChildRace that are NOT already in the translator, and
+        // pair the first one we find with the sim-only child.
         //---------------------------------------------------------------------
-        inline bool PairVisibleChild(
-            EntityRegistry& a_registry,
-            EntityId a_child,
-            std::uint32_t a_settlementFormId)
-        {
-            // Without the baby mod's FormIDs, we cannot search for
-            // child actors. This is the graceful-degradation path:
-            // the child stays sim-only, the world does not notice.
-            // When permission lands and we know the mod's child
-            // FormIDs, this function will:
-            //   1. Search the settlement for child actors
-            //   2. Pick one not yet assigned to a sim child
-            //   3. Add FormRef + register with the translator
-            return false;
-        }
+        //---------------------------------------------------------------------
+        // PairVisibleChild — (0.7.8) implemented in Adapter.cpp because
+        // it needs game types (RE::ProcessLists, RE::Actor). The adapter
+        // calls this after GrowChildren when sim.birth.visible is on and
+        // the baby mod is loaded. Returns true if pairing succeeded.
+        //---------------------------------------------------------------------
 
         //---------------------------------------------------------------------
         // FeedChildren — one tick of the child's life: every sim-only
