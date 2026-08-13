@@ -11,6 +11,14 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## 0.8.1 — the illness field pass: the tell and the radio (2026-08-13)
 
+- **The kin-gate summary logs on change, not every second** (2026-08-13,
+  evening): `RebuildKin` runs on the 1-second reconcile and printed
+  "kin: N family pairs gated" every pass regardless of whether the set
+  changed — 224–264 identical lines in a few minutes, the bulk of the
+  session log (the 2.2 MB / 10-min session). Now tracked by last-logged
+  count: you see it once when families stream in on load, and again
+  only if the gated set actually grows.
+
 Two scale fixes the day-12 outbreak exposed — a settlement-wide
 outbreak is one story, not a wall of sound and a wall of names.
 
