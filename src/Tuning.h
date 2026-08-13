@@ -522,6 +522,9 @@ namespace TLC::Tuning
             "sim.illness.contagionChance", settings.Illness.ContagionChance);
         settings.Illness.MedicinePrice = read(
             "sim.illness.medicinePrice", settings.Illness.MedicinePrice);
+        settings.Illness.Stock = static_cast<std::uint32_t>(
+            read("sim.illness.stock",
+                 static_cast<double>(settings.Illness.Stock)));
         settings.Illness.SeverityRate = read(
             "sim.illness.severityRate", settings.Illness.SeverityRate);
         settings.Illness.ChildMult = read(

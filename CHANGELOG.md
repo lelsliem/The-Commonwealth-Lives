@@ -9,6 +9,30 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.3 — the sick household: a stocked shelf, a family's care (2026-08-14)
+
+Medicine is not an endless shelf, and a family cares for its own.
+
+- **Stocked medicine (co-save v9).** Each market's doses left today
+  ride the co-save as (market form id, stock) pairs; a shelf with no
+  entry reads as full (`sim.illness.stock`, default 10, INI). The
+  buy path checks the shelf before the wallet — a sick mind at a
+  sold-out stall rests instead (`finds the stall out of medicine`).
+  Every market-open transition refills every known shelf, so an
+  outbreak can outrun a single day's stock, and a stall that sold
+  out stays sold out across save/load until the next market day.
+- **The family care-buy.** The trade block's dose logic is now one
+  `buyDose` path used twice: self first (the 0.8.0 behavior — the
+  sick at the bench dose themselves), then, for a well buyer, the
+  household — the spouse first, then a sick child (who has no walk
+  of its own to the bench). The shared household wallet pays either
+  way; the news reads `X bought medicine for Y — a family cares.`
+- **The round-trip is locked.** CoSaveTest carries a sold-down shelf
+  (market 000250FE, 4 doses) through Encode → Decode and checks it
+  comes back exactly; harness 26/26.
+
+---
+
 ## 0.8.2 — the burial: the settlement lays its own to rest (2026-08-13, verified 2026-08-14)
 
 ADR-0023's planned stone, built and verified in-game: a kill in

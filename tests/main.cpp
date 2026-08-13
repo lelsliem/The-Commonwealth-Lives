@@ -750,7 +750,8 @@ namespace TLC::Tests
                     TLC::Bonds::BondKind::Enemy),
                 12 } },
             { { 0x00012345u, 0x00012346u, 11, 12 } },
-            { { 0x0000000Du, 17 } });
+            { { 0x0000000Du, 17 } },
+            { { 0x000250FEu, 4 } });
 
         // The record carries the adapter's stable names — literally in the
         // bytes — never the process-local std::type_index addresses.
@@ -796,9 +797,10 @@ namespace TLC::Tests
         std::vector<TLC::CoSave::BondPair> bonds;
         std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
         if (!TLC::CoSave::Decode(
-                record, decoded, rngState, stalls, bonds, gates, burials)
+                record, decoded, rngState, stalls, bonds, gates, burials, medicineStock)
             || rngState != 0x5EEDC0DEull
             || bonds.size() != 1
             || bonds[0].Kind != static_cast<std::uint32_t>(
@@ -833,6 +835,17 @@ namespace TLC::Tests
         if (burials.size() != 1
             || burials[0].FormId != 0x0000000Du
             || burials[0].DiedDay != 17)
+        {
+            return false;
+        }
+
+        // The v9 medicine-stock section round-trips exactly: the shelf
+        // at the market has 4 doses left — not the day's full stock — so
+        // a stall that sold out stays sold out across save/load until
+        // the next market day refills it.
+        if (medicineStock.size() != 1
+            || medicineStock[0].MarketFormId != 0x000250FEu
+            || medicineStock[0].Stock != 4)
         {
             return false;
         }
@@ -926,9 +939,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (TLC::CoSave::Decode(
-                    truncated, bad, rngState, stalls, bonds, gates, burials))
+                    truncated, bad, rngState, stalls, bonds, gates, burials, medicineStock))
             {
                 return false;
             }
@@ -947,9 +961,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (TLC::CoSave::Decode(
-                    badVersion, bad, rngState, stalls, bonds, gates, burials))
+                    badVersion, bad, rngState, stalls, bonds, gates, burials, medicineStock))
             {
                 return false;
             }
@@ -992,9 +1007,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (!TLC::CoSave::Decode(
-                    unknownName, migrated, rngState, stalls, bonds, gates, burials))
+                    unknownName, migrated, rngState, stalls, bonds, gates, burials, medicineStock))
             {
                 return false;
             }
@@ -1052,9 +1068,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (!TLC::CoSave::Decode(
-                    writer.Bytes, decoded, rngState, stalls, bonds, gates, burials)
+                    writer.Bytes, decoded, rngState, stalls, bonds, gates, burials, medicineStock)
                 || decoded.Entities.size() != 1
                 || decoded.Entities[0].Components.size() != 1)
             {
@@ -1110,9 +1127,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (TLC::CoSave::Decode(
-                    writer.Bytes, bad, rngState, stalls, bonds, gates, burials))
+                    writer.Bytes, bad, rngState, stalls, bonds, gates, burials, medicineStock))
             {
                 return false;
             }
@@ -1146,9 +1164,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (!TLC::CoSave::Decode(
-                    writer.Bytes, decoded, rngState, stalls, bonds, gates, burials)
+                    writer.Bytes, decoded, rngState, stalls, bonds, gates, burials, medicineStock)
                 || rngState != 0xFEEDFACE00000000ull   // untouched
                 || decoded.Entities.size() != 1
                 || !stalls.empty()   // v1 predates the stall section
@@ -1202,9 +1221,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (!TLC::CoSave::Decode(
-                    writer.Bytes, decoded, rngState, stalls, bonds, gates, burials)
+                    writer.Bytes, decoded, rngState, stalls, bonds, gates, burials, medicineStock)
                 || decoded.Entities.size() != 1
                 || !bonds.empty())   // v3 predates the bond section
             {
@@ -2424,7 +2444,7 @@ namespace TLC::Tests
             };
 
             const auto record = TLC::CoSave::Encode(
-                snapshot, 0x5EEDC0DEull, {}, savedBonds, {}, {});
+                snapshot, 0x5EEDC0DEull, {}, savedBonds, {}, {}, {});
 
             RegistrySnapshot decoded;
             std::uint64_t rngState = 0;
@@ -2432,9 +2452,10 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (!TLC::CoSave::Decode(
-                    record, decoded, rngState, stalls, bonds, gates, burials)
+                    record, decoded, rngState, stalls, bonds, gates, burials, medicineStock)
                 || rngState != 0x5EEDC0DEull
                 || bonds.size() != 1
                 || bonds[0].FormA != 0x00011111u
@@ -2451,15 +2472,15 @@ namespace TLC::Tests
                 snapshot, 0, {},
                 { { 0x00011111u, 0x00011111u,
                     static_cast<std::uint32_t>(BondKind::Friend), 1 } },
-                {}, {});
+                {}, {}, {});
 
             std::vector<TLC::CoSave::BondPair> badBonds;
             std::vector<TLC::CoSave::ConflictGatePair> badGates;
             std::vector<TLC::CoSave::BurialEntry> badBurials;
+        std::vector<TLC::CoSave::MedicineStockPair> badMedicineStock;
 
             if (!TLC::CoSave::Decode(
-                    badRecord, decoded, rngState, stalls, badBonds, badGates,
-                    badBurials)
+                    badRecord, decoded, rngState, stalls, badBonds, badGates, badBurials, badMedicineStock)
                 || !badBonds.empty()
                 || !badGates.empty()
                 || !badBurials.empty())
@@ -2479,10 +2500,11 @@ namespace TLC::Tests
             std::vector<TLC::CoSave::BondPair> migratedBonds;
             std::vector<TLC::CoSave::ConflictGatePair> migratedGates;
             std::vector<TLC::CoSave::BurialEntry> migratedBurials;
+        std::vector<TLC::CoSave::MedicineStockPair> migratedMedicineStock;
 
             if (!TLC::CoSave::Decode(
                     legacy.Bytes, decoded, rngState, stalls,
-                    migratedBonds, migratedGates, migratedBurials)
+                    migratedBonds, migratedGates, migratedBurials, migratedMedicineStock)
                 || !migratedBonds.empty()
                 || !migratedGates.empty()
                 || !migratedBurials.empty())
@@ -4459,7 +4481,7 @@ namespace TLC::Tests
 
         const auto snapshot = source.Capture();
         const auto record = TLC::CoSave::Encode(
-            snapshot, 0x5EEDull, {}, {}, {}, {});
+            snapshot, 0x5EEDull, {}, {}, {}, {}, {});
 
         // The name rides under its stable key; the legacy's name rides
         // in the record bytes.
@@ -4503,9 +4525,10 @@ namespace TLC::Tests
         std::vector<TLC::CoSave::BondPair> bonds;
         std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
         if (!TLC::CoSave::Decode(
-                record, decoded, rngState, stalls, bonds, gates, burials))
+                record, decoded, rngState, stalls, bonds, gates, burials, medicineStock))
         {
             return false;
         }
@@ -4572,10 +4595,10 @@ namespace TLC::Tests
         std::vector<TLC::CoSave::BondPair> v5Bonds;
         std::vector<TLC::CoSave::ConflictGatePair> v5Gates;
         std::vector<TLC::CoSave::BurialEntry> v5Burials;
+        std::vector<TLC::CoSave::MedicineStockPair> v5MedicineStock;
 
         if (!TLC::CoSave::Decode(
-                writer.Bytes, v5Decoded, v5Rng, v5Stalls, v5Bonds, v5Gates,
-                v5Burials))
+                writer.Bytes, v5Decoded, v5Rng, v5Stalls, v5Bonds, v5Gates, v5Burials, v5MedicineStock))
         {
             return false;
         }
@@ -4630,7 +4653,7 @@ namespace TLC::Tests
 
         const auto snapshot = source.Capture();
         const auto record = TLC::CoSave::Encode(
-            snapshot, 0x5EEDull, {}, {}, {}, {});
+            snapshot, 0x5EEDull, {}, {}, {}, {}, {});
 
         RegistrySnapshot decoded;
         std::uint64_t rngState = 0;
@@ -4638,9 +4661,10 @@ namespace TLC::Tests
         std::vector<TLC::CoSave::BondPair> bonds;
         std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
+        std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
         if (!TLC::CoSave::Decode(
-                record, decoded, rngState, stalls, bonds, gates, burials))
+                record, decoded, rngState, stalls, bonds, gates, burials, medicineStock))
         {
             return false;
         }

@@ -59,7 +59,11 @@ namespace TLC::CoSave
     // v8 (the burial stone) added the per-world burial section after
     // the gates - the dead and the day they died, so a corpse is laid
     // to rest once the mourning window passes, even across save/load.
-    inline constexpr std::uint32_t kRecordVersion = 8;
+    // v9 (the sick household stone) added the per-world medicine-stock
+    // section after the burials - each market's doses left today, so
+    // a stall that sold out stays sold out across save/load until the
+    // next market day refills it.
+    inline constexpr std::uint32_t kRecordVersion = 9;
 
     // A market's stall-keeper, in the durable form: the market's
     // workbench FormID and the keeper's actor FormID — form ids, not
@@ -109,6 +113,18 @@ namespace TLC::CoSave
         std::uint64_t DiedDay = 0;
     };
 
+    // A market's medicine left today, in the durable form (v9): the
+    // market's FormID (a workshop bench, or a person-market's actor)
+    // and the doses still on the shelf. Form ids are stable across
+    // sessions (entity ids are session-local). The adapter translates
+    // at the edges (MedicineStockForSave / RestoreMedicineStock) and
+    // refills the book on each market-open transition.
+    struct MedicineStockPair
+    {
+        std::uint32_t MarketFormId = 0;
+        std::uint32_t Stock = 0;
+    };
+
     // Encodes a registry snapshot as the durable record bytes: stable
     // component names (never std::type_index), the core's snapshot version
     // layered underneath, the record's own version, and the Rng state (v2)
@@ -120,7 +136,8 @@ namespace TLC::CoSave
         const std::vector<StallKeeperPair>& a_stallKeepers,
         const std::vector<BondPair>& a_bonds,
         const std::vector<ConflictGatePair>& a_gates,
-        const std::vector<BurialEntry>& a_burials);
+        const std::vector<BurialEntry>& a_burials,
+        const std::vector<MedicineStockPair>& a_medicineStock);
 
     // Decodes record bytes back into a snapshot. Returns false — the load
     // is refused, never half-applied — when the record version is newer
@@ -143,5 +160,6 @@ namespace TLC::CoSave
         std::vector<StallKeeperPair>& a_stallKeepers,
         std::vector<BondPair>& a_bonds,
         std::vector<ConflictGatePair>& a_gates,
-        std::vector<BurialEntry>& a_burials);
+        std::vector<BurialEntry>& a_burials,
+        std::vector<MedicineStockPair>& a_medicineStock);
 }

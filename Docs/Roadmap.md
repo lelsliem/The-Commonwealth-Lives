@@ -30,7 +30,7 @@ Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
                    (Docs/Design/Run080.md):
                    0.8.1 illness field pass (shipped) →
                    0.8.2 burial (verified 2026-08-14) →
-                   0.8.3 sick household →
+                   0.8.3 sick household (built 2026-08-14, awaiting verify) →
                    0.8.4 random interactions (the trial) →
                    0.8.5 MCM → 0.8.6a the audit →
                    0.8.6b redefine & loose ends →
@@ -397,11 +397,12 @@ the settlement heard it
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: BUILT — awaiting in-game verification (2026-08-14)
 
 The economy stone's next step: medicine is not an endless shelf.
-Stalls stock a limited supply per day (`sim.illness.stock`, INI) that
-sells out, so an outbreak can outrun the market — the broke-rest
+Stalls stock a limited supply per day (`sim.illness.stock`, INI,
+default 10) that sells out, so an outbreak can outrun the market —
+the broke-rest
 path and the honest season return. A sick mind's household notices:
 when one spouse is ill, the other's market trip can buy the dose for
 the sick one (the shared wallet already exists — the intent is a

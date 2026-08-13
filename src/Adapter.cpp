@@ -803,7 +803,8 @@ namespace TLC
         std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
         std::vector<TLC::CoSave::BondPair> a_bonds,
         std::vector<TLC::CoSave::ConflictGatePair> a_gates,
-        std::vector<TLC::CoSave::BurialEntry> a_burials)
+        std::vector<TLC::CoSave::BurialEntry> a_burials,
+        std::vector<TLC::CoSave::MedicineStockPair> a_medicineStock)
     {
         m_PendingRestore = std::move(a_snapshot);
         m_PendingRngState = a_rngState;
@@ -811,6 +812,7 @@ namespace TLC
         m_PendingBonds = std::move(a_bonds);
         m_PendingGates = std::move(a_gates);
         m_PendingBurials = std::move(a_burials);
+        m_PendingMedicineStock = std::move(a_medicineStock);
     }
 
     std::vector<TLC::CoSave::StallKeeperPair> Adapter::StallKeepersForSave() const
@@ -1073,6 +1075,84 @@ namespace TLC
 
             it = m_Burials.erase(it);
         }
+    }
+
+    std::uint32_t Adapter::MedicineStockOf(
+        std::uint32_t a_marketFormId) const noexcept
+    {
+        const auto it = m_MedicineStock.find(a_marketFormId);
+
+        if (it == m_MedicineStock.end())
+        {
+            return m_Settings.Illness.Stock;   // a fresh shelf
+        }
+
+        return it->second;
+    }
+
+    void Adapter::ConsumeMedicine(std::uint32_t a_marketFormId) noexcept
+    {
+        const auto full = m_Settings.Illness.Stock;
+        const auto left = MedicineStockOf(a_marketFormId);
+
+        m_MedicineStock[a_marketFormId] = left > 0 ? left - 1 : 0;
+    }
+
+    void Adapter::ReplenishMedicineStock() noexcept
+    {
+        const auto full = m_Settings.Illness.Stock;
+
+        // Every shelf the world knows refills; a shelf nobody has
+        // touched yet stays missing (MedicineStockOf reads it as full).
+        for (auto& [market, stock] : m_MedicineStock)
+        {
+            stock = full;
+        }
+
+        REX::INFO(
+            "illness: the market day turns — {} shelf{} refill{} to full stock.",
+            m_MedicineStock.size(),
+            m_MedicineStock.size() == 1 ? "" : "s",
+            m_MedicineStock.size() == 1 ? "s" : "");
+    }
+
+    void Adapter::RestoreMedicineStock(
+        const std::vector<TLC::CoSave::MedicineStockPair>& a_medicineStock)
+    {
+        m_MedicineStock.clear();
+
+        for (const auto& entry : a_medicineStock)
+        {
+            m_MedicineStock[entry.MarketFormId] = entry.Stock;
+        }
+
+        if (!m_MedicineStock.empty())
+        {
+            REX::INFO(
+                "illness: {} market shelf{} from the co-save — sold-out stalls stay sold out until the market day turns.",
+                m_MedicineStock.size(),
+                m_MedicineStock.size() == 1 ? " restored" : "s restored");
+        }
+    }
+
+    std::vector<TLC::CoSave::MedicineStockPair>
+    Adapter::MedicineStockForSave() const
+    {
+        // The map is already durable: form ids are stable across
+        // sessions (entity ids are session-local, but a shelf's key is
+        // the market's game form id — the thing walks resolve by).
+        // Nothing to translate; the co-save carries it as (market form
+        // id, doses left) pairs (v9).
+        std::vector<TLC::CoSave::MedicineStockPair> result;
+        result.reserve(m_MedicineStock.size());
+
+        for (const auto& [marketFormId, stock] : m_MedicineStock)
+        {
+            result.push_back(
+                TLC::CoSave::MedicineStockPair{ marketFormId, stock });
+        }
+
+        return result;
     }
 
     void Adapter::RestoreBonds(
@@ -1999,6 +2079,11 @@ namespace TLC
         // is still on the books after reload. The per-second sweep
         // below buries the due ones within a second of the world waking.
         RestoreBurials(m_PendingBurials);
+
+        // The medicine shelves (v9): a stall that sold out before the
+        // save stays sold out after the load — the next market day
+        // (PushWorldFacts' open transition) refills it.
+        RestoreMedicineStock(m_PendingMedicineStock);
 
         // The household stone (v3? no — derived, ADR-0013): a restored
         // marriage re-establishes its shared pouch silently. The loud
@@ -3903,6 +3988,7 @@ namespace TLC
         m_Bonds.clear();
         m_ConflictGates.clear();
         m_Burials.clear();
+        m_MedicineStock.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
         m_MarketAttendance.clear();
@@ -4427,42 +4513,166 @@ namespace TLC
                 // shared wallet), the hold ends, recovery starts early.
                 // A broke sick mind rests instead — honest: sickness
                 // without caps means time, not treatment.
+                //
+                // 0.8.3 — the sick household: medicine is a stocked
+                // good (sim.illness.stock per market day — an outbreak
+                // can outrun the shelf), and a family cares for its
+                // own. A well buyer's trip doses the sick at home —
+                // the spouse first, then a child, who has no walk of
+                // its own to the bench.
                 auto buyerHealth =
                     m_Registry.GetComponent<Health>(a_entity);
 
-                if (buyerHealth
-                    && buyerHealth->Illness.Kind != SicknessKind::None
-                    && m_Settings.Illness.MedicinePrice > 0.0f)
-                {
-                    const auto price = static_cast<std::uint32_t>(
-                        m_Settings.Illness.MedicinePrice);
-
-                    auto buyerPouch =
-                        Households::PouchOf(m_Registry, m_Bonds, a_entity);
-                    auto sellerPouch =
-                        Households::PouchOf(m_Registry, m_Bonds, counterparty);
-
-                    if (buyerPouch && sellerPouch
-                        && buyerPouch->Caps >= price)
+                // One dose: the shelf, the household wallet, the hold.
+                // Returns true when a dose was actually bought. The
+                // wallet is the buyer's household's (PouchOf resolves
+                // the shared pouch either way), so a family's medicine
+                // comes from the family's caps.
+                const auto buyDose =
+                    [&](LCE::Simulation::EntityId a_patient,
+                        const std::string& a_patientLabel,
+                        bool a_forSelf) -> bool
                     {
+                        if (m_Settings.Illness.MedicinePrice <= 0.0f)
+                        {
+                            return false;   // no medicine in this world
+                        }
+
+                        const auto price = static_cast<std::uint32_t>(
+                            m_Settings.Illness.MedicinePrice);
+
+                        auto buyerPouch = Households::PouchOf(
+                            m_Registry, m_Bonds, a_entity);
+                        auto sellerPouch = Households::PouchOf(
+                            m_Registry, m_Bonds, counterparty);
+
+                        if (buyerPouch == nullptr || sellerPouch == nullptr
+                            || buyerPouch->Caps < price)
+                        {
+                            REX::INFO(
+                                "illness: {} is sick but broke — they rest instead of buying medicine.",
+                                a_patientLabel);
+                            return false;
+                        }
+
+                        if (MedicineStockOf(marketFormId) == 0)
+                        {
+                            REX::INFO(
+                                "illness: {} finds the stall out of medicine — they rest instead.",
+                                a_patientLabel);
+                            return false;
+                        }
+
                         buyerPouch->Caps -= price;
                         sellerPouch->Caps += price;
+                        ConsumeMedicine(marketFormId);
 
-                        TakeMedicine(*buyerHealth, m_Settings.Illness);
+                        if (auto patientHealth =
+                                m_Registry.GetComponent<Health>(a_patient))
+                        {
+                            TakeMedicine(
+                                *patientHealth, m_Settings.Illness);
+                        }
 
-                        REX::INFO(
-                            "illness: {} buys medicine from {} for {} caps — the hold ends, recovery begins.",
-                            MindLabelForm(formId),
-                            MindLabelForm(m_Translator.FormFor(counterparty)),
-                            price);
+                        if (a_forSelf)
+                        {
+                            REX::INFO(
+                                "illness: {} buys medicine from {} for {} caps — the hold ends, recovery begins.",
+                                MindLabelForm(formId),
+                                MindLabelForm(
+                                    m_Translator.FormFor(counterparty)),
+                                price);
 
-                        PushNews(MindLabelForm(formId) + " bought medicine.");
-                    }
-                    else
+                            PushNews(
+                                MindLabelForm(formId) + " bought medicine.");
+                        }
+                        else
+                        {
+                            REX::INFO(
+                                "illness: {} buys medicine for {} — a family cares.",
+                                MindLabelForm(formId), a_patientLabel);
+
+                            PushNews(
+                                MindLabelForm(formId) + " bought medicine for "
+                                + a_patientLabel + ".");
+                        }
+
+                        return true;
+                    };
+
+                // Self first: the sick at the bench dose themselves.
+                if (buyerHealth
+                    && buyerHealth->Illness.Kind != SicknessKind::None)
+                {
+                    buyDose(a_entity, MindLabelForm(formId), true);
+                }
+                else
+                {
+                    // The family check: who is sick at home? The spouse
+                    // first (the design's headline), then a child — the
+                    // ChildMult's path: a child can't reach the bench's
+                    // medicine, so a parent's trip is the dose.
+                    auto sickAtHome = LCE::Simulation::EntityId{};
+
+                    const auto spouse =
+                        Households::SpouseOf(m_Bonds, a_entity);
+
+                    if (spouse.IsValid())
                     {
-                        REX::INFO(
-                            "illness: {} is sick but broke — they rest instead of buying medicine.",
-                            MindLabelForm(formId));
+                        const auto spouseHealth =
+                            m_Registry.GetComponent<Health>(spouse);
+
+                        if (spouseHealth
+                            && spouseHealth->Illness.Kind
+                                != SicknessKind::None)
+                        {
+                            sickAtHome = spouse;
+                        }
+                    }
+
+                    if (!sickAtHome.IsValid())
+                    {
+                        if (const auto rels =
+                                m_Registry.GetComponent<Relationships>(
+                                    a_entity))
+                        {
+                            for (const auto& [other, rel] : rels->ByEntity)
+                            {
+                                const auto tag =
+                                    m_Registry.GetComponent<SpeciesTag>(
+                                        other);
+
+                                if (tag && tag->Value == Species::Child)
+                                {
+                                    const auto childHealth =
+                                        m_Registry.GetComponent<Health>(other);
+
+                                    if (childHealth
+                                        && childHealth->Illness.Kind
+                                            != SicknessKind::None)
+                                    {
+                                        sickAtHome = other;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (sickAtHome.IsValid())
+                    {
+                        const auto patientLabel = [&]() -> std::string
+                        {
+                            if (const auto name = m_Registry
+                                    .GetComponent<Name>(sickAtHome))
+                            {
+                                return name->Full;
+                            }
+
+                            return MindLabel(sickAtHome);
+                        }();
+
+                        buyDose(sickAtHome, patientLabel, false);
                     }
                 }
 
@@ -5045,6 +5255,11 @@ namespace TLC
                     FormatGameHour(hour));
 
                 PushNews("the market opened — the Commonwealth trades.");
+
+                // The market day turns (0.8.3): every shelf refills at
+                // open, so a stall that sold out yesterday is fresh
+                // today — and a stall mid-outbreak can sell out again.
+                ReplenishMedicineStock();
             }
         }
 

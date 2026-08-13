@@ -67,6 +67,13 @@ namespace TLC
         // anywhere — a sick settlement suffers honestly.
         float MedicinePrice = 25.0f;
 
+        // Doses a stall stocks per market day (0.8.3 — the sick
+        // household). Medicine is not an endless shelf: an outbreak can
+        // outrun the market, and a stall that sells out is empty until
+        // the next market day refills it. 0 = no stall ever carries
+        // medicine (a harsher world than MedicinePrice alone).
+        std::uint32_t Stock = 10;
+
         // Severity growth per second while untreated. Severity drives
         // the fatigue toll's ease-off and, at the top, death. 0.002 is
         // the tuned rate: over the 300 s hold it grows 0.6, so the

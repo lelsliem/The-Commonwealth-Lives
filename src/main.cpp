@@ -75,13 +75,16 @@ namespace
         const auto bonds = g_Adapter.BondsForSave();
         const auto gates = g_Adapter.ConflictGatesForSave();
         const auto burials = g_Adapter.BurialsForSave();
+        const auto medicineStock = g_Adapter.MedicineStockForSave();
         const auto record = TLC::CoSave::Encode(
-            snapshot, g_Adapter.RngState(), stalls, bonds, gates, burials);
+            snapshot, g_Adapter.RngState(), stalls, bonds, gates, burials,
+            medicineStock);
 
         REX::INFO(
-            "co-save: writing {} entities, {} stall-keepers, {} bonds, {} gates, {} burials ({} bytes).",
+            "co-save: writing {} entities, {} stall-keepers, {} bonds, {} gates, {} burials, {} medicine shelves ({} bytes).",
             snapshot.Entities.size(), stalls.size(), bonds.size(),
-            gates.size(), burials.size(), record.size());
+            gates.size(), burials.size(), medicineStock.size(),
+            record.size());
 
         if (!a_intfc->WriteRecord(
                 TLC::CoSave::kRecordType, TLC::CoSave::kRecordVersion,
@@ -123,22 +126,24 @@ namespace
             std::vector<TLC::CoSave::BondPair> bonds;
             std::vector<TLC::CoSave::ConflictGatePair> gates;
             std::vector<TLC::CoSave::BurialEntry> burials;
+            std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
 
             if (!TLC::CoSave::Decode(
-                    record, snapshot, rngState, stalls, bonds, gates, burials))
+                    record, snapshot, rngState, stalls, bonds, gates, burials,
+                    medicineStock))
             {
                 REX::ERROR("co-save: record decode failed (version {}).", version);
                 continue;
             }
 
             REX::INFO(
-                "co-save: read {} entities, {} stall-keepers, {} bonds, {} gates, {} burials — the world will be restored on load.",
+                "co-save: read {} entities, {} stall-keepers, {} bonds, {} gates, {} burials, {} medicine shelves — the world will be restored on load.",
                 snapshot.Entities.size(), stalls.size(), bonds.size(),
-                gates.size(), burials.size());
+                gates.size(), burials.size(), medicineStock.size());
             g_Adapter.QueueRestore(
                 std::move(snapshot), rngState,
                 std::move(stalls), std::move(bonds), std::move(gates),
-                std::move(burials));
+                std::move(burials), std::move(medicineStock));
         }
     }
 

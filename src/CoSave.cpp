@@ -111,7 +111,8 @@ namespace TLC::CoSave
         const std::vector<StallKeeperPair>& a_stallKeepers,
         const std::vector<BondPair>& a_bonds,
         const std::vector<ConflictGatePair>& a_gates,
-        const std::vector<BurialEntry>& a_burials)
+        const std::vector<BurialEntry>& a_burials,
+        const std::vector<MedicineStockPair>& a_medicineStock)
     {
         Codec::Writer writer;
 
@@ -232,6 +233,20 @@ namespace TLC::CoSave
             writer.U64(burial.DiedDay);
         }
 
+        // v9 (the sick household stone): the per-world medicine-stock
+        // section — each market's doses left today, as (market form id,
+        // stock) pairs, stable across sessions. Present only in v9+
+        // records; older records end after the burials, and every stall
+        // simply starts the day at full stock — honest for a save made
+        // before a stall could sell out.
+        writer.U32(static_cast<std::uint32_t>(a_medicineStock.size()));
+
+        for (const auto& entry : a_medicineStock)
+        {
+            writer.U32(entry.MarketFormId);
+            writer.U32(entry.Stock);
+        }
+
         return writer.Bytes;
     }
 
@@ -242,7 +257,8 @@ namespace TLC::CoSave
         std::vector<StallKeeperPair>& a_stallKeepers,
         std::vector<BondPair>& a_bonds,
         std::vector<ConflictGatePair>& a_gates,
-        std::vector<BurialEntry>& a_burials)
+        std::vector<BurialEntry>& a_burials,
+        std::vector<MedicineStockPair>& a_medicineStock)
     {
         Codec::Reader reader{ a_record };
 
@@ -567,6 +583,45 @@ namespace TLC::CoSave
                 }
 
                 a_burials.push_back(burial);
+            }
+        }
+
+        // v9 (the sick household stone): the per-world medicine-stock
+        // section follows the burials. Older records have no section —
+        // the caller's stock list stands empty, and every stall starts
+        // the day at full stock (a safe default, like a missing
+        // component). A malformed entry (a zero market form id) is
+        // skipped, not fatal — same tolerance as an unknown component
+        // name; truncation is still a refusal.
+        a_medicineStock.clear();
+
+        if (recordVersion >= 9)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto stockCount = reader.U32();
+            a_medicineStock.reserve(stockCount);
+
+            for (std::uint32_t i = 0; i < stockCount; ++i)
+            {
+                if (reader.Remaining() < 8)   // 4 + 4
+                {
+                    return false;
+                }
+
+                MedicineStockPair entry;
+                entry.MarketFormId = reader.U32();
+                entry.Stock = reader.U32();
+
+                if (entry.MarketFormId == 0)
+                {
+                    continue;   // malformed — skipped, never half-applied
+                }
+
+                a_medicineStock.push_back(entry);
             }
         }
 

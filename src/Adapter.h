@@ -156,7 +156,8 @@ namespace TLC
             std::vector<TLC::CoSave::StallKeeperPair> a_stallKeepers,
             std::vector<TLC::CoSave::BondPair> a_bonds,
             std::vector<TLC::CoSave::ConflictGatePair> a_gates,
-            std::vector<TLC::CoSave::BurialEntry> a_burials);
+            std::vector<TLC::CoSave::BurialEntry> a_burials,
+            std::vector<TLC::CoSave::MedicineStockPair> a_medicineStock);
 
         // The stall-keepers in durable form — (market FormID, keeper
         // FormID) pairs, translated from the session-local entity ids via
@@ -190,6 +191,14 @@ namespace TLC
         // passes, even if the window expires while the game is away.
         [[nodiscard]] std::vector<TLC::CoSave::BurialEntry>
         BurialsForSave() const;
+
+        // The medicine stock in durable form — (market form id, doses
+        // left) pairs, straight from the map (form ids are already
+        // stable across sessions; nothing to translate). The co-save
+        // persists this (v9) so a stall that sold out stays sold out
+        // across save/load until the next market day refills it.
+        [[nodiscard]] std::vector<TLC::CoSave::MedicineStockPair>
+        MedicineStockForSave() const;
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -905,6 +914,12 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // ledger directly — form ids need no translation).
         std::vector<TLC::CoSave::BurialEntry> m_PendingBurials;
 
+        // The medicine stock the co-save held for this save (v9),
+        // riding with m_PendingRestore; consumed by ApplyRestore (which
+        // restores the map directly — market form ids need no
+        // translation).
+        std::vector<TLC::CoSave::MedicineStockPair> m_PendingMedicineStock;
+
         // Rebuilds m_StallKeepers from durable (market, keeper) FormID
         // pairs after a restore — the market entity and the keeper entity
         // both resolve via the rebuilt translator (their FormRefs rode
@@ -920,6 +935,39 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // form id is what the game world still holds). Persisted in the
         // co-save (v8) so the window keeps ticking across save/load.
         std::unordered_map<std::uint32_t, std::uint64_t> m_Burials;
+
+        // The medicine on each market's shelf today (0.8.3): market
+        // form id -> doses left. Form ids, not entity ids (the stall is
+        // the game's workshop; a person-market keys by the seller's
+        // actor form). A missing entry means the stall is at full stock
+        // (lazily filled on the first buy of the day) — so a fresh
+        // world or a restored pre-v9 save simply has full shelves, and
+        // each market-open transition (PushWorldFacts) refills every
+        // known shelf to sim.illness.stock. Persisted in the co-save
+        // (v9) so a stall that sold out stays sold out across save/load
+        // until the next market day.
+        std::unordered_map<std::uint32_t, std::uint32_t> m_MedicineStock;
+
+        // The doses a market has left today — full stock (sim.illness
+        // .stock) when the shelf has no entry yet. The lazy default is
+        // what makes a fresh world and a pre-v9 restore honest: no
+        // entry means the day's stock was never touched.
+        [[nodiscard]] std::uint32_t MedicineStockOf(
+            std::uint32_t a_marketFormId) const noexcept;
+
+        // One dose leaves the shelf. Inserts at full-minus-one when the
+        // shelf has no entry yet (the first buy of the day).
+        void ConsumeMedicine(std::uint32_t a_marketFormId) noexcept;
+
+        // The market day turns: every known shelf refills to
+        // sim.illness.stock. Called on each market-open transition (the
+        // world-facts push) so a stall that sold out is fresh the next
+        // morning.
+        void ReplenishMedicineStock() noexcept;
+
+        void RestoreMedicineStock(
+            const std::vector<TLC::CoSave::MedicineStockPair>& a_medicineStock);
+
 
         // The 0.8.2 burial sweep: for every ledger entry whose mourning
         // window has passed, disable the corpse ref (the game corpse
