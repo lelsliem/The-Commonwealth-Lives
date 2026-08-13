@@ -1052,11 +1052,15 @@ re-roll write a synchronous file line on the game thread — 22,478
 "decides" lines in under three minutes of one session, 75% of the log,
 growing the frame hang the player reported as "longer the more we add."
 `LogPlanEntry` now logs on intent change or once per
-`sim.log.decisions.every` seconds (default 1.0), whichever comes first:
-real decisions (a walk's target, an arrival) still print instantly; only
-the per-frame flip-flop is throttled. The core's tie-break jitter is
-flagged for the engine handoff — a settled mind should rest, not
-re-roll — but the adapter no longer amplifies it into a file-I/O flood.
+`sim.log.decisions.every` seconds (default 5.0 since 0.8.1), whichever
+comes first: real decisions (a walk's target, an arrival) still print
+instantly; only the per-frame flip-flop is throttled. The core's
+tie-break jitter is flagged for the engine handoff — a settled mind
+should rest, not re-roll — but the adapter no longer amplifies it into
+a file-I/O flood. The 0.8.1 default bump (1.0 → 5.0) came after the
+kin-gate and refusal floods were fixed: at 1.0 a 191-mind world still
+wrote ~36 lines/second (~2 MB per 10 minutes) with no floods left to
+blame; at 5.0 that drops to ~7 lines/second.
 
 ### ADR-0030 — A fight is a Combat wrong, booked, not an animation (2026-08-12)
 

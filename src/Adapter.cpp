@@ -5741,6 +5741,17 @@ namespace TLC
             // Refusal is the contract (the intent is a hint, not a command):
             // an unloaded actor, an unloaded target, or a busy actor. The
             // dropped intent is simply re-decided next tick — nothing queued.
+            //
+            // Refusal keys are action-stable on purpose (the third field
+            // carries the reason): a streamed-out mind flip-flops between
+            // near-tied intents every second (Rest/Explore), and if the key
+            // carried the action each flip would be a "new" key — one
+            // refusal line per LogDecisionEvery seconds for as long as the
+            // actor is away (the 2026-08-13 finding: Ellie Taylor's actor
+            // streamed out after a fast travel and her refusals wrote 64
+            // lines). A constant key means one refusal per reason per mind
+            // until its state actually changes — the mind loads, or the
+            // intent moves on — and that change is a new key, so it logs.
             if (!entry.ActorLoaded)
             {
                 m_Walks.erase(entry.Entity);
@@ -5749,7 +5760,7 @@ namespace TLC
                     entry.Entity,
                     actorLabel + " decides " + ActionName(entry.Intent.Action)
                         + " -> " + MindLabelForm(targetFormId) + " — refused: actor not loaded",
-                    { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId, 1 });
+                    { 0, 0, 1 });
                 continue;
             }
 
@@ -5761,7 +5772,7 @@ namespace TLC
                     entry.Entity,
                     actorLabel + " decides " + ActionName(entry.Intent.Action)
                         + " -> " + MindLabelForm(targetFormId) + " — refused: target not loaded",
-                    { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId, 2 });
+                    { 0, 0, 2 });
                 continue;
             }
 
@@ -5773,7 +5784,7 @@ namespace TLC
                     entry.Entity,
                     actorLabel + " decides " + ActionName(entry.Intent.Action)
                         + " -> " + MindLabelForm(targetFormId) + " — refused: actor busy",
-                    { static_cast<std::uint32_t>(entry.Intent.Action), targetFormId, 3 });
+                    { 0, 0, 3 });
                 continue;
             }
 

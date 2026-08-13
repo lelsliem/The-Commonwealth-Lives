@@ -344,8 +344,11 @@ namespace TLC::Tuning
         // verify channel stays readable — one line per mind per second at
         // most — instead of a 150-line-per-second file-I/O flood on the
         // game thread (the 22k-line session that preceded the silent
-        // freeze).
-        float LogDecisionEvery = 1.0f;
+        // freeze). Default 5.0 since 0.8.1: at 1.0 a 191-mind world still
+        // writes ~36 lines/second (~2 MB per 10 minutes) with no floods —
+        // the kin and refusal fixes killed the floods, so the cadence can
+        // relax. Real intent changes still print instantly.
+        float LogDecisionEvery = 5.0f;
 
         // The walk probe gate (0.8.0 polish): the per-walker "d = ..."
         // probe is the log's biggest single contributor (2.2k lines of a

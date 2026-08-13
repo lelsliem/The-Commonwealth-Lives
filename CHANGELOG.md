@@ -18,6 +18,20 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
   session log (the 2.2 MB / 10-min session). Now tracked by last-logged
   count: you see it once when families stream in on load, and again
   only if the gated set actually grows.
+- **Refusal lines are one per mind, not one per flip** (2026-08-13): a
+  mind whose actor streamed out (fast travel, cell unload) flip-flops
+  between near-tied Rest/Explore intents every second, and each flip
+  was a new log key — one "refused: actor not loaded" line per
+  `sim.log.decisions.every` seconds for as long as the actor was away
+  (Ellie Taylor's refusals wrote 64 lines after one fast travel). The
+  refusal keys no longer carry the action (the reason field does), so a
+  streamed-out mind logs one refusal and goes quiet until its state
+  actually changes — the mind loads, or the intent moves on.
+- **`sim.log.decisions.every` default 1.0 → 5.0** (2026-08-13): with the
+  kin and refusal floods fixed, 1.0's ~36 lines/second (~2 MB per 10
+  minutes at 191 minds) had no flood left to justify. 5.0 keeps real
+  intent changes instant and drops the flip-flop noise to ~7
+  lines/second.
 
 Two scale fixes the day-12 outbreak exposed — a settlement-wide
 outbreak is one story, not a wall of sound and a wall of names.
@@ -384,10 +398,11 @@ moment. The game froze silently at the end of that session.
 
 - **Time-based decision logging** — `LogPlanEntry` dedupes on intent
   *and* time: a mind's "decides X" line logs when its intent changes,
-  or at most once per `sim.log.decisions.every` seconds (default 1.0)
-  while it flip-flops. The verify channel stays readable — one line per
-  mind per second at most — instead of a 150-line-per-second file-I/O
-  flood on the game thread.
+  or at most once per `sim.log.decisions.every` seconds (default 1.0,
+  raised to 5.0 in 0.8.1 once the floods were gone) while it
+  flip-flops. The verify channel stays readable — one line per mind per
+  second at most — instead of a 150-line-per-second file-I/O flood on
+  the game thread.
 - The intent-change gate still fires instantly on real decisions (a
   walk's target, an arrival), so nothing observable is lost; only the
   per-frame Rest/Explore re-roll noise is throttled.
