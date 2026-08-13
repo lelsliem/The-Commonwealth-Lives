@@ -26,10 +26,14 @@ Current Stage   : 0.8.0 shipped — Health component, four contraction
                    good, death at the bottom. 24/24 harness suites
                    green.
 
-Next Milestone  : 0.8.1 — the illness field pass (below), then the
-                   staged run to 1.0.0 (Docs/Design/ReleasePlan.md):
-                   0.8.1 illness field pass →
-                   0.9.0 the release gate (scale verified, docs) →
+Next Milestone  : the 0.8.x run to the release gate
+                   (Docs/Design/Run080.md):
+                   0.8.1 illness field pass (in progress) →
+                   0.8.2 burial → 0.8.3 sick household →
+                   0.8.4 MCM → 0.8.5 player's stage →
+                   0.8.6 scale → 0.8.7 trust → 0.8.8 docs →
+                   0.8.9 bugs & polish →
+                   0.9.0 the release gate (verify, not build) →
                    1.0.0 freeze and ship
 
 ═══════════════════════════════════════════════
@@ -350,16 +354,148 @@ test (2026-08-13) or a follow-on hardening pass.
 
 ═══════════════════════════════════════════════
 
-0.9.0 — The Release Gate
+0.8.2 — The Burial · "The settlement lays its own to rest"
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (ADR-0023's planned stone)
+
+The corpse must not linger forever. The sim's death path is complete
+in the books (death fact, grief, legacy) but the game corpse stays in
+the settlement cell forever (no cell reset there). After the mourning
+window (`sim.death.burialDays`, INI-tunable), the adapter disables the
+corpse ref and logs `the settlement laid X to rest` (+ a news line).
+Body state is game state — the adapter owns it, no engine change.
+
+- Disable the corpse after the mourning window, gate on the day since
+the death was booked
+- News + log receipt, co-save aware (a buried corpse stays buried)
+- Verify: kill a settler, wait out the window, the body is gone and
+the settlement heard it
+
+═══════════════════════════════════════════════
+
+0.8.3 — The Sick Household · medicine as a stocked good
 
 ═══════════════════════════════════════════════
 
 STATUS: PLANNED
 
-- Performance at scale verified in-game
-- Remove-the-DLL trust story documented
-- Player docs and compatibility notes
-- News polish (player's settlement prioritized)
+The economy stone's next step: medicine is not an endless shelf.
+Stalls stock a limited supply per day (`sim.illness.stock`, INI) that
+sells out, so an outbreak can outrun the market — the broke-rest
+path and the honest season return. A sick mind's household notices:
+when one spouse is ill, the other's market trip can buy the dose for
+the sick one (the shared wallet already exists — the intent is a
+family that cares).
+
+- Per-stall daily medicine stock, sells out, replenishes next day
+- The family buys for the sick member (shared wallet + a care check)
+- Verify: a big outbreak drains the stalls; a married sick settler
+  gets dosed by the spouse's trip
+
+═══════════════════════════════════════════════
+
+0.8.4 — MCM + Settings Manager · the player tunes in-game
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (deferred from 0.7.x — Life.md's player-window half)
+
+A Mod Configuration Menu page exposing the tuning keys (hunger
+rhythm, market hours, bond thresholds, births gate, illness curve,
+gossip radius, population cap) so players tune the world in-game;
+the INI stays the source of truth, MCM reads and writes it (or an
+override file), with a restore-defaults button. Requires the MCM mod
+as a soft dependency and a small Papyrus surface on the adapter side.
+
+- Verify: an MCM change survives reload; defaults restore cleanly;
+  no MCM installed → the INI alone still works (soft dependency)
+
+═══════════════════════════════════════════════
+
+0.8.5 — The Player's Stage · news where the player is
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (0.9.0's news-polish item, pulled forward)
+
+The news feed prioritizes the player's settlement: what happens where
+the player stands comes first, the wider Commonwealth second, and the
+throttle stays sane at 600 minds (one headline per beat, never a
+wall). The radio is the storyteller — this makes it *about* the
+player's people.
+
+- Verify: standing in Sanctuary, the headlines are Sanctuary's;
+  the feed never floods during a mass event
+
+═══════════════════════════════════════════════
+
+0.8.6 — Scale in the Field · the hard gate, measured
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (0.9.0's hard gate, pulled forward)
+
+The engine proved 5000 minds round-trip and year-long soaks; the
+adapter must prove a normal save with hundreds of settlers ticks
+inside a frame budget. The engine's `TickReport` (once a minute)
+measures it; a release that chugs at 600 minds is dead on arrival.
+
+- Verify: a restored 600+ mind save holds frame time over a long
+  session; any hotspot found is fixed or gated behind a knob
+
+═══════════════════════════════════════════════
+
+0.8.7 — The Trust Story · remove-the-DLL is safe
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (0.9.0's trust item, pulled forward)
+
+Remove-the-DLL behavior documented and proven: the co-save rides in
+the save, the save still loads without the mod, clean migration, no
+stale-record corruption. The save/load proof is the mod's reputation.
+
+- Verify: load a saved world with the DLL removed, then reinstall —
+  nothing corrupts, nothing explodes, the world resumes
+
+═══════════════════════════════════════════════
+
+0.8.8 — Player Docs · the mod-page copy
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED (0.9.0's docs item, pulled forward)
+
+A real README: what it does, install, tune, known limits,
+compatibility notes (Sim Settlements and other renaming mods,
+place-anywhere, baby mod), the settings cheat-sheet. The mod-page
+copy the release will use.
+
+═══════════════════════════════════════════════
+
+0.8.9 — Bugs & Polish · the clean run into the gate
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The named sweep, not a bucket: every field note from 0.8.2–0.8.8
+folded back in, the docs reconciled, warnings cleared, the harness at
+full green. The standing rule — each fix lands with its ADR and its
+log receipt.
+
+═══════════════════════════════════════════════
+
+0.9.0 — The Release Gate (verify, not build)
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED — the verify, not build, gate. The four gate items
+were built in the 0.8.x run (scale 0.8.6, trust 0.8.7, docs 0.8.8,
+news 0.8.5); 0.9.0 re-verifies all four together in one long session
+and signs them off. Nothing ships before it.
 
 ═══════════════════════════════════════════════
 
