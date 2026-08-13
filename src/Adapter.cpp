@@ -1273,11 +1273,25 @@ namespace TLC
             const auto a = LCE::Simulation::EntityId{ key.first };
             const auto b = LCE::Simulation::EntityId{ key.second };
 
-            if (m_Translator.FormFor(a) != 0
-                && m_Translator.FormFor(b) != 0)
+            if (m_Translator.FormFor(a) == 0
+                || m_Translator.FormFor(b) == 0)
             {
-                couples.emplace_back(a, b);
+                continue;  // one or both not in the world
             }
+
+            // Species gate: only humans conceive. Animals, robots,
+            // super mutants, ghouls — they live, they bond, but
+            // they don't add to the population.
+            const auto spA = m_Registry.GetComponent<SpeciesTag>(a);
+            const auto spB = m_Registry.GetComponent<SpeciesTag>(b);
+
+            if ((spA == nullptr || spA->Value != Species::Human)
+                || (spB == nullptr || spB->Value != Species::Human))
+            {
+                continue;
+            }
+
+            couples.emplace_back(a, b);
         }
 
         for (const auto& [parentA, parentB] : couples)
