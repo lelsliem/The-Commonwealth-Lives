@@ -17,6 +17,51 @@ bench, arrive, trade, and the whole world survives save/load.
 
 ---
 
+## 0.7.9 — Bugs & Polish (2026-08-13)
+
+The clean run into Illness. The full codebase audit — every INI default
+vs the code, every comment, every doc — found **no bugs**. Everything
+consistent, 23/23 tests green. Version 0.7.9.
+
+The 0.7.x run is complete: talk, rows, names for everyone, trade with
+anyone, fights, the real kick, babies, visible children, and polish.
+Next: 0.8.0 Illness & Medicine.
+
+## 0.7.8 — Visible Children (2026-08-13)
+
+Born children can now be **seen**. When a sim-only child grows up
+(`sim.birth.childhood` days), the adapter scans the game for child
+actors — from the Baby Sim mod or any source — and pairs the child to
+a real actor: it walks, trades, and bonds like any mind. The pairing is
+entirely in code — no patch ESP, no load-order fragility. Without the
+mod nothing changes (`sim.birth.visible`, default off): children stay
+sim-only, as before. The Baby Sim mod itself is *usable now*; shipping
+it as a requirement waits on the author's permission.
+
+## 0.7.7 — Babies: The Birth Lifecycle (2026-08-13)
+
+A child is now *born*, not just created. Bonded human couples conceive
+(`sim.birth.chance`), carry a pregnancy through `sim.birth.gestation`
+sim-days, and the birth fires on the due day — the settlement hears it,
+the parents bond, the child is named and fed. After `sim.birth.childhood`
+sim-days the child grows up: its needs normalize and it walks to market
+like any mind. Only humans conceive (no robot babies), the day-261
+crash is fixed, and the whole journey survives save/load.
+
+## 0.7.6 — The Fight-Feel Pass: The Kick Is Real (2026-08-13)
+
+Two presentation bugs closed. **The kick finally plays for real** — the
+game's own push-kick idle refuses to play outside combat, so the mod
+ships its own 380-byte ESP (unconditional clone of the proven recipe)
+and the adapter plays it on the attacker: a real kick on the first
+shove AND the retaliation. **The fall tips instead of sliding** — the
+knock force drops to the tip-over zone so the victim falls in place;
+the paired push is the shove. And both actors must be on their feet
+before the next beat — no more double-collapses. The experiment adding
+body-slam and push animations was reverted; the kick alone reads right.
+
+---
+
 ## 0.7.0 — Identity & the Player Window (2026-08-11)
 
 The world is alive even when the player isn't watching — settlers have

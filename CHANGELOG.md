@@ -9,6 +9,69 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.7.9 — bugs & polish (2026-08-13)
+
+The clean run into Illness. The codebase audit found **no bugs**: all INI
+defaults match the code, all comments reference correct versions, no
+stale TODOs beyond the CoSave UID placeholder (a release-time concern).
+Version bumped to 0.7.9; the banner stamps the git hash so the log
+always names the DLL that ran. Docs swept and consistent (Roadmap,
+README, AdapterProject, DecisionLog). 23/23 harness suites green.
+
+## 0.7.8 — visible children: runtime pairing (2026-08-13)
+
+The adapter now pairs grown sim-only children with real game child
+actors — no patch ESP needed. `PairVisibleChildren` scans the game's
+process lists for `HumanChildRace`/`GhoulChildRace` actors, filters out
+actors already translated into minds, collects the sim-only children
+(`Species::Child`, no FormRef), and pairs them greedily — one actor per
+child. Each paired child gets a FormRef + translator entry → walks,
+trades, bonds like any mind. The external Baby Sim mod (Nexus 100934)
+is **usable now** — its children are found by race, not FormID — while
+*editing* it or shipping it as a hard requirement waits on the author's
+permission (already requested). Without the mod the scan finds nothing
+and does nothing: graceful degradation via `sim.birth.visible`
+(default off). Children stay sim-only — the 0.7.7 behavior — until the
+mod is installed.
+
+## 0.7.7 — babies: the birth lifecycle made whole (2026-08-13)
+
+The instant-birth proof became a journey. A `Pregnancy` component
+(conception day, due day, parent IDs — co-save serialized) and a
+`BirthDay` component (the child's birth stamp) drive it: spouses
+conceive on a day-roll (`sim.birth.chance`, default 0.05) once bonded
+and fed, the due day is conception + `sim.birth.gestation` (default 3
+sim-days), the birth fires on the due day with gossip and news, and at
+`sim.birth.childhood` (default 10) the child's species moves Child →
+Human — needs normalize and it walks to market like any mind. A species
+gate keeps reproduction human-only (Servomech Swarmbot couples no
+longer conceive). The day-261 crash — `RemoveComponent` inside
+`ForEachWithComponent` invalidating the iterator — is fixed with a
+two-pass CheckBirths (collect due mothers, then create), plus a
+dead-parent safety that skips a birth if either parent is gone.
+Verified in-game: 9 children born in the first test, 14 more
+expecting.
+
+## 0.7.6 — the fight-feel pass: the kick is real (2026-08-13)
+
+The two 0.7.5 presentation bugs closed. **The kick plays for real** —
+previously the "kick" was the stagger flinch: the vanilla
+`PairedFrontPushKick` IDLE records carry conditions (raider-only,
+`RaiderRootBehavior.hkx`) and `PlayIdle` refuses them outside combat.
+The fix is our own 380-byte ESP,
+`data/TheLivingCommonwealthAnims.esp` — unconditional IDLE clones of
+the proven crowd-mod recipe (same subrecords, `MeleeBehavior.hkx`,
+no conditions, byte-verified) — resolved load-order-independently and
+played on the attacker, on the first shove AND the retaliation. Missing
+ESP falls back to the flinch — nothing crashes. **The fall tips instead
+of sliding** — `sim.fight.push` drops 8 → 3 (the tip-over zone measured
+in the loop tests) so the knock only puts the victim down; the paired
+push is the shove. And the **IsDown guard** waits for both actors to be
+on their feet (500ms re-check) before a fall or the retaliation fires,
+killing the both-fall look. The push/punch variety experiment
+(kick/body-slam/push) was tested and reverted — the kick alone reads
+right.
+
 ## 0.7.4 verification — the log flood tamed (2026-08-12)
 
 ### 0.7.5 — the scuffle reads as a sequence (2026-08-12)
