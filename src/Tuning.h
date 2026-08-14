@@ -474,10 +474,18 @@ namespace TLC::Tuning
         settings.SaleWarmth = read("sim.sale.warmth", settings.SaleWarmth);
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
         settings.Stipend = read("sim.economy.stipend", settings.Stipend);
-        settings.StipendSourcePlayer =
+        // The source's two spellings (0.8.6b field find): the INI's
+        // documented text form (sim.economy.stipend.source = player /
+        // settlement) and the MCM toggle's bool form (the overlay
+        // stores the switcher as bsim.economy.stipend.source = 1 / 0,
+        // and the prefix strip leaves "1"/"0" in the config). Both
+        // must mean the same thing, or the in-game toggle silently
+        // never takes effect.
+        const auto source =
             readText("sim.economy.stipend.source",
-                     settings.StipendSourcePlayer ? "player" : "settlement")
-            == "player";
+                     settings.StipendSourcePlayer ? "player" : "settlement");
+        settings.StipendSourcePlayer =
+            source == "player" || source == "1" || source == "true";
         settings.StipendRequireOwned =
             readText("sim.economy.stipend.requireOwned",
                      settings.StipendRequireOwned ? "1" : "0")
