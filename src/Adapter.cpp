@@ -3388,7 +3388,14 @@ namespace TLC
                 auto* actor =
                     RE::TESForm::GetFormByID<RE::Actor>(a_ref.FormId);
 
-                if (actor == nullptr)
+                // Genuinely loaded only: GetFormByID resolves actors in
+                // streamed-out cells too, and their position reads
+                // garbage — without this gate every restored mind looks
+                // "within range" of every other and the whole world
+                // chats at once (the 329-line wake burst, 0.8.4 field
+                // find). A 3D-loaded actor (Get3D non-null) is one the
+                // player is actually near.
+                if (actor == nullptr || actor->Get3D() == nullptr)
                 {
                     return;
                 }
@@ -3465,8 +3472,20 @@ namespace TLC
                 continue;   // alone — nothing to say
             }
 
-            // The chance gate: a cooldown-expired mind in company does
-            // not always speak — a crowd stays sparse.
+            // Claim the slot before the roll: a cooldown-expired mind
+            // in company waits a full jittered cadence whether or not
+            // it speaks — otherwise a failed chance roll retries next
+            // frame and the gate means nothing (0.8.4 field find).
+            m_InteractCooldown[a.Id] =
+                now
+                + std::chrono::duration_cast<
+                    std::chrono::steady_clock::duration>(
+                    std::chrono::duration<float>(
+                        m_Settings.InteractCadence
+                        * (0.5f + m_Rng.NextFloat())));
+
+            // The chance gate: not every cooldown-expired mind in
+            // company speaks — a crowd stays sparse.
             if (m_Rng.NextFloat() >= m_Settings.InteractChance)
             {
                 continue;
@@ -3500,16 +3519,6 @@ namespace TLC
             // the player is close enough to hear it — the settlement
             // radio never carries small talk (0.8.4 field truth).
             Say(a.Id, partner, pool, /*a_loud=*/false, /*a_radio=*/false);
-
-            // The jittered cooldown: 0.5–1.5× the cadence, so a pair
-            // never falls into lockstep chatter.
-            m_InteractCooldown[a.Id] =
-                now
-                + std::chrono::duration_cast<
-                    std::chrono::steady_clock::duration>(
-                    std::chrono::duration<float>(
-                        m_Settings.InteractCadence
-                        * (0.5f + m_Rng.NextFloat())));
         }
     }
 
