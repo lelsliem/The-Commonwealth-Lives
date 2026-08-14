@@ -680,7 +680,21 @@ namespace TLC
                 [this, &overlaid](
                     std::string_view a_key, std::string_view a_value)
                 {
-                    m_Config.Set(a_key, a_value);
+                    // MCM settings carry a one-char type prefix
+                    // (b/i/f/s — the MCM convention, e.g. "fHunger"),
+                    // but the sim's own keys are bare. Strip the
+                    // prefix so fsim.hunger.decay overlays
+                    // sim.hunger.decay.
+                    auto key = std::string(a_key);
+
+                    if (!key.empty()
+                        && (key[0] == 'b' || key[0] == 'i'
+                            || key[0] == 'f' || key[0] == 's'))
+                    {
+                        key.erase(0, 1);
+                    }
+
+                    m_Config.Set(key, a_value);
                     ++overlaid;
                 });
 
@@ -830,7 +844,17 @@ namespace TLC
         mcmConfig.ForEach(
             [this](std::string_view a_key, std::string_view a_value)
             {
-                m_Config.Set(a_key, a_value);
+                // Strip the MCM type prefix (see LoadConfiguration).
+                auto key = std::string(a_key);
+
+                if (!key.empty()
+                    && (key[0] == 'b' || key[0] == 'i'
+                        || key[0] == 'f' || key[0] == 's'))
+                {
+                    key.erase(0, 1);
+                }
+
+                m_Config.Set(key, a_value);
             });
 
         REX::INFO("tuning: MCM override changed — hot-applied.");

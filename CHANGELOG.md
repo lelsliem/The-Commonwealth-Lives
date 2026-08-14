@@ -9,6 +9,20 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.5 field fix — MCM NaN reads (2026-08-14)
+
+The first in-game pass of the MCM page showed every control reading
+`NaN`. MCM's settings store is typed, so bare `sim.*` keys parse as
+nothing. Fixed: typed keys (`f`/`i`/`b` prefixes) in
+`MCM/Settings/TheLivingCommonwealth.ini`, `id`-bound controls
+(`"fHungerDecay:Main"` + `sourceType ModSettingFloat/Int/Bool`) in
+the page, an About page added, and the adapter strips the type
+prefix when overlaying the MCM file (`Adapter.cpp`). The JSON and
+settings file re-read live (MCM reloads on menu open); the DLL
+half ships with the next restart.
+
+---
+
 ## 0.8.x field fix — the INI governs a restored world (2026-08-14)
 
 - **Decay rates re-derived on restore.** The co-save serializes each
