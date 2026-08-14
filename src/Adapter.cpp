@@ -1194,6 +1194,8 @@ namespace TLC
 
     void Adapter::PayStipends()
     {
+        using namespace LCE::Simulation;
+
         const auto stipend =
             static_cast<std::uint32_t>(m_Settings.Stipend);
 
@@ -1215,19 +1217,48 @@ namespace TLC
             m_Registry, stipend, day,
             [this](LCE::Simulation::EntityId a_entity)
             {
-                // The mind's settlement: the nearest workshop to its
-                // actor — the same spatial rule the per-settlement seed
-                // uses, so the wage comes from the bench it trades at.
-                // A mind whose actor is not loaded yet (a restored world
-                // streams in gradually) has no position this tick — the
-                // next tick's sweep pays it under the right settlement.
+                // The mind's home market, from its own memory first:
+                // the per-settlement seed wrote a Trade-kind event whose
+                // Other is its market — co-save state, available even
+                // before the actor streams in. The 0.7.4 vendor seed
+                // also writes Trade events, but their Other is a person
+                // (an actor, not a workshop), so a memory's Other that
+                // is a known workshop is unambiguously the home market.
+                if (const auto memory =
+                        m_Registry.GetComponent<Memory>(a_entity))
+                {
+                    for (const auto& event : memory->Events)
+                    {
+                        if (event.Kind
+                            != InteractionKind::Trade)
+                        {
+                            continue;
+                        }
+
+                        const auto marketFormId =
+                            m_Translator.FormFor(event.Other);
+
+                        if (IsWorkshopForm(marketFormId))
+                        {
+                            return marketFormId;
+                        }
+                    }
+                }
+
+                // No remembered market (a mind that never traded, or a
+                // fresh world): the nearest workshop to the actor — the
+                // same spatial rule the seed uses. An actor not loaded
+                // yet has no position; it is paid under the wastes this
+                // day and its mark holds, so tomorrow's sweep (actor
+                // loaded, memory seeded) books it under the right
+                // settlement.
                 const auto formId = m_Translator.FormFor(a_entity);
                 const auto* actor =
                     RE::TESForm::GetFormByID<RE::Actor>(formId);
 
                 if (actor == nullptr)
                 {
-                    return 0u;   // the wastes, for now
+                    return 0u;
                 }
 
                 const auto pos = actor->GetPosition();
@@ -2981,8 +3012,30 @@ namespace TLC
         return MarketLabel(a_formId);
     }
 
+    bool Adapter::IsWorkshopForm(std::uint32_t a_formId) const noexcept
+    {
+        return a_formId != 0
+            && std::find_if(
+                   m_Workshops.begin(), m_Workshops.end(),
+                   [a_formId](const WorkshopPosition& a_workshop)
+                   {
+                       return a_workshop.FormId == a_formId;
+                   })
+                != m_Workshops.end();
+    }
+
     std::string Adapter::MarketLabel(std::uint32_t a_formId) const
     {
+        // The census-time name first (the persistent-cell read happens
+        // before the workshops stream in — a label asked while the form
+        // is still unloaded still names the settlement).
+        const auto cached = m_WorkshopNames.find(a_formId);
+
+        if (cached != m_WorkshopNames.end())
+        {
+            return cached->second + " [" + FormatHex8(a_formId) + "]";
+        }
+
         const auto* form = RE::TESForm::GetFormByID(a_formId);
 
         if (form != nullptr)
@@ -3411,16 +3464,8 @@ namespace TLC
                     }
 
                     const auto formId = m_Translator.FormFor(event.Other);
-                    const auto isWorkshop = formId != 0
-                        && std::find_if(
-                               m_Workshops.begin(), m_Workshops.end(),
-                               [formId](const WorkshopPosition& a_workshop)
-                               {
-                                   return a_workshop.FormId == formId;
-                               })
-                            != m_Workshops.end();
 
-                    if (isWorkshop)
+                    if (IsWorkshopForm(formId))
                     {
                         m_Registry.AddComponent<Groups>(
                             a_entity,
@@ -4379,6 +4424,7 @@ namespace TLC
         m_Burials.clear();
         m_MedicineStock.clear();
         m_Walks.clear();
+        m_WorkshopNames.clear();
         m_ArrivedAt.clear();
         m_WalkRefusedUntil.clear();
         m_InteractCooldown.clear();
@@ -4521,9 +4567,24 @@ namespace TLC
                     }
 
                     const auto pos = a_ref->GetPosition();
+                    const auto workshopFormId = a_ref->GetFormID();
 
                     m_Workshops.push_back(WorkshopPosition{
-                        a_ref->GetFormID(), pos.x, pos.y });
+                        workshopFormId, pos.x, pos.y });
+
+                    // The workshop's display name, captured while the
+                    // ref is in hand (the census reads the persistent
+                    // cells at world start, before the workshops stream
+                    // in — MarketLabel falls back to this cache when the
+                    // form is not loaded yet, so the stipend's
+                    // per-settlement line names the settlement instead
+                    // of a bare hex).
+                    const auto name = a_ref->GetDisplayFullName();
+
+                    if (name != nullptr)
+                    {
+                        m_WorkshopNames[workshopFormId] = name;
+                    }
 
                     return RE::BSContainer::ForEachResult::kContinue;
                 });

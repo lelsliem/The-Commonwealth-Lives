@@ -357,6 +357,14 @@ namespace TLC
         // the REFR array may not be populated when the world wakes. The
         // legacy single-bench fallback covers the world meanwhile.
         std::vector<WorkshopPosition> m_Workshops;
+
+        // The workshops' display names, captured at census time (the
+        // persistent-cell read happens before the REFRs stream in).
+        // MarketLabel consults this cache first so a settlement is
+        // named even while its form is unloaded — the stipend's
+        // per-settlement pay line reads "Sanctuary", not a bare hex.
+        std::unordered_map<std::uint32_t, std::string> m_WorkshopNames;
+
         bool m_WorkshopsReady = false;
         std::chrono::steady_clock::time_point m_LastCensus{};
 
@@ -461,6 +469,15 @@ namespace TLC
         // Aid, Success, nothing in return.
         void ReportArrival(
             LCE::Simulation::EntityId a_entity, std::uint32_t a_targetFormId);
+
+        // IsWorkshopForm — is this form id one of the known settlement
+        // workshops (m_Workshops, the census result)? A memory's
+        // Trade-kind Other is the mind's home market exactly when it is
+        // a workshop — a vendor's Trade event points at a person, not a
+        // bench, so this membership test disambiguates the two (the
+        // stipend's home-market read and the settlement-group seed
+        // share it).
+        [[nodiscard]] bool IsWorkshopForm(std::uint32_t a_formId) const noexcept;
 
         // The identity stone's voice (0.7.0 Stone 1): a mind's name with
         // its form id — "Marcy Long [00050976]" — or, for a mind with no
