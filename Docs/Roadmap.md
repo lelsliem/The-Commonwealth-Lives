@@ -526,8 +526,11 @@ that chugs at 600 minds is dead on arrival.
      `PlayerOwnedWorkshops` array, read through the VM
      (`FindBoundObject` on the quest's WorkshopParent script), with
      the census read falling back to "owned" until proven. The
-     field truth to beat: `GetOwner()` null everywhere,
-     WorkshopPlayerOwned AV never set by vanilla.
+     field truth to beat (verified in-game 2026-08-14): `GetOwner()`
+     null everywhere, and `getav WorkshopPlayerOwned` on the
+     Sanctuary workbench is rejected by the console ("not a
+     function") — the AVIF record is vestigial, never registered in
+     the game's AV table.
   2. **Player-pays deduction** — `source = player`'s RemoveItem path
      ran (the log's bill line fired) but the caps never moved; the
      FO4 `RemoveItem` count/reason semantics need investigation

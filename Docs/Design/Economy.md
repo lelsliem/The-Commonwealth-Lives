@@ -145,13 +145,14 @@ knobs shipped and harness-pinned (27/27), then failed in the field:
 - **The ownership read (`requireOwned`)**: vanilla FO4 does not store
   settlement ownership anywhere a wrapped API can read it.
   `TESObjectREFR::GetOwner()` returns null for every workshop (0 of 28
-  in the field); the `WorkshopPlayerOwned` actor value — the console
-  trick from forum posts — is a Workshop-Framework mechanic that
-  vanilla never sets, so it reads 0 even for claimed settlements. The
-  game's real ownership lives in the WorkshopParent quest's Papyrus
-  state (the `PlayerOwnedWorkshops` array), readable only through
-  fragile VM plumbing commonlibf4 doesn't wrap. With the gate on, no
-  one drew at all.
+  in the field); the `WorkshopPlayerOwned` actor value is dead too —
+  verified in-game 2026-08-14, the console rejects `getav
+  WorkshopPlayerOwned` on the Sanctuary workbench ("not a function");
+  the AVIF record exists in the data but is never registered in the
+  game's AV table. The game's real ownership lives in the
+  WorkshopParent quest's Papyrus state (the `PlayerOwnedWorkshops`
+  array), readable only through fragile VM plumbing commonlibf4
+  doesn't wrap. With the gate on, no one drew at all.
 - **The player-pays leg (`source = player`)**: the RemoveItem path ran
   (the log's bill line fired: "the wage bill of 5320 caps came from
   the player's purse") but the caps never left the player's

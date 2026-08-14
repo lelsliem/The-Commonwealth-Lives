@@ -4685,16 +4685,20 @@ namespace TLC
                         m_WorkshopNames[workshopFormId] = refName;
                     }
 
-                    // The ownership read (0.8.6b): does the player own
-                    // this workshop? The stipend's requireOwned gate
-                    // answers "whose people draw a wage" — a settler at
-                    // a workshop the player never claimed doesn't cost
-                    // the player. The game stores settlement ownership
-                    // as the workshop's WorkshopPlayerOwned actor value
-                    // (set to 1 when the player claims the settlement) —
-                    // the same read the game's GetValue(WorkshopPlayerOwned)
-                    // Papyrus uses. (GetOwner returns null here: workshop
-                    // ownership is an AV, not an ExtraOwnership.)
+                    // The ownership read (0.8.6b, BENCHED): does the
+                    // player own this workshop? The stipend's
+                    // requireOwned gate answers "whose people draw a
+                    // wage". The read is dead in the field — verified
+                    // in-game 2026-08-14: the console rejects
+                    // `getav WorkshopPlayerOwned` on the Sanctuary
+                    // workbench ("not a function" — the AVIF record
+                    // found by the scan below is vestigial, never
+                    // registered in the game's AV table), and
+                    // GetOwner() returns null for every workshop. The
+                    // gate defaults off and this map feeds nothing;
+                    // the real read (the WorkshopParent quest's
+                    // PlayerOwnedWorkshops array via the VM) is a
+                    // benched 0.8.6c item.
                     //
                     // The AVIF is found by scanning the data handler's
                     // ActorValueInfo array for the editor ID, not
