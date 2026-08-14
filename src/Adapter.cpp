@@ -4642,9 +4642,43 @@ namespace TLC
                     // the same read the game's GetValue(WorkshopPlayerOwned)
                     // Papyrus uses. (GetOwner returns null here: workshop
                     // ownership is an AV, not an ExtraOwnership.)
-                    static const auto* kWorkshopOwnedAv =
-                        RE::TESForm::GetFormByEditorID<RE::ActorValueInfo>(
-                            "WorkshopPlayerOwned");
+                    //
+                    // The AVIF is found by scanning the data handler's
+                    // ActorValueInfo array for the editor ID, not
+                    // GetFormByEditorID: the game's editor-ID map does
+                    // not index AVIFs (their editor IDs live inline in
+                    // the form's formEditorID member, not as extra
+                    // data), so the map lookup returns null every time.
+                    static const RE::ActorValueInfo* kWorkshopOwnedAv =
+                        []() -> const RE::ActorValueInfo*
+                    {
+                        auto* handler =
+                            RE::TESDataHandler::GetSingleton();
+
+                        if (handler == nullptr)
+                        {
+                            return nullptr;
+                        }
+
+                        for (const auto* av :
+                             handler->GetFormArray<RE::ActorValueInfo>())
+                        {
+                            if (av == nullptr)
+                            {
+                                continue;
+                            }
+
+                            const std::string_view editorId =
+                                av->formEditorID;   // BSString → view
+
+                            if (editorId == "WorkshopPlayerOwned")
+                            {
+                                return av;
+                            }
+                        }
+
+                        return nullptr;
+                    }();
 
                     const bool owned =
                         kWorkshopOwnedAv != nullptr
