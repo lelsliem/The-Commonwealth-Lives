@@ -402,6 +402,16 @@ namespace TLC
         bool m_TickCalled = false;
         bool m_FirstPassLogged = false;
 
+        // The 0.8.6c scale gate: the engine's TickReport (0.8.0 stone
+        // 13) measures one Update call — per-pass counts and wall time.
+        // The adapter fills it every frame (cheap timers) and logs the
+        // worst frame's total once a minute, so a restored 600+ mind
+        // save's per-tick cost is knowable in the field instead of
+        // guessed. Session state, never co-saved.
+        LCE::Simulation::TickReport m_TickReport;
+        double m_TickMaxMs = 0.0;
+        std::chrono::steady_clock::time_point m_LastTickReportLog{};
+
         // Abort recovery: armed by PreLoadGame, cleared by GameLoaded or
         // the recovery itself. The game's exit-save reload starts a load
         // ~0.1s after the world wakes and aborts it ~9s later without a

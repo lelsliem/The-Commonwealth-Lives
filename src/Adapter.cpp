@@ -6732,8 +6732,39 @@ namespace TLC
         // with the modder's tuning (the config file) when present. The
         // observation bus rides along so the sim's changes flow out —
         // bond crossings surface as RelationshipChangedEvent (0.6.0
-        // stone 08).
-        Update(m_Registry, a_deltaSeconds, m_CoreTuning, &m_Bus, &m_Rng);
+        // stone 08). The TickReport measures this one call (0.8.0 stone
+        // 13); the 0.8.6c scale gate logs the worst frame once a minute.
+        Update(m_Registry, a_deltaSeconds, m_CoreTuning, &m_Bus, &m_Rng,
+               &m_TickReport);
+
+        // The 0.8.6c scale-in-the-field gate: once a minute, log the
+        // sim's per-tick cost — how many minds were swept, and the
+        // worst single Update's wall time this window. A restored
+        // 600+ mind save must tick inside a frame budget; if the worst
+        // frame's TotalMs is a big slice of the 16.6 ms budget, the
+        // show chugs and the gate fails.
+        m_TickMaxMs = std::max(m_TickMaxMs, m_TickReport.TotalMs);
+
+        const auto reportNow = std::chrono::steady_clock::now();
+
+        if (reportNow - m_LastTickReportLog
+            >= std::chrono::seconds(60))
+        {
+            m_LastTickReportLog = reportNow;
+
+            REX::INFO(
+                "LCE: tick report — {} entities, {} memory events, "
+                "{} relationships, worst frame {:.2f} ms total "
+                "(needs {:.2f}, memory {:.2f}, relationships {:.2f}, "
+                "goals {:.2f}, decide {:.2f}).",
+                m_TickReport.Entities, m_TickReport.MemoryEvents,
+                m_TickReport.Relationships, m_TickMaxMs,
+                m_TickReport.NeedsMs, m_TickReport.MemoryMs,
+                m_TickReport.RelationshipsMs, m_TickReport.GoalsMs,
+                m_TickReport.DecideMs);
+
+            m_TickMaxMs = 0.0;
+        }
 
         // The read + the table. "Already acting" is a future refinement —
         // every loaded settler is available for now.
