@@ -218,58 +218,6 @@
     },
     {
      "type": "spacer"
-    },
-    {
-     "type": "section",
-     "text": "Market"
-    },
-    {
-     "id": "imarket.open.hour:Main",
-     "type": "slider",
-     "text": "Market opens (hour)",
-     "help": "The market's opening hour — 8 is breakfast time.",
-     "valueOptions": {
-      "sourceType": "ModSettingInt",
-      "min": 0,
-      "max": 24,
-      "step": 1
-     }
-    },
-    {
-     "id": "imarket.close.hour:Main",
-     "type": "slider",
-     "text": "Market closes (hour)",
-     "help": "The market's closing hour — 20 is dusk.",
-     "valueOptions": {
-      "sourceType": "ModSettingInt",
-      "min": 0,
-      "max": 24,
-      "step": 1
-     }
-    },
-    {
-     "id": "isim.meal.price:Main",
-     "type": "slider",
-     "text": "Meal price",
-     "help": "Caps per meal. A broke buyer is still fed on the settlement's credit.",
-     "valueOptions": {
-      "sourceType": "ModSettingInt",
-      "min": 0,
-      "max": 50,
-      "step": 1
-     }
-    },
-    {
-     "id": "fsim.sale.warmth:Main",
-     "type": "slider",
-     "text": "Sale warmth",
-     "help": "How much a stall-keeper warms to a customer with each sale.",
-     "valueOptions": {
-      "sourceType": "ModSettingFloat",
-      "min": 0.0,
-      "max": 1.0,
-      "step": 0.05
-     }
     }
    ]
   },
@@ -380,7 +328,7 @@
      "id": "bsim.illness.enabled:Main",
      "type": "switcher",
      "text": "Illness enabled",
-     "help": "Settlers can fall ill — from stores, wounds, radstorms, or each other.",
+     "help": "Settlers can fall ill — from food, wounds, radstorms, or each other.",
      "valueOptions": {
       "sourceType": "ModSettingBool"
      }
@@ -395,46 +343,6 @@
       "min": 0.0,
       "max": 0.2,
       "step": 0.01
-     }
-    },
-    {
-     "id": "isim.illness.medicinePrice:Main",
-     "type": "slider",
-     "text": "Medicine price",
-     "help": "Caps a dose costs — paid from the buyer's household wallet.",
-     "valueOptions": {
-      "sourceType": "ModSettingInt",
-      "min": 0,
-      "max": 100,
-      "step": 5
-     }
-    },
-    {
-     "type": "section",
-     "text": "The Economy"
-    },
-    {
-     "id": "isim.economy.stipend:Main",
-     "type": "slider",
-     "text": "Daily stipend",
-     "help": "Caps each settler earns per world-day from the settlement, so non-keepers aren't broke and the sick can afford the medicine above. 0 = off (the default). Household-shared: a couple draws one wage.",
-     "valueOptions": {
-      "sourceType": "ModSettingInt",
-      "min": 0,
-      "max": 50,
-      "step": 1
-     }
-    },
-    {
-     "id": "isim.illness.stock:Main",
-     "type": "slider",
-     "text": "Daily stock",
-     "help": "Doses each stall shelves per market day. An outbreak can sell it out.",
-     "valueOptions": {
-      "sourceType": "ModSettingInt",
-      "min": 0,
-      "max": 50,
-      "step": 1
      }
     },
     {
@@ -471,6 +379,107 @@
       "min": 60,
       "max": 3600,
       "step": 30
+     }
+    }
+   ]
+  },
+  {
+   "pageDisplayName": "Economy",
+   "content": [
+    {
+     "type": "section",
+     "text": "The Market"
+    },
+    {
+     "id": "imarket.open.hour:Main",
+     "type": "slider",
+     "text": "Market opens (hour)",
+     "help": "Hour of the day the market opens — minds gather at the bench.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 23,
+      "step": 1
+     }
+    },
+    {
+     "id": "imarket.close.hour:Main",
+     "type": "slider",
+     "text": "Market closes (hour)",
+     "help": "Hour the market closes — the bench goes quiet.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 23,
+      "step": 1
+     }
+    },
+    {
+     "id": "isim.meal.price:Main",
+     "type": "slider",
+     "text": "Meal price",
+     "help": "Caps per meal. A broke buyer is still fed — the settlement covers it.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 1,
+      "max": 50,
+      "step": 1
+     }
+    },
+    {
+     "id": "fsim.sale.warmth:Main",
+     "type": "slider",
+     "text": "Sale warmth",
+     "help": "How much a stall-keeper warms to a customer per sale.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.01
+     }
+    },
+    {
+     "type": "section",
+     "text": "Medicine"
+    },
+    {
+     "id": "isim.illness.medicinePrice:Main",
+     "type": "slider",
+     "text": "Medicine price",
+     "help": "Caps a dose costs — paid from the buyer's household wallet.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 100,
+      "step": 5
+     }
+    },
+    {
+     "id": "isim.illness.stock:Main",
+     "type": "slider",
+     "text": "Medicine stock",
+     "help": "Doses each stall shelves per market day. An outbreak can sell it out.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 50,
+      "step": 1
+     }
+    },
+    {
+     "type": "section",
+     "text": "The Stipend"
+    },
+    {
+     "id": "isim.economy.stipend:Main",
+     "type": "slider",
+     "text": "Daily stipend",
+     "help": "Caps each settler earns per world-day from the settlement, so non-keepers aren't broke and the sick can afford the medicine above. 0 = off (the default). Household-shared: a couple draws one wage.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 50,
+      "step": 1
      }
     }
    ]
