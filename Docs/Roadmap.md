@@ -31,7 +31,7 @@ Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
                    0.8.1 illness field pass (shipped) →
                    0.8.2 burial (verified 2026-08-14) →
                    0.8.3 sick household (verified 2026-08-14) →
-                   0.8.4 random interactions (the trial) →
+                   0.8.4 random interactions (verified 2026-08-14) →
                    0.8.5 MCM → 0.8.6a the audit →
                    0.8.6b redefine & loose ends →
                    0.8.6c scale in the field →
@@ -428,7 +428,7 @@ family that cares).
 
 ═══════════════════════════════════════════════
 
-STATUS: BUILT — awaiting the in-game trial (2026-08-14)
+STATUS: VERIFIED — the trial passed, the stone ships (2026-08-14)
 
 Settlers interact with each other unprompted — not only when hunger
 drives them to a bench. The trial first: watch what the existing sim

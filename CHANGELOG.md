@@ -42,9 +42,19 @@ only when the player is within `sim.subtitle.radius` of the speaker
 what is said nearby, not the whole Commonwealth). A walking mind
 never talks; the jittered `sim.interact.cadence` (30 s, 0.5–1.5×)
 keeps a pair from lockstep chatter. Tuning:
-`sim.interact.cadence/radius/chance`. Harness 26/26 green. The
-in-game trial decides whether it ships as 0.8.4 or closes as a
-documented finding.
+`sim.interact.cadence/radius/chance`. Harness 26/26 green.
+- **The trial passed in-game (2026-08-14) — the stone ships.** A
+  loaded settlement genuinely talks: 186 genuinely-near speakers at
+the sparse per-mind cadence, bond-aware pools (bonded caravan
+guards got family lines), walking minds never interrupted, and the
+speech local-only (log + subtitle-when-close; the feed untouched).
+Two field fixes landed during the trial: the loaded gate
+(`Get3D() != nullptr` — `GetFormByID` resolves streamed-out actors
+whose positions read as garbage, so the whole world looked "in
+range" and 2000 lines poured out in 2.3 minutes from 23 speakers),
+and claiming the interaction slot before the chance roll (a failed
+roll had retried next frame, making the gate meaningless). The
+author judged it "added life".
 
 ---
 
