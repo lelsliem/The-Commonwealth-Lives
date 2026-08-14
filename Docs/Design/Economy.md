@@ -156,8 +156,12 @@ knobs shipped and harness-pinned (27/27), then failed in the field:
 - **The player-pays leg (`source = player`)**: the RemoveItem path ran
   (the log's bill line fired: "the wage bill of 5320 caps came from
   the player's purse") but the caps never left the player's
-  inventory — the FO4 RemoveItem count semantics need investigation
-  before this leg returns.
+  inventory. **Root cause (2026-08-14): the count's sign.** The
+  unified inventory native removes on a POSITIVE count and adds on a
+  negative one — the first build passed `-totalOut`, so nothing
+  visibly moved. Fixed: positive count + `ITEM_REMOVE_REASON::kSelling`
+  (the game's own trade-money flow) + a before/after `GetGoldAmount`
+  diagnostic in the bill line. Field test pending.
 
 **The revert:** `sim.economy.stipend.requireOwned` defaults to 0 (every
 mind with a home market draws — the working behavior), the source

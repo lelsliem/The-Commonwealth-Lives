@@ -1325,15 +1325,26 @@ namespace TLC
 
             if (player != nullptr && caps != nullptr)
             {
-                // The wage bill leaves the player's inventory: the game's
-                // own remove path (RemoveItemData, the same the game uses
-                // for every transaction), caps [ITEM:0000000F].
-                RE::TESObjectREFR::RemoveItemData data{ caps, -static_cast<std::int32_t>(totalOut) };
+                const auto before = player->GetGoldAmount();
+
+                // The wage bill leaves the player's inventory: the
+                // game's own remove path, caps [ITEM:0000000F]. The
+                // count is POSITIVE — the unified inventory native
+                // removes on a positive count and adds on a negative
+                // one (the 0.8.6b field failure: the bill line fired
+                // but the caps never moved because the count was
+                // negated; the sign was the bug). The selling reason
+                // is the game's own trade-money flow.
+                RE::TESObjectREFR::RemoveItemData data{
+                    caps, static_cast<std::int32_t>(totalOut) };
+                data.reason = RE::ITEM_REMOVE_REASON::kSelling;
                 player->RemoveItem(data);
 
+                const auto after = player->GetGoldAmount();
+
                 REX::INFO(
-                    "LCE: economy — the wage bill of {} caps came from the player's purse.",
-                    totalOut);
+                    "LCE: economy — the wage bill of {} caps came from the player's purse ({} -> {}).",
+                    totalOut, before, after);
             }
         }
     }

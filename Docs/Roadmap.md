@@ -531,12 +531,11 @@ that chugs at 600 minds is dead on arrival.
      Sanctuary workbench is rejected by the console ("not a
      function") — the AVIF record is vestigial, never registered in
      the game's AV table.
-  2. **Player-pays deduction** — `source = player`'s RemoveItem path
-     ran (the log's bill line fired) but the caps never moved; the
-     FO4 `RemoveItem` count/reason semantics need investigation
-     (negative count, ITEM_REMOVE_REASON, or a different gold API
-     like `GetGoldAmount`/`AddItem` round-trip) before the leg
-     returns.
+  2. **Player-pays deduction** — root cause found 2026-08-14: the
+     unified inventory native removes on a POSITIVE count and adds on
+     a negative one; the first build passed `-totalOut`, so nothing
+     visibly moved. Fixed (positive count + `kSelling` reason +
+     before/after `GetGoldAmount` diagnostic); field test pending.
 
   Both are small and independent; either may land before the scale
   gate closes, and neither blocks it.
