@@ -1,0 +1,601 @@
+{
+  "modName": "TheLivingCommonwealth",
+  "author": "The Living Commonwealth team",
+  "displayName": "The Living Commonwealth",
+  "minMcmVersion": 1,
+  "pages": [
+    {
+      "pageDisplayName": "Life",
+      "content": [
+        {
+          "type": "section",
+          "text": "The Body"
+        },
+        {
+          "type": "slider",
+          "text": "Hunger decay",
+          "help": "How fast a mind gets hungry (per second of sim time). 0.002 is a few meals a day; 0.02 is a meal every minute.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.hunger.decay",
+            "min": 0.0,
+            "max": 0.02,
+            "step": 0.001
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Fatigue decay",
+          "help": "How fast a mind tires. Faster makes the sleep cycle more visible.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.fatigue.decay",
+            "min": 0.0,
+            "max": 0.02,
+            "step": 0.001
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Safety decay",
+          "help": "How fast a mind's sense of danger fades when nothing threatens it.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.safety.decay",
+            "min": 0.0,
+            "max": 0.02,
+            "step": 0.001
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Social decay",
+          "help": "How fast a mind's need for company builds. Drives the urge to seek others out.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.social.decay",
+            "min": 0.0,
+            "max": 0.02,
+            "step": 0.001
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Comfort decay",
+          "help": "How fast a mind's comfort fades — the pull toward a familiar spot.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.comfort.decay",
+            "min": 0.0,
+            "max": 0.02,
+            "step": 0.001
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Rest recovery",
+          "help": "How fast a resting mind refills its drained needs (per second).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.rest.recovery",
+            "min": 0.01,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Need jitter",
+          "help": "Per-mind variation so settlers don't march in lockstep. 0 turns it off.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.jitter",
+            "min": 0.0,
+            "max": 0.5,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "spacer"
+        },
+        {
+          "type": "section",
+          "text": "Wandering"
+        },
+        {
+          "type": "slider",
+          "text": "Wander cooldown",
+          "help": "Seconds between a resting mind's commands to a new nearby spot.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.wander.cooldown",
+            "min": 5,
+            "max": 120,
+            "step": 5
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Wander radius",
+          "help": "How far a resting mind may range from where it stands (game units).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.wander.radius",
+            "min": 500,
+            "max": 20000,
+            "step": 500
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Walk cap",
+          "help": "How many settlers may walk at once — the flood guard.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.walk.cap",
+            "min": 4,
+            "max": 64,
+            "step": 2
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Interactions",
+      "content": [
+        {
+          "type": "section",
+          "text": "Small Talk"
+        },
+        {
+          "type": "slider",
+          "text": "Talk cadence",
+          "help": "Seconds between a mind's chances to speak with someone nearby. Higher is quieter.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.interact.cadence",
+            "min": 10,
+            "max": 180,
+            "step": 5
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Talk radius",
+          "help": "How close two settlers must be to cross paths and speak (game units).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.interact.radius",
+            "min": 100,
+            "max": 2000,
+            "step": 50
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Talk chance",
+          "help": "Chance a cooldown-expired mind actually speaks — lower keeps a crowd quiet.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.interact.chance",
+            "min": 0.05,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Subtitle radius",
+          "help": "How near the player must be to overhear a conversation (game units).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.subtitle.radius",
+            "min": 100,
+            "max": 3000,
+            "step": 100
+          }
+        },
+        {
+          "type": "switcher",
+          "text": "News captions",
+          "help": "The settlement radio's on-screen captions for births, deaths, feuds, and marriages.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.news.enabled"
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Radio caption pace",
+          "help": "Seconds between radio captions — the news feed's cadence.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.radio.caption.every",
+            "min": 5,
+            "max": 300,
+            "step": 5
+          }
+        },
+        {
+          "type": "spacer"
+        },
+        {
+          "type": "section",
+          "text": "Market"
+        },
+        {
+          "type": "slider",
+          "text": "Market opens (hour)",
+          "help": "The market's opening hour — 8 is breakfast time.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "market.open.hour",
+            "min": 0,
+            "max": 24,
+            "step": 1
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Market closes (hour)",
+          "help": "The market's closing hour — 20 is dusk.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "market.close.hour",
+            "min": 0,
+            "max": 24,
+            "step": 1
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Meal price",
+          "help": "Caps per meal. A broke buyer is still fed on the settlement's credit.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.meal.price",
+            "min": 0,
+            "max": 50,
+            "step": 1
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Sale warmth",
+          "help": "How much a stall-keeper warms to a customer with each sale.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.sale.warmth",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Relationships",
+      "content": [
+        {
+          "type": "section",
+          "text": "Bond Lines"
+        },
+        {
+          "type": "slider",
+          "text": "Friend line",
+          "help": "Disposition at which two minds become friends.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.bond.threshold.friend",
+            "min": -1.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Sweetheart line",
+          "help": "Disposition at which friendship becomes a romance.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.bond.threshold.sweetheart",
+            "min": -1.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Spouse line",
+          "help": "Disposition at which a couple marries and shares a wallet.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.bond.threshold.spouse",
+            "min": -1.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Rival line",
+          "help": "Disposition at which minds turn on each other.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.bond.threshold.rival",
+            "min": -1.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Enemy line",
+          "help": "Disposition at which a rivalry becomes a feud.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.bond.threshold.enemy",
+            "min": -1.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "spacer"
+        },
+        {
+          "type": "section",
+          "text": "Grief & Death"
+        },
+        {
+          "type": "slider",
+          "text": "Grief ache",
+          "help": "How much faster a grieving mind's need for company builds.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.arc.grief.decay",
+            "min": 0.0,
+            "max": 0.1,
+            "step": 0.005
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Burial days",
+          "help": "How long a body stays before the settlement lays it to rest (sim days).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.death.burialDays",
+            "min": 0,
+            "max": 10,
+            "step": 1
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Illness",
+      "content": [
+        {
+          "type": "switcher",
+          "text": "Illness enabled",
+          "help": "Settlers can fall ill — from stores, wounds, radstorms, or each other.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.enabled"
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Contagion chance",
+          "help": "Chance a sick mind passes it to someone nearby.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.contagionChance",
+            "min": 0.0,
+            "max": 0.2,
+            "step": 0.01
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Medicine price",
+          "help": "Caps a dose costs — paid from the buyer's household wallet.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.medicinePrice",
+            "min": 0,
+            "max": 100,
+            "step": 5
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Daily stock",
+          "help": "Doses each stall shelves per market day. An outbreak can sell it out.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.stock",
+            "min": 0,
+            "max": 50,
+            "step": 1
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Illness hold",
+          "help": "How much of the illness a mind must carry before it shows symptoms.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.hold",
+            "min": 0.1,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Recovery rate",
+          "help": "How fast a treated mind recovers (per second).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.recovery",
+            "min": 0.01,
+            "max": 0.5,
+            "step": 0.01
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Illness duration",
+          "help": "How long an untreated illness runs (seconds of sim time).",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.illness.duration",
+            "min": 60,
+            "max": 3600,
+            "step": 30
+          }
+        }
+      ]
+    },
+    {
+      "pageDisplayName": "Birth & Fights",
+      "content": [
+        {
+          "type": "section",
+          "text": "New Life"
+        },
+        {
+          "type": "switcher",
+          "text": "Births enabled",
+          "help": "Married couples can have children. The baby mod's children are used when the flag below is on.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.birth.enabled"
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Birth chance",
+          "help": "Chance a married couple is expecting, per day.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.birth.chance",
+            "min": 0.0,
+            "max": 0.5,
+            "step": 0.01
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Gestation",
+          "help": "Sim days a pregnancy runs before the child is born.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.birth.gestation",
+            "min": 1,
+            "max": 30,
+            "step": 1
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Childhood",
+          "help": "Sim days before a child grows into an adult.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.birth.childhood",
+            "min": 1,
+            "max": 60,
+            "step": 1
+          }
+        },
+        {
+          "type": "spacer"
+        },
+        {
+          "type": "section",
+          "text": "Fights"
+        },
+        {
+          "type": "slider",
+          "text": "Fight chance",
+          "help": "Chance a heated row turns physical.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.fight.chance",
+            "min": 0.0,
+            "max": 1.0,
+            "step": 0.05
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Fight temper",
+          "help": "Global temper multiplier — higher makes fights come sooner and harder.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.fight.temper",
+            "min": 0.0,
+            "max": 5.0,
+            "step": 0.1
+          }
+        },
+        {
+          "type": "slider",
+          "text": "Shove force",
+          "help": "The fall's force when a shove lands.",
+          "valueOptions": {
+            "sourceType": "Setting",
+            "sourceForm": "TheLivingCommonwealth",
+            "sourceIndex": "sim.fight.push",
+            "min": 1,
+            "max": 10,
+            "step": 1
+          }
+        }
+      ]
+    }
+  ]
+}

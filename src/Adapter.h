@@ -32,6 +32,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <optional>
 #include <string>
@@ -266,8 +267,28 @@ namespace TLC
         // never written by the plugin.
         void LoadConfiguration();
 
+        // The MCM override (0.8.5): the player tunes in-game through the
+        // Mod Configuration Menu page; MCM stores the changes in
+        // Data\MCM\Settings\TheLivingCommonwealth.ini, and the adapter
+        // overlays that file on top of its own INI (the MCM layer
+        // wins). Applied at load and hot-applied by the per-second
+        // override check, so a slider change lands within a second,
+        // in-game, with no rebuild and no Papyrus surface.
+        void ApplyConfig(
+            const LCE::Config::Configuration& a_config,
+            const std::filesystem::path& a_iniPath);
+        void CheckMcmOverride();
+
         LCE::Simulation::SimulationTuning m_CoreTuning;
         Tuning::AdapterSettings m_Settings;
+
+        // The effective configuration (0.8.5): the sim INI overlaid with
+        // the MCM override file. The MCM override's last-write stamp
+        // drives the hot-apply check.
+        LCE::Config::Configuration m_Config;
+        std::filesystem::path m_ConfigPath;
+        std::filesystem::path m_McmOverridePath;
+        std::filesystem::file_time_type m_McmOverrideStamp{};
 
         // The settlement census (per-settlement markets, 0.5.x): one
         // pass over the game's REFR form array, keeping every placed ref

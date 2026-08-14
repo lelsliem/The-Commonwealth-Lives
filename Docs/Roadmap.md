@@ -451,16 +451,22 @@ on.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED (deferred from 0.7.x — Life.md's player-window half)
+STATUS: BUILT — awaiting the in-game page test (2026-08-14)
 
 A Mod Configuration Menu page exposing the tuning keys (hunger
 rhythm, market hours, bond thresholds, births gate, illness curve,
-gossip radius, population cap, and the interaction knobs the 0.8.4
-trial defined, if it proved) so players tune the world in-game;
-the INI stays the source of truth, MCM reads and writes it (or an
-override file), with a restore-defaults button. Requires the MCM mod
-as a soft dependency and a small Papyrus surface on the adapter side.
+and the interaction knobs the 0.8.4 trial proved) so players tune
+the world in-game. The INI stays the source of truth; MCM writes an
+override file (`Data\MCM\Settings\TheLivingCommonwealth.ini`) the
+adapter overlays at load and hot-applies within a second (a
+last-write stamp poll in the per-second tick). No native Papyrus
+bridge: this pin's VM header exposes no registration surface, so the
+override-file route carries zero crash risk. The MCM mod is a soft
+dependency — no MCM, the INI alone rules.
 
+- The page: 5 pages / 53 controls (Life, Interactions, Relationships,
+  Illness, Birth & Fights) bound to MCM ModSettings; shipped
+  defaults in MCM/Settings/TheLivingCommonwealth.ini
 - Verify: an MCM change survives reload; defaults restore cleanly;
   no MCM installed → the INI alone still works (soft dependency)
 

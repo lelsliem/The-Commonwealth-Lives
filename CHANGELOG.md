@@ -26,6 +26,27 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.5 — MCM + Settings Manager: the page and the override layer (2026-08-14)
+
+The player tunes the world in-game. The MCM page
+(`MCM/Config/TheLivingCommonwealth/config.json` — 5 pages / 53
+controls: Life, Interactions, Relationships, Illness, Birth &
+Fights) binds every player-facing knob to MCM's ModSettings; the
+shipped defaults ride `MCM/Settings/TheLivingCommonwealth.ini`.
+MCM stores the player's changes in
+`Data\MCM\Settings\TheLivingCommonwealth.ini`, and the adapter
+overlays that file on top of its own INI at load (the MCM layer
+wins) and polls its last-write stamp once per second
+(`CheckMcmOverride`), so a slider change lands in the sim within a
+second — hot-applied, no rebuild, and it survives a restart. No
+native Papyrus bridge by design: this pin's VM header exposes no
+registration surface, and hand-declaring the vtable entry blind is a
+crash risk — the override-file route achieves the same result with
+zero risk. MCM stays a soft dependency; with no MCM, the INI alone
+rules. Harness 26/26 green.
+
+---
+
 ## 0.8.4 — random interactions: the trial's pass is built (2026-08-14)
 
 Settlers who cross paths sometimes speak unprompted — no hunger

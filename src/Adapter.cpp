@@ -649,22 +649,69 @@ namespace TLC
         std::stringstream buffer;
         buffer << stream.rdbuf();
 
-        const auto config = Tuning::ParseConfig(buffer.str());
+        m_Config = Tuning::ParseConfig(buffer.str());
+        m_ConfigPath = ini;
 
+        // The MCM override (0.8.5): the MCM page's changes live in
+        // Data\MCM\Settings\TheLivingCommonwealth.ini (MCM's own
+        // storage — the page is pure JSON, no Papyrus surface). The
+        // adapter overlays that file on top of its own INI, the MCM
+        // layer winning, so a slider change persists here and survives
+        // a restart. The last-write stamp drives the per-second
+        // hot-apply check.
+        m_McmOverridePath =
+            std::filesystem::current_path() / "Data" / "MCM" / "Settings"
+            / "TheLivingCommonwealth.ini";
+
+        std::error_code mcmError;
+
+        if (std::filesystem::exists(m_McmOverridePath, mcmError))
+        {
+            std::ifstream mcmStream(m_McmOverridePath);
+            std::stringstream mcmBuffer;
+            mcmBuffer << mcmStream.rdbuf();
+
+            const auto mcmConfig =
+                Tuning::ParseConfig(mcmBuffer.str());
+
+            auto overlaid = 0U;
+
+            mcmConfig.ForEach(
+                [this, &overlaid](
+                    std::string_view a_key, std::string_view a_value)
+                {
+                    m_Config.Set(a_key, a_value);
+                    ++overlaid;
+                });
+
+            m_McmOverrideStamp =
+                std::filesystem::last_write_time(m_McmOverridePath, mcmError);
+
+            REX::INFO(
+                "tuning: MCM override applied ({} keys).", overlaid);
+        }
+
+        ApplyConfig(m_Config, ini);
+    }
+
+    void Adapter::ApplyConfig(
+        const LCE::Config::Configuration& a_config,
+        const std::filesystem::path& a_iniPath)
+    {
         m_CoreTuning =
-            LCE::Simulation::SimulationTuning::FromConfiguration(config);
-        m_Settings = Tuning::AdapterSettingsFrom(config);
+            LCE::Simulation::SimulationTuning::FromConfiguration(a_config);
+        m_Settings = Tuning::AdapterSettingsFrom(a_config);
 
         // The identity stone's pool (0.7.0 Stone 1): the author's own
         // name lists — names.first.male / .female / .animal, names.last
         // — comma-separated, each overriding its default list. The
         // defaults are the world's fallback, never a broken line.
-        m_Names = TLC::Names::PoolFrom(config);
+        m_Names = TLC::Names::PoolFrom(a_config);
 
         // The dialogue pools (0.7.1 Talk): the author's one-liners,
         // overridable per list in the INI (dialogue.* keys), defaults
         // otherwise — a missing or broken line never breaks the world.
-        m_Dialogue = TLC::Dialogue::PoolFrom(config);
+        m_Dialogue = TLC::Dialogue::PoolFrom(a_config);
 
         // The feeling rhythm (0.6.0 Stone 2): the core's drift default
         // (0.05/s — half-life ~14 s) was tuned for a fast demo and
@@ -673,7 +720,8 @@ namespace TLC
         // runs the same slow clock the shipped INI sets (sim.drift.rate)
         // when the config names none — the adapter's defaults ARE the
         // living-world defaults, exactly like the bond lines below.
-        const auto driftInjected = config.Get("sim.drift.rate").empty();
+        const auto driftInjected =
+            a_config.Get("sim.drift.rate").empty();
 
         if (driftInjected)
         {
@@ -699,25 +747,25 @@ namespace TLC
         // nap in ~5 s) applies when the config names none, so a world
         // without the key still sleeps.
         const auto restInjected =
-            config.Get("sim.rest.recovery").empty();
+            a_config.Get("sim.rest.recovery").empty();
 
         // The seeded need rhythm — the five sim.*.decay rates. Printed
         // so the log always says which rhythm actually runs (the
         // 2026-08-11 hunt: a 0.1/s hunger INI that read as if it were
         // 0.002/s — the banner only showed market hours, drift, and rest).
         const auto needsDefaultsInjected =
-            config.Get("sim.hunger.decay").empty()
-            && config.Get("sim.fatigue.decay").empty()
-            && config.Get("sim.safety.decay").empty()
-            && config.Get("sim.social.decay").empty()
-            && config.Get("sim.comfort.decay").empty();
+            a_config.Get("sim.hunger.decay").empty()
+            && a_config.Get("sim.fatigue.decay").empty()
+            && a_config.Get("sim.safety.decay").empty()
+            && a_config.Get("sim.social.decay").empty()
+            && a_config.Get("sim.comfort.decay").empty();
 
         m_BondThresholds =
             Bonds::ParseBondThresholds(m_CoreTuning.BondThresholds);
 
         REX::INFO(
-            "tuning: loaded {} — market {:02.0f}:00–{:02.0f}:00, drift {}{}, rest {:.3f}/s{}.",
-            ini.string(),
+            "tuning: applied {} — market {:02.0f}:00–{:02.0f}:00, drift {}{}, rest {:.3f}/s{}.",
+            a_iniPath.string(),
             m_Settings.MarketOpenHour,
             m_Settings.MarketCloseHour,
             m_CoreTuning.DriftRate,
@@ -744,6 +792,49 @@ namespace TLC
             m_Settings.Rates.Comfort,
             m_Settings.WalkCap,
             needsDefaultsInjected ? " (defaults)" : "");
+    }
+
+    void Adapter::CheckMcmOverride()
+    {
+        if (m_McmOverridePath.empty())
+        {
+            return;   // LoadConfiguration never ran — no override known
+        }
+
+        std::error_code error;
+
+        if (!std::filesystem::exists(m_McmOverridePath, error))
+        {
+            return;   // no MCM page installed — the sim INI alone rules
+        }
+
+        const auto stamp =
+            std::filesystem::last_write_time(m_McmOverridePath, error);
+
+        if (stamp == m_McmOverrideStamp)
+        {
+            return;   // unchanged since the last apply
+        }
+
+        m_McmOverrideStamp = stamp;
+
+        // The player changed something in the MCM page — re-overlay and
+        // re-apply live, mid-session. A stat is cheap; this only fires
+        // when MCM actually wrote the file.
+        std::ifstream stream(m_McmOverridePath);
+        std::stringstream buffer;
+        buffer << stream.rdbuf();
+
+        const auto mcmConfig = Tuning::ParseConfig(buffer.str());
+
+        mcmConfig.ForEach(
+            [this](std::string_view a_key, std::string_view a_value)
+            {
+                m_Config.Set(a_key, a_value);
+            });
+
+        REX::INFO("tuning: MCM override changed — hot-applied.");
+        ApplyConfig(m_Config, m_ConfigPath);
     }
 
     void Adapter::GameLoaded()
@@ -6015,6 +6106,13 @@ namespace TLC
             > std::chrono::seconds(1))
         {
             m_LastMarketSeed = std::chrono::steady_clock::now();
+
+            // The MCM override check (0.8.5): a stat of the MCM
+            // settings file, once a second — when the player changed a
+            // slider, the settings land in the sim within a second,
+            // with no rebuild. Runs before the seed so this tick's
+            // Update sees the new tuning.
+            CheckMcmOverride();
 
             // 0.6.0 Stone 1 — the world keeps its books: new settlers
             // become minds, deaths and departures leave the book. Runs
