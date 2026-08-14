@@ -9,6 +9,36 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.6b — the earn-caps economy, who-pays benched (2026-08-14)
+
+Both who-pays knobs shipped and harness-pinned, then failed in the
+field and were **reverted to the working minted stipend**:
+
+- `sim.economy.stipend.requireOwned` — the ownership read failed.
+  Vanilla FO4 keeps settlement ownership in the WorkshopParent
+  quest's Papyrus state; `GetOwner()` returns null for every
+  workshop, and the `WorkshopPlayerOwned` actor value is a
+  Workshop-Framework mechanic vanilla never sets (0 of 28 read owned
+  in the field). With the gate on, nobody drew. Gate now defaults 0
+  — every mind with a home market draws, owned or not (working).
+- `sim.economy.stipend.source = player` — the RemoveItem path ran
+  (the log's bill line fired) but the caps never left the player's
+  inventory; the FO4 count semantics need investigation.
+
+The keys, the census ownership read, and the deduction edge stay in
+  the tree, benched for 0.8.6c → 0.9.x (unbench: the WorkshopParent
+  quest-array read, and the RemoveItem semantics).
+
+Also in this pass: **the Robot species** (field find — Buddy the Mr.
+Handy seeded as Human and caught the flu). Robots are now their own
+species: they talk but have no biological needs (no hunger, no
+fatigue), no Health component (never ill), no pouch (no stipend),
+never walk to the market, and never romance (befriends and feuds
+like anyone). Handy, Protectron, SentryBot, Assaultron, and EyeBot
+races; pre-fix saves re-classify and heal on load.
+
+---
+
 ## 0.8.6b — the earn-caps economy, who-pays built (2026-08-14)
 
 Both knobs shipped: `sim.economy.stipend.source` (settlement minted

@@ -202,18 +202,23 @@ namespace TLC::Tuning
         // the stipend is minted from the settlement's implied
         // production; player = the wage bill comes out of the player's
         // own caps each pay day (the game's gold API, read at the
-        // edge). The minted default never regresses — if the
-        // player-pays leg fails in the field it degrades to
-        // settlement-only and the mode is recorded for 0.9.x.
+        // edge). Benched 2026-08-14: the player leg ran its RemoveItem
+        // path (the log's bill line fired) but the caps never moved in
+        // the field — the FO4 count semantics need investigation
+        // before it returns. The minted default is the working one.
         bool StipendSourcePlayer = false;
 
-        // Whose people draw (0.8.6b extension): 1 (default) = only
-        // minds whose home settlement the player owns draw the stipend
-        // (a settler at a workshop you've never claimed doesn't cost
-        // you — the census ownership read rides the same pass as the
-        // workshop names); 0 = every mind with a home market draws,
-        // owned or not.
-        bool StipendRequireOwned = true;
+        // Whose people draw (0.8.6b extension): 1 = only minds whose
+        // home settlement the player owns draw the stipend; 0 = every
+        // mind with a home market draws, owned or not. Benched
+        // 2026-08-14: the ownership read failed in the field — vanilla
+        // FO4 keeps it in the WorkshopParent quest's Papyrus state,
+        // unreadable via any wrapped API (GetOwner returns null; the
+        // WorkshopPlayerOwned actor value is a Workshop-Framework
+        // mechanic, never set by vanilla) — so the gate defaults OFF
+        // (the working behavior). The key stays for the quest-array
+        // read on a later release.
+        bool StipendRequireOwned = false;
 
         // The meal-cadence wander (0.6.0 Stone 3.75): how often a
         // resting or exploring mind is re-commanded to a real nearby

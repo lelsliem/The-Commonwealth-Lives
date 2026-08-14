@@ -131,33 +131,43 @@ sim.economy.stipend.source = settlement  ; settlement = minted from the
                                ; settlement's implied production (default)
                                ; player = the wage bill comes out of the
                                ; player's own caps each pay day
-sim.economy.stipend.requireOwned = 1     ; 0 = every mind with a home
-                               ; market draws, owned or not; 1 = only
-                               ; minds whose settlement the player owns
-                               ; draw (a settler at a workshop you've
-                               ; never claimed doesn't cost you)
+sim.economy.stipend.requireOwned = 0     ; 0 = every mind with a home
+                               ; market draws, owned or not (working
+                               ; behavior); 1 = only minds whose
+                               ; settlement the player owns draw
 ```
 
-## Who pays the wage — "the settlement's treasury, or yours?" (0.8.6b, designed)
+## Who pays the wage — "the settlement's treasury, or yours?" (0.8.6b, BENCHED)
 
-**Status: BUILT + HARNESS-VERIFIED 2026-08-14** — both knobs shipped:
-`sim.economy.stipend.source` (settlement | player) and
-`sim.economy.stipend.requireOwned` (1 = only player-owned settlements
-pay wages). The census captures each workshop's ownership
-(`GetOwner` vs. the player faction, one diagnostic line on first
-read), the player-pays leg removes the wage bill from the player's
-caps via the game's own `RemoveItem` path, and the owned gate leaves
-a gated mind's mark untouched — the wage waits for the claim, it
-isn't lost. Harness `StipendTest` pins the gate and the
-claim-landing leg — 27/27. **Fallback contract still holds:** if the
-player-pays leg fails in the field (inventory APIs, fairness, or
-feel), the source key degrades to `settlement`-only and the player
-mode is recorded for 0.9.x — the minted default must never regress.
-The ownership diagnostic line (`economy: workshop {:#x} reads
-owned/unowned by the player`) is the in-game verification of the
-census read before the gate is trusted.
+**Status: BENCHED 2026-08-14 — reverted to the minted stipend.** Both
+knobs shipped and harness-pinned (27/27), then failed in the field:
 
-**The two questions, answered.**
+- **The ownership read (`requireOwned`)**: vanilla FO4 does not store
+  settlement ownership anywhere a wrapped API can read it.
+  `TESObjectREFR::GetOwner()` returns null for every workshop (0 of 28
+  in the field); the `WorkshopPlayerOwned` actor value — the console
+  trick from forum posts — is a Workshop-Framework mechanic that
+  vanilla never sets, so it reads 0 even for claimed settlements. The
+  game's real ownership lives in the WorkshopParent quest's Papyrus
+  state (the `PlayerOwnedWorkshops` array), readable only through
+  fragile VM plumbing commonlibf4 doesn't wrap. With the gate on, no
+  one drew at all.
+- **The player-pays leg (`source = player`)**: the RemoveItem path ran
+  (the log's bill line fired: "the wage bill of 5320 caps came from
+  the player's purse") but the caps never left the player's
+  inventory — the FO4 RemoveItem count semantics need investigation
+  before this leg returns.
+
+**The revert:** `sim.economy.stipend.requireOwned` defaults to 0 (every
+mind with a home market draws — the working behavior), the source
+stays `settlement` (minted), and the MCM toggles sit inert. The keys,
+the census ownership read, and the deduction edge stay in the tree,
+benched. **Unbench work:** the WorkshopParent quest-array read
+(ownership), and the RemoveItem count/reason investigation
+(player-pays). Both are recorded as 0.8.6c → 0.9.x candidates; the
+minted default must never regress.
+
+**The two questions, answered (as designed).**
 
 1. **Who pays?** The stipend currently mints caps from the settlement's
    implied production. The player's ask: an option to make it real —
