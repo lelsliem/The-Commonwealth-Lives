@@ -9,6 +9,17 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.6b — the earn-caps economy, control first (2026-08-14)
+
+The stipend's MCM control and INI key ship **default-off** — the
+player opts in (`sim.economy.stipend`, 0 = off; the "Daily stipend"
+slider on the Illness page, next to the medicine price it exists to
+pay for). The payment sweep itself is staged behind this control's
+test: the knob first, then the StipendMark co-save component and the
+once-per-day pay run it drives. Harness 26/26.
+
+---
+
 ## 0.8.5 — MCM + Settings Manager verified (2026-08-14)
 
 The in-game test passed end to end: the page renders with real

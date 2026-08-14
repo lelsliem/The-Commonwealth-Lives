@@ -1,590 +1,606 @@
 {
-  "modName": "TheLivingCommonwealth",
-  "author": "The Living Commonwealth team",
-  "displayName": "The Living Commonwealth",
-  "minMcmVersion": 1,
-  "pages": [
+ "modName": "TheLivingCommonwealth",
+ "author": "The Living Commonwealth team",
+ "displayName": "The Living Commonwealth",
+ "minMcmVersion": 1,
+ "pages": [
+  {
+   "pageDisplayName": "Life",
+   "content": [
     {
-      "pageDisplayName": "Life",
-      "content": [
-        {
-          "type": "section",
-          "text": "The Body"
-        },
-        {
-          "id": "fsim.hunger.decay:Main",
-          "type": "slider",
-          "text": "Hunger decay",
-          "help": "How fast a mind gets hungry (per second of sim time). 0.002 is a few meals a day; 0.02 is a meal every minute.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.02,
-            "step": 0.001
-          }
-        },
-        {
-          "id": "fsim.fatigue.decay:Main",
-          "type": "slider",
-          "text": "Fatigue decay",
-          "help": "How fast a mind tires. Faster makes the sleep cycle more visible.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.02,
-            "step": 0.001
-          }
-        },
-        {
-          "id": "fsim.safety.decay:Main",
-          "type": "slider",
-          "text": "Safety decay",
-          "help": "How fast a mind's sense of danger fades when nothing threatens it.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.02,
-            "step": 0.001
-          }
-        },
-        {
-          "id": "fsim.social.decay:Main",
-          "type": "slider",
-          "text": "Social decay",
-          "help": "How fast a mind's need for company builds. Drives the urge to seek others out.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.02,
-            "step": 0.001
-          }
-        },
-        {
-          "id": "fsim.comfort.decay:Main",
-          "type": "slider",
-          "text": "Comfort decay",
-          "help": "How fast a mind's comfort fades — the pull toward a familiar spot.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.02,
-            "step": 0.001
-          }
-        },
-        {
-          "id": "fsim.rest.recovery:Main",
-          "type": "slider",
-          "text": "Rest recovery",
-          "help": "How fast a resting mind refills its drained needs (per second).",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.01,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.jitter:Main",
-          "type": "slider",
-          "text": "Need jitter",
-          "help": "Per-mind variation so settlers don't march in lockstep. 0 turns it off.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.5,
-            "step": 0.05
-          }
-        },
-        {
-          "type": "spacer"
-        },
-        {
-          "type": "section",
-          "text": "Wandering"
-        },
-        {
-          "id": "isim.wander.cooldown:Main",
-          "type": "slider",
-          "text": "Wander cooldown",
-          "help": "Seconds between a resting mind's commands to a new nearby spot.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 5,
-            "max": 120,
-            "step": 5
-          }
-        },
-        {
-          "id": "isim.wander.radius:Main",
-          "type": "slider",
-          "text": "Wander radius",
-          "help": "How far a resting mind may range from where it stands (game units).",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 500,
-            "max": 20000,
-            "step": 500
-          }
-        },
-        {
-          "id": "isim.walk.cap:Main",
-          "type": "slider",
-          "text": "Walk cap",
-          "help": "How many settlers may walk at once — the flood guard.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 4,
-            "max": 64,
-            "step": 2
-          }
-        }
-      ]
+     "type": "section",
+     "text": "The Body"
     },
     {
-      "pageDisplayName": "Interactions",
-      "content": [
-        {
-          "type": "section",
-          "text": "Small Talk"
-        },
-        {
-          "id": "isim.interact.cadence:Main",
-          "type": "slider",
-          "text": "Talk cadence",
-          "help": "Seconds between a mind's chances to speak with someone nearby. Higher is quieter.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 10,
-            "max": 180,
-            "step": 5
-          }
-        },
-        {
-          "id": "isim.interact.radius:Main",
-          "type": "slider",
-          "text": "Talk radius",
-          "help": "How close two settlers must be to cross paths and speak (game units).",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 100,
-            "max": 2000,
-            "step": 50
-          }
-        },
-        {
-          "id": "fsim.interact.chance:Main",
-          "type": "slider",
-          "text": "Talk chance",
-          "help": "Chance a cooldown-expired mind actually speaks — lower keeps a crowd quiet.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.05,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "isim.subtitle.radius:Main",
-          "type": "slider",
-          "text": "Subtitle radius",
-          "help": "How near the player must be to overhear a conversation (game units).",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 100,
-            "max": 3000,
-            "step": 100
-          }
-        },
-        {
-          "id": "bsim.news.enabled:Main",
-          "type": "switcher",
-          "text": "News captions",
-          "help": "The settlement radio's on-screen captions for births, deaths, feuds, and marriages.",
-          "valueOptions": {
-            "sourceType": "ModSettingBool"
-          }
-        },
-        {
-          "id": "isim.radio.caption.every:Main",
-          "type": "slider",
-          "text": "Radio caption pace",
-          "help": "Seconds between radio captions — the news feed's cadence.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 5,
-            "max": 300,
-            "step": 5
-          }
-        },
-        {
-          "type": "spacer"
-        },
-        {
-          "type": "section",
-          "text": "Market"
-        },
-        {
-          "id": "imarket.open.hour:Main",
-          "type": "slider",
-          "text": "Market opens (hour)",
-          "help": "The market's opening hour — 8 is breakfast time.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 0,
-            "max": 24,
-            "step": 1
-          }
-        },
-        {
-          "id": "imarket.close.hour:Main",
-          "type": "slider",
-          "text": "Market closes (hour)",
-          "help": "The market's closing hour — 20 is dusk.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 0,
-            "max": 24,
-            "step": 1
-          }
-        },
-        {
-          "id": "isim.meal.price:Main",
-          "type": "slider",
-          "text": "Meal price",
-          "help": "Caps per meal. A broke buyer is still fed on the settlement's credit.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 0,
-            "max": 50,
-            "step": 1
-          }
-        },
-        {
-          "id": "fsim.sale.warmth:Main",
-          "type": "slider",
-          "text": "Sale warmth",
-          "help": "How much a stall-keeper warms to a customer with each sale.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        }
-      ]
+     "id": "fsim.hunger.decay:Main",
+     "type": "slider",
+     "text": "Hunger decay",
+     "help": "How fast a mind gets hungry (per second of sim time). 0.002 is a few meals a day; 0.02 is a meal every minute.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.02,
+      "step": 0.001
+     }
     },
     {
-      "pageDisplayName": "Relationships",
-      "content": [
-        {
-          "type": "section",
-          "text": "Bond Lines"
-        },
-        {
-          "id": "fsim.bond.threshold.friend:Main",
-          "type": "slider",
-          "text": "Friend line",
-          "help": "Disposition at which two minds become friends.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": -1.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.bond.threshold.sweetheart:Main",
-          "type": "slider",
-          "text": "Sweetheart line",
-          "help": "Disposition at which friendship becomes a romance.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": -1.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.bond.threshold.spouse:Main",
-          "type": "slider",
-          "text": "Spouse line",
-          "help": "Disposition at which a couple marries and shares a wallet.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": -1.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.bond.threshold.rival:Main",
-          "type": "slider",
-          "text": "Rival line",
-          "help": "Disposition at which minds turn on each other.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": -1.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.bond.threshold.enemy:Main",
-          "type": "slider",
-          "text": "Enemy line",
-          "help": "Disposition at which a rivalry becomes a feud.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": -1.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "type": "spacer"
-        },
-        {
-          "type": "section",
-          "text": "Grief & Death"
-        },
-        {
-          "id": "fsim.arc.grief.decay:Main",
-          "type": "slider",
-          "text": "Grief ache",
-          "help": "How much faster a grieving mind's need for company builds.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.1,
-            "step": 0.005
-          }
-        },
-        {
-          "id": "isim.death.burialDays:Main",
-          "type": "slider",
-          "text": "Burial days",
-          "help": "How long a body stays before the settlement lays it to rest (sim days).",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 0,
-            "max": 10,
-            "step": 1
-          }
-        }
-      ]
+     "id": "fsim.fatigue.decay:Main",
+     "type": "slider",
+     "text": "Fatigue decay",
+     "help": "How fast a mind tires. Faster makes the sleep cycle more visible.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.02,
+      "step": 0.001
+     }
     },
     {
-      "pageDisplayName": "Illness",
-      "content": [
-        {
-          "id": "bsim.illness.enabled:Main",
-          "type": "switcher",
-          "text": "Illness enabled",
-          "help": "Settlers can fall ill — from stores, wounds, radstorms, or each other.",
-          "valueOptions": {
-            "sourceType": "ModSettingBool"
-          }
-        },
-        {
-          "id": "fsim.illness.contagionChance:Main",
-          "type": "slider",
-          "text": "Contagion chance",
-          "help": "Chance a sick mind passes it to someone nearby.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.2,
-            "step": 0.01
-          }
-        },
-        {
-          "id": "isim.illness.medicinePrice:Main",
-          "type": "slider",
-          "text": "Medicine price",
-          "help": "Caps a dose costs — paid from the buyer's household wallet.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 0,
-            "max": 100,
-            "step": 5
-          }
-        },
-        {
-          "id": "isim.illness.stock:Main",
-          "type": "slider",
-          "text": "Daily stock",
-          "help": "Doses each stall shelves per market day. An outbreak can sell it out.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 0,
-            "max": 50,
-            "step": 1
-          }
-        },
-        {
-          "id": "fsim.illness.hold:Main",
-          "type": "slider",
-          "text": "Illness hold",
-          "help": "How much of the illness a mind must carry before it shows symptoms.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.1,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.illness.recovery:Main",
-          "type": "slider",
-          "text": "Recovery rate",
-          "help": "How fast a treated mind recovers (per second).",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.01,
-            "max": 0.5,
-            "step": 0.01
-          }
-        },
-        {
-          "id": "isim.illness.duration:Main",
-          "type": "slider",
-          "text": "Illness duration",
-          "help": "How long an untreated illness runs (seconds of sim time).",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 60,
-            "max": 3600,
-            "step": 30
-          }
-        }
-      ]
+     "id": "fsim.safety.decay:Main",
+     "type": "slider",
+     "text": "Safety decay",
+     "help": "How fast a mind's sense of danger fades when nothing threatens it.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.02,
+      "step": 0.001
+     }
     },
     {
-      "pageDisplayName": "Birth & Fights",
-      "content": [
-        {
-          "type": "section",
-          "text": "New Life"
-        },
-        {
-          "id": "bsim.birth.enabled:Main",
-          "type": "switcher",
-          "text": "Births enabled",
-          "help": "Married couples can have children. The baby mod's children are used when the flag below is on.",
-          "valueOptions": {
-            "sourceType": "ModSettingBool"
-          }
-        },
-        {
-          "id": "fsim.birth.chance:Main",
-          "type": "slider",
-          "text": "Birth chance",
-          "help": "Chance a married couple is expecting, per day.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 0.5,
-            "step": 0.01
-          }
-        },
-        {
-          "id": "isim.birth.gestation:Main",
-          "type": "slider",
-          "text": "Pregnancy length",
-          "help": "Sim days a pregnancy runs before the child is born.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 1,
-            "max": 30,
-            "step": 1
-          }
-        },
-        {
-          "id": "isim.birth.childhood:Main",
-          "type": "slider",
-          "text": "Childhood",
-          "help": "Sim days before a child grows into an adult.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 1,
-            "max": 60,
-            "step": 1
-          }
-        },
-        {
-          "type": "spacer"
-        },
-        {
-          "type": "section",
-          "text": "Fights"
-        },
-        {
-          "id": "fsim.fight.chance:Main",
-          "type": "slider",
-          "text": "Fight chance",
-          "help": "Chance a heated row turns physical.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 1.0,
-            "step": 0.05
-          }
-        },
-        {
-          "id": "fsim.fight.temper:Main",
-          "type": "slider",
-          "text": "Fight temper",
-          "help": "Global temper multiplier — higher makes fights come sooner and harder.",
-          "valueOptions": {
-            "sourceType": "ModSettingFloat",
-            "min": 0.0,
-            "max": 5.0,
-            "step": 0.1
-          }
-        },
-        {
-          "id": "isim.fight.push:Main",
-          "type": "slider",
-          "text": "Shove force",
-          "help": "The fall's force when a shove lands.",
-          "valueOptions": {
-            "sourceType": "ModSettingInt",
-            "min": 1,
-            "max": 10,
-            "step": 1
-          }
-        }
-      ]
+     "id": "fsim.social.decay:Main",
+     "type": "slider",
+     "text": "Social decay",
+     "help": "How fast a mind's need for company builds. Drives the urge to seek others out.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.02,
+      "step": 0.001
+     }
     },
     {
-      "pageDisplayName": "About",
-      "content": [
-        {
-          "type": "text",
-          "html": true,
-          "text": "<font size='40'><p align='center'>The Living Commonwealth</p></font>"
-        },
-        {
-          "type": "text",
-          "html": true,
-          "text": "<p align='center'>An F4SE plugin that makes the Commonwealth <i>live</i> — every settler a mind with needs, bonds, jobs, illnesses, and a life. Built on the Living Commonwealth Engine (LCE).</p>"
-        },
-        {
-          "type": "text",
-          "html": true,
-          "text": "<p align='center'>Settings apply within a second of a change — the sim hot-applies them. The INI next to the plugin remains the source of truth; this page is its in-game face.</p>"
-        },
-        {
-          "type": "text",
-          "html": true,
-          "text": "<p align='center'>The Commonwealth remembers: save, quit, reload — the world keeps its bonds, its caps, and its stories.</p>"
-        },
-        {
-          "type": "text",
-          "html": true,
-          "text": "<p align='center'>Chaos with a seed is just a story that repeats itself politely.</p>"
-        }
-      ]
+     "id": "fsim.comfort.decay:Main",
+     "type": "slider",
+     "text": "Comfort decay",
+     "help": "How fast a mind's comfort fades — the pull toward a familiar spot.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.02,
+      "step": 0.001
+     }
+    },
+    {
+     "id": "fsim.rest.recovery:Main",
+     "type": "slider",
+     "text": "Rest recovery",
+     "help": "How fast a resting mind refills its drained needs (per second).",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.01,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.jitter:Main",
+     "type": "slider",
+     "text": "Need jitter",
+     "help": "Per-mind variation so settlers don't march in lockstep. 0 turns it off.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.05
+     }
+    },
+    {
+     "type": "spacer"
+    },
+    {
+     "type": "section",
+     "text": "Wandering"
+    },
+    {
+     "id": "isim.wander.cooldown:Main",
+     "type": "slider",
+     "text": "Wander cooldown",
+     "help": "Seconds between a resting mind's commands to a new nearby spot.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 5,
+      "max": 120,
+      "step": 5
+     }
+    },
+    {
+     "id": "isim.wander.radius:Main",
+     "type": "slider",
+     "text": "Wander radius",
+     "help": "How far a resting mind may range from where it stands (game units).",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 500,
+      "max": 20000,
+      "step": 500
+     }
+    },
+    {
+     "id": "isim.walk.cap:Main",
+     "type": "slider",
+     "text": "Walk cap",
+     "help": "How many settlers may walk at once — the flood guard.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 4,
+      "max": 64,
+      "step": 2
+     }
     }
-  ]
+   ]
+  },
+  {
+   "pageDisplayName": "Interactions",
+   "content": [
+    {
+     "type": "section",
+     "text": "Small Talk"
+    },
+    {
+     "id": "isim.interact.cadence:Main",
+     "type": "slider",
+     "text": "Talk cadence",
+     "help": "Seconds between a mind's chances to speak with someone nearby. Higher is quieter.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 10,
+      "max": 180,
+      "step": 5
+     }
+    },
+    {
+     "id": "isim.interact.radius:Main",
+     "type": "slider",
+     "text": "Talk radius",
+     "help": "How close two settlers must be to cross paths and speak (game units).",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 100,
+      "max": 2000,
+      "step": 50
+     }
+    },
+    {
+     "id": "fsim.interact.chance:Main",
+     "type": "slider",
+     "text": "Talk chance",
+     "help": "Chance a cooldown-expired mind actually speaks — lower keeps a crowd quiet.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.05,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "isim.subtitle.radius:Main",
+     "type": "slider",
+     "text": "Subtitle radius",
+     "help": "How near the player must be to overhear a conversation (game units).",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 100,
+      "max": 3000,
+      "step": 100
+     }
+    },
+    {
+     "id": "bsim.news.enabled:Main",
+     "type": "switcher",
+     "text": "News captions",
+     "help": "The settlement radio's on-screen captions for births, deaths, feuds, and marriages.",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
+    },
+    {
+     "id": "isim.radio.caption.every:Main",
+     "type": "slider",
+     "text": "Radio caption pace",
+     "help": "Seconds between radio captions — the news feed's cadence.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 5,
+      "max": 300,
+      "step": 5
+     }
+    },
+    {
+     "type": "spacer"
+    },
+    {
+     "type": "section",
+     "text": "Market"
+    },
+    {
+     "id": "imarket.open.hour:Main",
+     "type": "slider",
+     "text": "Market opens (hour)",
+     "help": "The market's opening hour — 8 is breakfast time.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 24,
+      "step": 1
+     }
+    },
+    {
+     "id": "imarket.close.hour:Main",
+     "type": "slider",
+     "text": "Market closes (hour)",
+     "help": "The market's closing hour — 20 is dusk.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 24,
+      "step": 1
+     }
+    },
+    {
+     "id": "isim.meal.price:Main",
+     "type": "slider",
+     "text": "Meal price",
+     "help": "Caps per meal. A broke buyer is still fed on the settlement's credit.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 50,
+      "step": 1
+     }
+    },
+    {
+     "id": "fsim.sale.warmth:Main",
+     "type": "slider",
+     "text": "Sale warmth",
+     "help": "How much a stall-keeper warms to a customer with each sale.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    }
+   ]
+  },
+  {
+   "pageDisplayName": "Relationships",
+   "content": [
+    {
+     "type": "section",
+     "text": "Bond Lines"
+    },
+    {
+     "id": "fsim.bond.threshold.friend:Main",
+     "type": "slider",
+     "text": "Friend line",
+     "help": "Disposition at which two minds become friends.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": -1.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.bond.threshold.sweetheart:Main",
+     "type": "slider",
+     "text": "Sweetheart line",
+     "help": "Disposition at which friendship becomes a romance.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": -1.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.bond.threshold.spouse:Main",
+     "type": "slider",
+     "text": "Spouse line",
+     "help": "Disposition at which a couple marries and shares a wallet.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": -1.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.bond.threshold.rival:Main",
+     "type": "slider",
+     "text": "Rival line",
+     "help": "Disposition at which minds turn on each other.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": -1.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.bond.threshold.enemy:Main",
+     "type": "slider",
+     "text": "Enemy line",
+     "help": "Disposition at which a rivalry becomes a feud.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": -1.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "type": "spacer"
+    },
+    {
+     "type": "section",
+     "text": "Grief & Death"
+    },
+    {
+     "id": "fsim.arc.grief.decay:Main",
+     "type": "slider",
+     "text": "Grief ache",
+     "help": "How much faster a grieving mind's need for company builds.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.1,
+      "step": 0.005
+     }
+    },
+    {
+     "id": "isim.death.burialDays:Main",
+     "type": "slider",
+     "text": "Burial days",
+     "help": "How long a body stays before the settlement lays it to rest (sim days).",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 10,
+      "step": 1
+     }
+    }
+   ]
+  },
+  {
+   "pageDisplayName": "Illness",
+   "content": [
+    {
+     "id": "bsim.illness.enabled:Main",
+     "type": "switcher",
+     "text": "Illness enabled",
+     "help": "Settlers can fall ill — from stores, wounds, radstorms, or each other.",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
+    },
+    {
+     "id": "fsim.illness.contagionChance:Main",
+     "type": "slider",
+     "text": "Contagion chance",
+     "help": "Chance a sick mind passes it to someone nearby.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.2,
+      "step": 0.01
+     }
+    },
+    {
+     "id": "isim.illness.medicinePrice:Main",
+     "type": "slider",
+     "text": "Medicine price",
+     "help": "Caps a dose costs — paid from the buyer's household wallet.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 100,
+      "step": 5
+     }
+    },
+    {
+     "type": "section",
+     "text": "The Economy"
+    },
+    {
+     "id": "isim.economy.stipend:Main",
+     "type": "slider",
+     "text": "Daily stipend",
+     "help": "Caps each settler earns per world-day from the settlement, so non-keepers aren't broke and the sick can afford the medicine above. 0 = off (the default). Household-shared: a couple draws one wage.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 50,
+      "step": 1
+     }
+    },
+    {
+     "id": "isim.illness.stock:Main",
+     "type": "slider",
+     "text": "Daily stock",
+     "help": "Doses each stall shelves per market day. An outbreak can sell it out.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 50,
+      "step": 1
+     }
+    },
+    {
+     "id": "fsim.illness.hold:Main",
+     "type": "slider",
+     "text": "Illness hold",
+     "help": "How much of the illness a mind must carry before it shows symptoms.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.1,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.illness.recovery:Main",
+     "type": "slider",
+     "text": "Recovery rate",
+     "help": "How fast a treated mind recovers (per second).",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.01,
+      "max": 0.5,
+      "step": 0.01
+     }
+    },
+    {
+     "id": "isim.illness.duration:Main",
+     "type": "slider",
+     "text": "Illness duration",
+     "help": "How long an untreated illness runs (seconds of sim time).",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 60,
+      "max": 3600,
+      "step": 30
+     }
+    }
+   ]
+  },
+  {
+   "pageDisplayName": "Birth & Fights",
+   "content": [
+    {
+     "type": "section",
+     "text": "New Life"
+    },
+    {
+     "id": "bsim.birth.enabled:Main",
+     "type": "switcher",
+     "text": "Births enabled",
+     "help": "Married couples can have children. The baby mod's children are used when the flag below is on.",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
+    },
+    {
+     "id": "fsim.birth.chance:Main",
+     "type": "slider",
+     "text": "Birth chance",
+     "help": "Chance a married couple is expecting, per day.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.5,
+      "step": 0.01
+     }
+    },
+    {
+     "id": "isim.birth.gestation:Main",
+     "type": "slider",
+     "text": "Pregnancy length",
+     "help": "Sim days a pregnancy runs before the child is born.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 1,
+      "max": 30,
+      "step": 1
+     }
+    },
+    {
+     "id": "isim.birth.childhood:Main",
+     "type": "slider",
+     "text": "Childhood",
+     "help": "Sim days before a child grows into an adult.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 1,
+      "max": 60,
+      "step": 1
+     }
+    },
+    {
+     "type": "spacer"
+    },
+    {
+     "type": "section",
+     "text": "Fights"
+    },
+    {
+     "id": "fsim.fight.chance:Main",
+     "type": "slider",
+     "text": "Fight chance",
+     "help": "Chance a heated row turns physical.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+     }
+    },
+    {
+     "id": "fsim.fight.temper:Main",
+     "type": "slider",
+     "text": "Fight temper",
+     "help": "Global temper multiplier — higher makes fights come sooner and harder.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+     }
+    },
+    {
+     "id": "isim.fight.push:Main",
+     "type": "slider",
+     "text": "Shove force",
+     "help": "The fall's force when a shove lands.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 1,
+      "max": 10,
+      "step": 1
+     }
+    }
+   ]
+  },
+  {
+   "pageDisplayName": "About",
+   "content": [
+    {
+     "type": "text",
+     "html": true,
+     "text": "<font size='40'><p align='center'>The Living Commonwealth</p></font>"
+    },
+    {
+     "type": "text",
+     "html": true,
+     "text": "<p align='center'>An F4SE plugin that makes the Commonwealth <i>live</i> — every settler a mind with needs, bonds, jobs, illnesses, and a life. Built on the Living Commonwealth Engine (LCE).</p>"
+    },
+    {
+     "type": "text",
+     "html": true,
+     "text": "<p align='center'>Settings apply within a second of a change — the sim hot-applies them. The INI next to the plugin remains the source of truth; this page is its in-game face.</p>"
+    },
+    {
+     "type": "text",
+     "html": true,
+     "text": "<p align='center'>The Commonwealth remembers: save, quit, reload — the world keeps its bonds, its caps, and its stories.</p>"
+    },
+    {
+     "type": "text",
+     "html": true,
+     "text": "<p align='center'>Chaos with a seed is just a story that repeats itself politely.</p>"
+    }
+   ]
+  }
+ ]
 }

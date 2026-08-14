@@ -189,6 +189,15 @@ namespace TLC::Tuning
         // the settlement covers. 5 caps, a modest market.
         float MealPrice = 5.0f;
 
+        // The earn-caps economy (0.8.6b): the settlement stipend — caps
+        // each human mind draws from its settlement's workshop per
+        // world-day, so a non-keeper isn't perpetually broke and a sick
+        // mind can reach the medicine price. 0 = off (the design ships
+        // default-off: the stipend mints caps, so the player opts in;
+        // the credit path alone keeps the hungry fed). Household-shared
+        // (one wage per couple, Households::PouchOf).
+        float Stipend = 0.0f;
+
         // The meal-cadence wander (0.6.0 Stone 3.75): how often a
         // resting or exploring mind is re-commanded to a real nearby
         // reference (seconds — re-issuing mid-walk would yank the
@@ -431,6 +440,7 @@ namespace TLC::Tuning
 
         settings.SaleWarmth = read("sim.sale.warmth", settings.SaleWarmth);
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
+        settings.Stipend = read("sim.economy.stipend", settings.Stipend);
         settings.RestRecovery =
             read("sim.rest.recovery", settings.RestRecovery);
 
