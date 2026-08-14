@@ -378,10 +378,14 @@ namespace TLC
         // gate's safe default).
         std::unordered_map<std::uint32_t, bool> m_WorkshopOwned;
 
-        // The one-time census diagnostic (0.8.6b): the first ownership
-        // read is logged so the requireOwned gate can be verified
-        // in-game before it's trusted.
-        bool m_OwnershipDiagnosed = false;
+        // The census ownership diagnostics (0.8.6b): the first few
+        // ownership reads (what GetOwner returns) plus a count summary,
+        // so the requireOwned gate is verified in-game before it's
+        // trusted — a zero-owned summary with a full census says the
+        // GetOwner read is wrong, not that the player owns nothing.
+        std::uint32_t m_OwnershipSamples = 0;
+        std::uint32_t m_OwnershipCount = 0;
+        std::uint32_t m_OwnershipOwned = 0;
 
         bool m_WorkshopsReady = false;
         std::chrono::steady_clock::time_point m_LastCensus{};

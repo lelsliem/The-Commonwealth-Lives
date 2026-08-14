@@ -4648,19 +4648,25 @@ namespace TLC
 
                     m_WorkshopOwned[workshopFormId] = owned;
 
-                    // The one-time diagnostic: the census's ownership
-                    // read, so the requireOwned gate can be verified
+                    // The one-time diagnostics: the census's ownership
+                    // reads, so the requireOwned gate can be verified
                     // in-game before it's trusted (a wrong read would
-                    // silently stop wages at every settlement).
-                    if (!m_OwnershipDiagnosed)
+                    // silently stop wages at every settlement). The
+                    // first few reads show what GetOwner actually
+                    // returns (the player faction, another faction, or
+                    // null) and the summary counts owned vs unowned.
+                    if (m_OwnershipSamples < 3)
                     {
-                        m_OwnershipDiagnosed = true;
+                        ++m_OwnershipSamples;
 
                         REX::INFO(
                             "economy: workshop {:#x} reads {} by the player (owner {:#x}).",
                             workshopFormId, owned ? "owned" : "unowned",
                             owner != nullptr ? owner->GetFormID() : 0);
                     }
+
+                    m_OwnershipCount += 1;
+                    m_OwnershipOwned += owned ? 1 : 0;
 
                     return RE::BSContainer::ForEachResult::kContinue;
                 });
@@ -4683,6 +4689,18 @@ namespace TLC
             "settlement census: {} worldspaces, {} workshops known (base {:#x}){}.",
             worldspaces.size(), m_Workshops.size(), kWorkshopBaseFormId,
             m_Workshops.empty() ? " — will retry" : " — markets are per settlement");
+
+        // The ownership summary (0.8.6b): how many of the known
+        // workshops read as the player's, so the requireOwned gate is
+        // verified in-game — a summary of zero-owned with a full census
+        // says the GetOwner read is wrong (every settlement would be
+        // gated), not that the player owns nothing.
+        if (m_OwnershipCount > 0)
+        {
+            REX::INFO(
+                "economy: {} of {} workshops read as the player's.",
+                m_OwnershipOwned, m_OwnershipCount);
+        }
     }
 
     LCE::Simulation::EntityId Adapter::OwnerEntityFor(
