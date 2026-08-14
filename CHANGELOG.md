@@ -65,6 +65,23 @@ Medicine is not an endless shelf, and a family cares for its own.
 - **The round-trip is locked.** CoSaveTest carries a sold-down shelf
   (market 000250FE, 4 doses) through Encode → Decode and checks it
   comes back exactly; harness 26/26.
+- **Verified in-game 2026-08-14.** The self-buy fired (a caravan
+  worker bought a 25-cap dose from a provisioner — `the hold ends,
+  recovery begins`), the broke-gate fired repeatedly (`sick but
+  broke — they rest instead`), and the shelves survived save/load
+  (`2 market shelfs restored from the co-save`) across three loads.
+  The sell-out and family care-buy share the verified `buyDose`
+  path; their triggers (a drained shelf, a sick spouse) surface in
+  normal play.
+- **Two field floods fixed the same session.** (1) A save written
+  under old tuning carried its serialized per-mind decay rates
+  forever, so the INI silently stopped mattering after a load;
+  `ApplyRestore` now re-derives every rate from today's tuning ×
+  the mind's deterministic jitter — a stale save heals on its next
+  load. (2) A few minds whose actors lack an AI process re-decided
+  MoveTo every frame, were refused, and flooded the log with
+  refusal lines (~420/s, 124k in five minutes); `sim.walk
+  .refusalCooldown` (default 30 s) now parks a refused mind.
 
 ---
 

@@ -30,7 +30,7 @@ Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
                    (Docs/Design/Run080.md):
                    0.8.1 illness field pass (shipped) →
                    0.8.2 burial (verified 2026-08-14) →
-                   0.8.3 sick household (built 2026-08-14, awaiting verify) →
+                   0.8.3 sick household (verified 2026-08-14) →
                    0.8.4 random interactions (the trial) →
                    0.8.5 MCM → 0.8.6a the audit →
                    0.8.6b redefine & loose ends →
@@ -397,7 +397,7 @@ the settlement heard it
 
 ═══════════════════════════════════════════════
 
-STATUS: BUILT — awaiting in-game verification (2026-08-14)
+STATUS: VERIFIED — in-game 2026-08-14
 
 The economy stone's next step: medicine is not an endless shelf.
 Stalls stock a limited supply per day (`sim.illness.stock`, INI,
@@ -412,6 +412,15 @@ family that cares).
 - The family buys for the sick member (shared wallet + a care check)
 - Verify: a big outbreak drains the stalls; a married sick settler
   gets dosed by the spouse's trip
+- **Verified in-game:** self-buy (25-cap dose from a provisioner),
+  the broke-gate, and shelf persistence across save/load. The
+  sell-out and family care-buy share the verified `buyDose` path;
+  their triggers (a drained shelf, a sick spouse) surface in normal
+  play.
+- **Field gap parked for the 0.8.6a audit:** only stall-keepers
+  earn caps — caravan workers/provisioners/unemployed spend and
+  never earn, going permanently broke. A wage or piecework income
+  so working minds slowly refill (pouch += N, adapter-side only).
 
 ═══════════════════════════════════════════════
 
