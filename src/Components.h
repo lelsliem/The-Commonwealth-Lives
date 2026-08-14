@@ -67,6 +67,21 @@ namespace TLC
     };
 
     //-------------------------------------------------------------------------
+    // StipendMark — the earn-caps economy (0.8.6b): the last world-day a
+    // mind drew its settlement stipend. 0 = never paid. Carried by every
+    // human mind that has been paid at least once; a mind without one is
+    // due immediately (the first tick pays everyone once — the same
+    // back-fill spirit as SeedPouch). Children and animals never carry
+    // one (they never barter). Persisted in the co-save like CapPouch
+    // (additive — a pre-income save restores with no marks and is paid
+    // on the first tick).
+    //-------------------------------------------------------------------------
+    struct StipendMark
+    {
+        std::uint64_t Day = 0;
+    };
+
+    //-------------------------------------------------------------------------
     // Name is defined in Names.h — the identity stone (0.7.0): every
     // mind carries one, persisted in the co-save, the game's name first
     // and a procedural Commonwealth name for the nameless. It lives in

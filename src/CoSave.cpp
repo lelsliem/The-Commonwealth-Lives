@@ -55,9 +55,9 @@ namespace TLC::CoSave
         // never load-bearing for it). Additive: old records never
         // contained these types, and an unknown name decodes as a
         // graceful drop.
-        const std::array<TypeName, 13>& TypeNames()
+        const std::array<TypeName, 14>& TypeNames()
         {
-            static const std::array<TypeName, 13> kTable{
+            static const std::array<TypeName, 14> kTable{
                 TypeName{ "needs", typeid(Needs) },
                 TypeName{ "memory", typeid(Memory) },
                 TypeName{ "relationships", typeid(Relationships) },
@@ -71,6 +71,7 @@ namespace TLC::CoSave
                 TypeName{ "birthday", typeid(BirthDay) },
                 TypeName{ "pregnancy", typeid(Pregnancy) },
                 TypeName{ "health", typeid(Health) },
+                TypeName{ "stipendmark", typeid(StipendMark) },
             };
 
             return kTable;

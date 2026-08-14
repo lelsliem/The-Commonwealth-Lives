@@ -1192,6 +1192,64 @@ namespace TLC
         }
     }
 
+    void Adapter::PayStipends()
+    {
+        const auto stipend =
+            static_cast<std::uint32_t>(m_Settings.Stipend);
+
+        if (stipend == 0)
+        {
+            return;   // the stipend is off (the default) — nothing to pay
+        }
+
+        const auto day = CurrentDay();
+
+        if (day == 0)
+        {
+            return;   // the calendar is not up yet
+        }
+
+        std::vector<TLC::StipendReceipt> receipts;
+
+        TLC::PayStipends(
+            m_Registry, stipend, day,
+            [this](LCE::Simulation::EntityId a_entity)
+            {
+                // The mind's settlement: the nearest workshop to its
+                // actor — the same spatial rule the per-settlement seed
+                // uses, so the wage comes from the bench it trades at.
+                // A mind whose actor is not loaded yet (a restored world
+                // streams in gradually) has no position this tick — the
+                // next tick's sweep pays it under the right settlement.
+                const auto formId = m_Translator.FormFor(a_entity);
+                const auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+                if (actor == nullptr)
+                {
+                    return 0u;   // the wastes, for now
+                }
+
+                const auto pos = actor->GetPosition();
+
+                return NearestWorkshop(
+                    pos.x, pos.y, m_Workshops, kMarketRadius);
+            },
+            receipts);
+
+        for (const auto& receipt : receipts)
+        {
+            const auto settlement =
+                receipt.MarketFormId != 0
+                ? MarketLabel(receipt.MarketFormId)
+                : "the wastes";
+
+            REX::INFO(
+                "LCE: economy — {} paid its {} people {} caps each ({} caps out).",
+                settlement, receipt.Paid, stipend, receipt.Caps);
+        }
+    }
+
     std::uint32_t Adapter::MedicineStockOf(
         std::uint32_t a_marketFormId) const noexcept
     {
@@ -6211,6 +6269,13 @@ namespace TLC
             // settlement peers. Runs after the weather push so the
             // radstorm flag is current.
             ApplyIllnessVectors();
+
+            // The earn-caps economy (0.8.6b): the settlement stipend,
+            // once per world-day per mind (the StipendMark gates it —
+            // the second call of the same day pays nothing). A mind
+            // whose actor just streamed in gets paid under its home
+            // settlement on the next tick.
+            PayStipends();
 
             // 0.6.0 Stone 5 — the arcs, on a day cadence: mediation for
             // every feud the settlement has heard of, once per day; and

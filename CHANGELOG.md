@@ -9,6 +9,23 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.6b — the earn-caps economy, machinery built (2026-08-14)
+
+The stipend's other half: `StipendMark` (a new co-save component,
+`stipendmark` record — additive, so a pre-income save restores with
+no marks and is paid on the first tick), and the once-per-day
+`PayStipends` sweep in the per-second tick. The mark gates it — the
+second call of the same day pays nothing — and the household shares
+the wage (the pouch lives on one member, so one wage per couple).
+One summary line per settlement per day:
+`LCE: economy — Sanctuary paid its 47 people 5 caps each`. Default
+still off (`sim.economy.stipend = 0`); the player opts in via the
+MCM's Daily stipend slider. Harness `StipendTest` pins paid-once,
+the off-switch, the per-settlement tally, and the co-save
+round-trip — **27/27 suites**.
+
+---
+
 ## 0.8.6b — the earn-caps economy, control first (2026-08-14)
 
 The stipend's MCM control and INI key ship **default-off** — the

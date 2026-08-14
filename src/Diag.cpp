@@ -14,6 +14,7 @@
 #include "Bonds.h"
 #include "CoSave.h"
 #include "Components.h"
+#include "Stipend.h"
 #include "Names.h"
 #include "Serialization.h"
 #include "Translator.h"
@@ -314,6 +315,89 @@ namespace
             && medicineStock[0].MarketFormId == 0x000250FEu
             && medicineStock[0].Stock == 4;
     }
+
+    // The earn-caps economy (0.8.6b): the once-per-day stipend sweep.
+    bool StipendCheck()
+    {
+        using namespace LCE::Simulation;
+        using TLC::CapPouch;
+        using TLC::StipendMark;
+        using TLC::StipendReceipt;
+
+        EntityRegistry registry;
+        TLC::RegisterAllSerializers(registry);
+
+        // Two humans with pouches, one already paid today.
+        const auto first = registry.CreateEntity();
+        registry.AddComponent<CapPouch>(first, CapPouch{ 10 });
+        registry.AddComponent<StipendMark>(first, StipendMark{ 100 });
+
+        const auto second = registry.CreateEntity();
+        registry.AddComponent<CapPouch>(second, CapPouch{ 0 });
+
+        // A third — an animal, no pouch: never paid.
+        const auto dog = registry.CreateEntity();
+
+        std::vector<StipendReceipt> receipts;
+
+        TLC::PayStipends(
+            registry, 5, 100,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        // Only the unpaid mind draws; the marked one and the animal
+        // stay put. One receipt, one settlement, 5 caps out.
+        const bool paidOnce =
+            registry.GetComponent<CapPouch>(first)->Caps == 10
+            && registry.GetComponent<CapPouch>(second)->Caps == 5
+            && registry.GetComponent<StipendMark>(second) != nullptr
+            && registry.GetComponent<StipendMark>(second)->Day == 100
+            && receipts.size() == 1
+            && receipts[0].MarketFormId == 0x000250FEu
+            && receipts[0].Paid == 1
+            && receipts[0].Caps == 5;
+
+        // The second call of the same day pays nothing — the gate holds.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 100,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        const bool gateHolds =
+            receipts.empty()
+            && registry.GetComponent<CapPouch>(second)->Caps == 5;
+
+        // A new day pays everyone due again.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 101,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        const bool nextDay =
+            registry.GetComponent<CapPouch>(first)->Caps == 15
+            && registry.GetComponent<CapPouch>(second)->Caps == 10
+            && receipts.size() == 1
+            && receipts[0].Paid == 2
+            && receipts[0].Caps == 10;
+
+        // The off switch: stipend 0 pays nothing, ever.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 0, 102,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        const bool offSwitch =
+            receipts.empty()
+            && registry.GetComponent<CapPouch>(second)->Caps == 10;
+
+        return paidOnce && gateHolds && nextDay && offSwitch;
+    }
 }
 
 namespace TLC::Diag
@@ -351,6 +435,7 @@ namespace TLC::Diag
         Check("bond thresholds", BondsCheck());
         Check("translator", TranslatorCheck());
         Check("co-save round-trip", CoSaveCheck());
+        Check("stipend once-per-day", StipendCheck());
 
         const auto passed = g_Run - g_Failures;
 

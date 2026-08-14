@@ -10,9 +10,12 @@ CoSaveTest round-trip the pouch; TuningTest pins `sim.meal.price`).
 **Verified in-game 2026-08-10/11** — the trade log lines name the caps
 and the pouches round-trip the co-save (restored stall-keepers with
 their wallets intact across loads).
-**Income half (0.8.6b): DESIGNED 2026-08-14** — the settlement
-stipend closes the "no income yet" field gap (see the Income section
-below). Not yet built.
+**Income half (0.8.6b): BUILT + HARNESS-VERIFIED 2026-08-14** — the
+settlement stipend closes the "no income yet" field gap (see the
+Income section below). `StipendMark` rides the co-save, the sweep
+runs once per world-day in the per-second tick, and StipendTest
+(27/27) pins it. **Default-off** (`sim.economy.stipend = 0`): the
+player opts in via the MCM's Daily stipend slider.
 **Related:** the trade stone (`Trade.md` — this stone makes its exchange
 physical), the species split (only humans carry pouches), the co-save
 (`CoSave.md`), the desync stone's `IdJitter` (the pouch is seeded the
@@ -75,7 +78,7 @@ buyers spend down, sellers earn — which is exactly how markets behave.
 
 ## Income — "The settlement pays its people" (0.8.6b, the earn-caps economy)
 
-**Status: DESIGNED 2026-08-14** — the field gap closed. The 0.8.3 test
+**Status: BUILT 2026-08-14** — the field gap closed. The 0.8.3 test
 showed the honest flaw: pouches only spend, so every non-keeper runs
 dry, and a broke sick mind rests instead of buying medicine — illness
 becomes a death sentence for the poor. The audit (0.8.6a) made it the

@@ -23,6 +23,7 @@
 #include "Fights.h"
 #include "Rows.h"
 #include "Serialization.h"
+#include "Stipend.h"
 #include "TradeLedger.h"
 #include "Translator.h"
 #include "Tuning.h"
@@ -80,6 +81,7 @@ namespace TLC::Tests
     bool MidOutbreakSaveTest();
     bool IllnessTest();
     bool TradeLedgerTest();
+    bool StipendTest();
 }
 
 namespace
@@ -135,6 +137,7 @@ int main()
     Run("MidOutbreakSaveTest", TLC::Tests::MidOutbreakSaveTest);
     Run("IllnessTest", TLC::Tests::IllnessTest);
     Run("TradeLedgerTest", TLC::Tests::TradeLedgerTest);
+    Run("StipendTest", TLC::Tests::StipendTest);
 
     std::printf("%d/%d suites passed.\n", g_Run - g_Failures, g_Run);
 
@@ -5088,5 +5091,126 @@ namespace TLC::Tests
         }
 
         return true;
+    }
+
+    //-------------------------------------------------------------------------
+    // The earn-caps economy (0.8.6b): the once-per-day settlement
+    // stipend. Pins the pure sweep — the paid-once gate, the off switch,
+    // the per-settlement tally, and the round-trip of the StipendMark.
+    //-------------------------------------------------------------------------
+    bool StipendTest()
+    {
+        using TLC::CapPouch;
+        using TLC::StipendMark;
+        using TLC::StipendReceipt;
+
+        EntityRegistry registry;
+        TLC::RegisterAllSerializers(registry);
+
+        // Two humans with pouches — one already paid today, one due. An
+        // animal with no pouch is never paid.
+        const auto paid = registry.CreateEntity();
+        registry.AddComponent<CapPouch>(paid, CapPouch{ 10 });
+        registry.AddComponent<StipendMark>(paid, StipendMark{ 100 });
+
+        const auto due = registry.CreateEntity();
+        registry.AddComponent<CapPouch>(due, CapPouch{ 0 });
+
+        const auto dog = registry.CreateEntity();
+
+        std::vector<StipendReceipt> receipts;
+
+        TLC::PayStipends(
+            registry, 5, 100,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        // Only the due mind draws; the paid one and the animal stay.
+        if (registry.GetComponent<CapPouch>(paid)->Caps != 10
+            || registry.GetComponent<CapPouch>(due)->Caps != 5
+            || registry.GetComponent<StipendMark>(due) == nullptr
+            || registry.GetComponent<StipendMark>(due)->Day != 100
+            || receipts.size() != 1
+            || receipts[0].MarketFormId != 0x000250FEu
+            || receipts[0].Paid != 1
+            || receipts[0].Caps != 5)
+        {
+            return false;
+        }
+
+        // The second call of the same day pays nothing — the gate holds.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 100,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        if (!receipts.empty()
+            || registry.GetComponent<CapPouch>(due)->Caps != 5)
+        {
+            return false;
+        }
+
+        // A new day pays everyone due again — and the tally groups both
+        // under one settlement.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 101,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        if (registry.GetComponent<CapPouch>(paid)->Caps != 15
+            || registry.GetComponent<CapPouch>(due)->Caps != 10
+            || receipts.size() != 1
+            || receipts[0].Paid != 2
+            || receipts[0].Caps != 10)
+        {
+            return false;
+        }
+
+        // Two settlements tally separately.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 102,
+            [&paid](EntityId a_entity)
+            {
+                return a_entity == paid ? 0x000250FEu : 0x00046B0Bu;
+            },
+            receipts);
+
+        if (receipts.size() != 2)
+        {
+            return false;
+        }
+
+        // The off switch: stipend 0 pays nothing, ever.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 0, 103,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        if (!receipts.empty()
+            || registry.GetComponent<CapPouch>(due)->Caps != 15)
+        {
+            return false;
+        }
+
+        // The mark survives the co-save round-trip.
+        const auto snapshot = registry.Capture();
+        EntityRegistry restored;
+        TLC::RegisterAllSerializers(restored);
+        restored.Restore(snapshot);
+
+        // The marks hold their last-paid day (102 — the day-103 call
+        // was the off-switch, which pays nothing), and the pouches
+        // round-trip with them.
+        return restored.GetComponent<StipendMark>(due) != nullptr
+            && restored.GetComponent<StipendMark>(due)->Day == 102
+            && restored.GetComponent<CapPouch>(due)->Caps == 15;
     }
 }

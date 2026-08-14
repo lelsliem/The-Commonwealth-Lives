@@ -288,6 +288,25 @@ namespace TLC
             };
         }
 
+        ComponentSerializer<StipendMark> MakeStipendMarkSerializer()
+        {
+            return {
+                [](const StipendMark& mark)
+                {
+                    Codec::Writer writer;
+                    writer.U64(mark.Day);
+
+                    return writer.Bytes;
+                },
+                [](const ComponentBlob& blob)
+                {
+                    Codec::Reader reader{ blob };
+
+                    return StipendMark{ reader.U64() };
+                }
+            };
+        }
+
         ComponentSerializer<BirthDay> MakeBirthDaySerializer()
         {
             return {
@@ -461,6 +480,7 @@ namespace TLC
         registry.RegisterSerializer<CompanionTag>(
             MakeCompanionTagSerializer());
         registry.RegisterSerializer<CapPouch>(MakeCapPouchSerializer());
+        registry.RegisterSerializer<StipendMark>(MakeStipendMarkSerializer());
         registry.RegisterSerializer<BirthDay>(MakeBirthDaySerializer());
         registry.RegisterSerializer<Pregnancy>(MakePregnancySerializer());
         registry.RegisterSerializer<Health>(MakeHealthSerializer());

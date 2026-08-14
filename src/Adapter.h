@@ -19,6 +19,7 @@
 #include "Lifecycle.h"
 #include "Market.h"
 #include "News.h"
+#include "Stipend.h"
 #include "Translator.h"
 #include "Tuning.h"
 #include "WorldFacts.h"
@@ -95,6 +96,16 @@ namespace TLC
         // (every survivor remembers who is gone), and a known mind whose
         // actor left the settler faction is removed with a goodbye.
         void KeepBooks();
+
+        // The earn-caps economy (0.8.6b): the once-per-day settlement
+        // stipend. Every pouch-carrying mind whose StipendMark predates
+        // today draws sim.economy.stipend caps from its settlement's
+        // workshop (the nearest workshop to its actor — the same spatial
+        // rule the per-settlement seed uses); a couple shares the wage
+        // (the pouch lives on one member). Logs one summary line per
+        // settlement per day. Off when sim.economy.stipend = 0 (the
+        // default — the player opts in via the MCM).
+        void PayStipends();
 
         // Creates a mind for a loaded, sim-relevant actor: the entity,
         // the species split, seeded needs (with the per-mind desync),
