@@ -4654,12 +4654,29 @@ namespace TLC
                     // in — MarketLabel falls back to this cache when the
                     // form is not loaded yet, so the stipend's
                     // per-settlement line names the settlement instead
-                    // of a bare hex).
-                    const auto name = a_ref->GetDisplayFullName();
+                    // of a bare hex). The settlement's name lives on
+                    // the workshop's LOCATION (Sanctuary is the
+                    // location's name); the workbench ref itself reads
+                    // the generic "Workshop" — 2026-08-14 field find,
+                    // every pay line read "Workshop [hex]". Prefer the
+                    // location, fall back to the ref.
+                    const auto* workshopLocation =
+                        a_ref->GetCurrentLocation();
 
-                    if (name != nullptr)
+                    const auto locationName = workshopLocation != nullptr
+                        ? RE::TESFullName::GetFullName(*workshopLocation)
+                        : std::string_view{};
+
+                    const auto refName = a_ref->GetDisplayFullName();
+
+                    if (!locationName.empty())
                     {
-                        m_WorkshopNames[workshopFormId] = name;
+                        m_WorkshopNames[workshopFormId] =
+                            std::string(locationName);
+                    }
+                    else if (refName != nullptr)
+                    {
+                        m_WorkshopNames[workshopFormId] = refName;
                     }
 
                     // The ownership read (0.8.6b): does the player own
