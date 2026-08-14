@@ -309,6 +309,18 @@ namespace TLC
         // the first seed) and the list survives worlds.
         void RefreshWorkshops();
 
+        // The ownership read (0.8.6c): the WorkshopParent quest's
+        // PlayerOwnedWorkshops array, read through the VM — the only
+        // place vanilla FO4 records which settlements the player has
+        // claimed (the game's own Location.HasPlayerOwnedWorkshop
+        // checks exactly this array). Runs before the census's
+        // per-workshop pass, so the requireOwned gate and the ownership
+        // summary see the same map the names cache rides. True when the
+        // quest read succeeded; a failure leaves the map empty (the
+        // gate's safe default) and is retried on the next census pass,
+        // like the census itself.
+        bool QueryPlayerOwnedWorkshops();
+
         // A workshop form becomes a market entity (a FormRef only — a
         // target, never a mind), so minds can remember it as where to
         // trade and the walk can resolve its position. Idempotent per
@@ -365,20 +377,29 @@ namespace TLC
         // per-settlement pay line reads "Sanctuary", not a bare hex.
         std::unordered_map<std::uint32_t, std::string> m_WorkshopNames;
 
-        // Whether the player owns each workshop, captured at census
-        // time (the ownership read rides the same persistent-cell pass
-        // as the names). The stipend's requireOwned gate consults it:
-        // a settler at a workshop you've never claimed doesn't draw a
-        // wage. A workshop missing from the map reads as unowned (the
-        // gate's safe default).
+        // Whether the player owns each workshop, keyed by the
+        // workbench's form id. Populated once per session by
+        // QueryPlayerOwnedWorkshops (the WorkshopParent quest-array
+        // read — every candidate read before it died in the field: the
+        // console rejects `getav WorkshopPlayerOwned` on the Sanctuary
+        // workbench, and GetOwner() returns null for every workshop;
+        // the quest array is what the game's own Papyrus checks). The
+        // stipend's requireOwned gate consults it: a settler at a
+        // workshop you've never claimed doesn't draw a wage. A
+        // workshop missing from the map reads as unowned (the gate's
+        // safe default).
         std::unordered_map<std::uint32_t, bool> m_WorkshopOwned;
 
-        // The census ownership diagnostics (0.8.6b): the first few
-        // ownership reads (what GetOwner returns) plus a count summary,
-        // so the requireOwned gate is verified in-game before it's
-        // trusted — a zero-owned summary with a full census says the
-        // GetOwner read is wrong, not that the player owns nothing.
-        std::uint32_t m_OwnershipSamples = 0;
+        // The ownership query ran this session (once — the quest array
+        // is static per load, like the census).
+        bool m_OwnershipQueried = false;
+
+        // The census ownership diagnostics (0.8.6c): how many of the
+        // known workshops the quest array records as the player's, so
+        // the requireOwned gate is verified in-game — a zero-owned
+        // summary with a full census says the quest read is wrong
+        // (every settlement would be gated), not that the player owns
+        // nothing.
         std::uint32_t m_OwnershipCount = 0;
         std::uint32_t m_OwnershipOwned = 0;
 

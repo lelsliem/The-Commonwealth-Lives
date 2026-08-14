@@ -53,6 +53,15 @@ never walk to the market, and never romance (befriends and feuds
 like anyone). Handy, Protectron, SentryBot, Assaultron, and EyeBot
 races; pre-fix saves re-classify and heal on load.
 
+**The ownership read is unbenched** (the last 0.8.6b failure):
+`QueryPlayerOwnedWorkshops` reads the WorkshopParent quest's
+`PlayerOwnedWorkshops` array through the VM — the quest's handle,
+`FindBoundObject` to the attached script, the property, then each
+element's handle back to its REFR. The census's dead AVIF scan is
+gone; `requireOwned` now checks the quest-owned set. The log prints
+`economy: WorkshopParent quest records N owned workshop(s) — M read
+as the player's` on the next launch to verify the gate in-game.
+
 ---
 
 ## 0.8.6b — the earn-caps economy, who-pays built (2026-08-14)

@@ -30,6 +30,7 @@
 #include <RE/A/AIProcess.h>   // the game's knockback — the punch's shove
 #include <RE/A/Actor.h>
 #include <RE/B/BSContainer.h>
+#include <RE/B/BSScriptUtil.h>   // BSScript::GetVMTypeID — the quest-array ownership read
 #include <RE/B/BSSpinLock.h>     // BSAutoWriteLock — the subtitle queue's lock
 #include <RE/D/DamageImpactData.h>
 #include <RE/H/HitData.h>      // the melee hit-reaction — the standing shove
@@ -37,6 +38,7 @@
 #include <RE/T/TESIdleForm.h>   // the paired push — the game's real shove animation
 #include <RE/S/STAGGER_MAGNITUDE.h>
 #include <RE/C/Calendar.h>
+#include <RE/G/GameScript.h>   // GameVM — the quest-array ownership read
 #include <RE/N/NiAVObject.h>
 #include <RE/P/PlayerCharacter.h>
 #include <RE/P/ProcessLists.h>
@@ -4579,8 +4581,137 @@ namespace TLC
         m_Translator.Add(a_formId, id);
     }
 
+    // The ownership read (0.8.6c): the WorkshopParent quest's
+    // PlayerOwnedWorkshops array — an ObjectReference[] of the workbench
+    // refs the player has claimed, maintained by the game's own
+    // TakeOwnership flow. Every read before this died in the field: the
+    // console rejects `getav WorkshopPlayerOwned` on the Sanctuary
+    // workbench ("not a function" — the AVIF record in the data handler
+    // is vestigial, never registered in the game's AV table), and
+    // GetOwner() returns null for every workshop. This array is what the
+    // game's own Papyrus checks (Location.HasPlayerOwnedWorkshop), so it
+    // is the canonical answer the requireOwned gate wants. Read through
+    // the VM: resolve the quest's handle, FindBoundObject the attached
+    // WorkshopParentScript, pull the property, and resolve each element's
+    // handle back to its REFR. Best-effort — every failure path logs and
+    // leaves the map empty (the gate's safe default: gate everyone).
+    bool Adapter::QueryPlayerOwnedWorkshops()
+    {
+        m_WorkshopOwned.clear();
+        m_OwnershipCount = 0;
+        m_OwnershipOwned = 0;
+
+        auto* quest = RE::TESForm::GetFormByEditorID("WorkshopParent");
+        auto* questAsQuest =
+            quest != nullptr ? quest->As<RE::TESQuest>() : nullptr;
+
+        if (questAsQuest == nullptr)
+        {
+            REX::WARN(
+                "economy: WorkshopParent quest not found yet — ownership reads empty (retry next census; the requireOwned gate would gate everyone meanwhile).");
+            return false;
+        }
+
+        auto* game = RE::GameVM::GetSingleton();
+        const auto vm = game != nullptr ? game->GetVM() : nullptr;
+
+        if (!vm)
+        {
+            REX::WARN(
+                "economy: no VM yet — ownership reads empty (retry next census).");
+            return false;
+        }
+
+        const auto& handles = vm->GetObjectHandlePolicy();
+        const auto handle = handles.GetHandleForObject(
+            RE::BSScript::GetVMTypeID<RE::TESQuest>(), questAsQuest);
+
+        if (handle == handles.EmptyHandle())
+        {
+            REX::WARN(
+                "economy: WorkshopParent quest has no VM handle yet — ownership reads empty (retry next census).");
+            return false;
+        }
+
+        RE::BSTSmartPointer<RE::BSScript::Object> object;
+
+        if (!vm->FindBoundObject(
+                handle, "WorkshopParentScript", false, object, false)
+            || object == nullptr)
+        {
+            REX::WARN(
+                "economy: WorkshopParentScript not bound yet — ownership reads empty (retry next census).");
+            return false;
+        }
+
+        const auto* prop = object->GetProperty("PlayerOwnedWorkshops");
+
+        if (prop == nullptr || !prop->is<RE::BSScript::Array>())
+        {
+            REX::WARN(
+                "economy: PlayerOwnedWorkshops property missing or not an array — ownership reads empty (retry next census).");
+            return false;
+        }
+
+        const auto array = RE::BSScript::get<RE::BSScript::Array>(*prop);
+
+        if (array == nullptr)
+        {
+            return false;
+        }
+
+        std::size_t resolved = 0;
+
+        for (const auto& element : *array)
+        {
+            if (!element.is<RE::BSScript::Object>())
+            {
+                continue;
+            }
+
+            const auto refObject =
+                RE::BSScript::get<RE::BSScript::Object>(element);
+
+            if (refObject == nullptr)
+            {
+                continue;
+            }
+
+            auto* refr = static_cast<RE::TESObjectREFR*>(
+                handles.GetObjectForHandle(
+                    RE::BSScript::GetVMTypeID<RE::TESObjectREFR>(),
+                    refObject->GetHandle()));
+
+            if (refr != nullptr)
+            {
+                m_WorkshopOwned[refr->GetFormID()] = true;
+                ++resolved;
+            }
+        }
+
+        m_OwnershipCount = array->size();
+        m_OwnershipOwned = resolved;
+
+        REX::INFO(
+            "economy: WorkshopParent quest records {} owned workshop(s) — {} read as the player's.",
+            m_OwnershipCount, m_OwnershipOwned);
+
+        return true;
+    }
+
     void Adapter::RefreshWorkshops()
     {
+        // The ownership query runs once per session, ahead of the
+        // per-workshop pass (the quest array is static per load, like
+        // the census — a workshop's claimed state never changes while
+        // the game runs). Only success marks it done: a failure (quest
+        // not loaded yet, script not bound) retries on the next census
+        // pass, exactly like the census itself retries an empty world.
+        if (!m_OwnershipQueried)
+        {
+            m_OwnershipQueried = QueryPlayerOwnedWorkshops();
+        }
+
         // Throttled retry: the census can run before the game's REFR
         // data is fully available, so an empty result must never be
         // pinned — a false 0 would lock the whole session into the
@@ -4696,88 +4827,17 @@ namespace TLC
                         m_WorkshopNames[workshopFormId] = refName;
                     }
 
-                    // The ownership read (0.8.6b, BENCHED): does the
-                    // player own this workshop? The stipend's
-                    // requireOwned gate answers "whose people draw a
-                    // wage". The read is dead in the field — verified
-                    // in-game 2026-08-14: the console rejects
-                    // `getav WorkshopPlayerOwned` on the Sanctuary
-                    // workbench ("not a function" — the AVIF record
-                    // found by the scan below is vestigial, never
-                    // registered in the game's AV table), and
-                    // GetOwner() returns null for every workshop. The
-                    // gate defaults off and this map feeds nothing;
-                    // the real read (the WorkshopParent quest's
-                    // PlayerOwnedWorkshops array via the VM) is a
-                    // benched 0.8.6c item.
-                    //
-                    // The AVIF is found by scanning the data handler's
-                    // ActorValueInfo array for the editor ID, not
-                    // GetFormByEditorID: the game's editor-ID map does
-                    // not index AVIFs (their editor IDs live inline in
-                    // the form's formEditorID member, not as extra
-                    // data), so the map lookup returns null every time.
-                    static const RE::ActorValueInfo* kWorkshopOwnedAv =
-                        []() -> const RE::ActorValueInfo*
-                    {
-                        auto* handler =
-                            RE::TESDataHandler::GetSingleton();
-
-                        if (handler == nullptr)
-                        {
-                            return nullptr;
-                        }
-
-                        for (const auto* av :
-                             handler->GetFormArray<RE::ActorValueInfo>())
-                        {
-                            if (av == nullptr)
-                            {
-                                continue;
-                            }
-
-                            const std::string_view editorId =
-                                av->formEditorID;   // BSString → view
-
-                            if (editorId == "WorkshopPlayerOwned")
-                            {
-                                return av;
-                            }
-                        }
-
-                        return nullptr;
-                    }();
-
-                    const bool owned =
-                        kWorkshopOwnedAv != nullptr
-                        && a_ref->GetActorValue(*kWorkshopOwnedAv) >= 0.5f;
-
-                    m_WorkshopOwned[workshopFormId] = owned;
-
-                    // The one-time diagnostics: the census's ownership
-                    // reads, so the requireOwned gate can be verified
-                    // in-game before it's trusted (a wrong read would
-                    // silently stop wages at every settlement). The
-                    // first few reads show the AV value (1 = claimed,
-                    // 0 = never) and the summary counts owned vs unowned.
-                    if (m_OwnershipSamples < 3)
-                    {
-                        ++m_OwnershipSamples;
-
-                        const float ownedValue =
-                            kWorkshopOwnedAv != nullptr
-                            ? a_ref->GetActorValue(*kWorkshopOwnedAv)
-                            : -1.0f;   // the AV form didn't resolve
-
-                        REX::INFO(
-                            "economy: workshop {:#x} reads {} by the player (WorkshopPlayerOwned = {}).",
-                            workshopFormId, owned ? "owned" : "unowned",
-                            ownedValue);
-                    }
-
-                    m_OwnershipCount += 1;
-                    m_OwnershipOwned += owned ? 1 : 0;
-
+                    // The ownership read (0.8.6c): is this workshop in
+                    // the quest array's owned set? QueryPlayerOwnedWorkshops
+                    // populated the map once per session, ahead of this
+                    // pass — every earlier read died in the field (the
+                    // console rejects `getav WorkshopPlayerOwned` on the
+                    // Sanctuary workbench, and GetOwner() returns null
+                    // for every workshop; see that function for the
+                    // whole story). A workshop missing from the map is
+                    // unowned: the gate's safe default — and the
+                    // requireOwned gate consults this map, so a
+                    // missing entry gates that settlement's wage.
                     return RE::BSContainer::ForEachResult::kContinue;
                 });
         }
@@ -4800,10 +4860,11 @@ namespace TLC
             worldspaces.size(), m_Workshops.size(), kWorkshopBaseFormId,
             m_Workshops.empty() ? " — will retry" : " — markets are per settlement");
 
-        // The ownership summary (0.8.6b): how many of the known
-        // workshops read as the player's, so the requireOwned gate is
+        // The ownership summary (0.8.6c): how many of the known
+        // workshops the quest array records as the player's (filled by
+        // QueryPlayerOwnedWorkshops), so the requireOwned gate is
         // verified in-game — a summary of zero-owned with a full census
-        // says the GetOwner read is wrong (every settlement would be
+        // says the quest read is wrong (every settlement would be
         // gated), not that the player owns nothing.
         if (m_OwnershipCount > 0)
         {

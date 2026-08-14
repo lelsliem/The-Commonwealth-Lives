@@ -137,22 +137,28 @@ sim.economy.stipend.requireOwned = 0     ; 0 = every mind with a home
                                ; settlement the player owns draw
 ```
 
-## Who pays the wage — "the settlement's treasury, or yours?" (0.8.6b, BENCHED)
+## Who pays the wage — "the settlement's treasury, or yours?" (0.8.6b, UNBENCHED 0.8.6c)
 
-**Status: BENCHED 2026-08-14 — reverted to the minted stipend.** Both
-knobs shipped and harness-pinned (27/27), then failed in the field:
+**Status: both legs DONE as of 0.8.6c.** The bench (2026-08-14,
+reverted to the minted stipend) recorded two field failures; both are
+now fixed and the minted default never regressed:
 
-- **The ownership read (`requireOwned`)**: vanilla FO4 does not store
-  settlement ownership anywhere a wrapped API can read it.
-  `TESObjectREFR::GetOwner()` returns null for every workshop (0 of 28
-  in the field); the `WorkshopPlayerOwned` actor value is dead too —
-  verified in-game 2026-08-14, the console rejects `getav
-  WorkshopPlayerOwned` on the Sanctuary workbench ("not a function");
-  the AVIF record exists in the data but is never registered in the
-  game's AV table. The game's real ownership lives in the
-  WorkshopParent quest's Papyrus state (the `PlayerOwnedWorkshops`
-  array), readable only through fragile VM plumbing commonlibf4
-  doesn't wrap. With the gate on, no one drew at all.
+- **The ownership read (`requireOwned`) — DONE (field test pending):**
+  vanilla FO4 does not store settlement ownership anywhere a wrapped
+  API can read it. `TESObjectREFR::GetOwner()` returns null for every
+  workshop (0 of 28 in the field); the `WorkshopPlayerOwned` actor
+  value is dead too — verified in-game 2026-08-14, the console
+  rejects `getav WorkshopPlayerOwned` on the Sanctuary workbench
+  ("not a function"); the AVIF record exists in the data but is never
+  registered in the game's AV table. The game's real ownership lives
+  in the WorkshopParent quest's Papyrus state (the
+  `PlayerOwnedWorkshops` array), readable only through VM plumbing —
+  which is exactly what the fix does: `QueryPlayerOwnedWorkshops`
+  resolves the quest's handle, `FindBoundObject`s the attached
+  WorkshopParentScript, pulls the array, and resolves each element's
+  handle back to its REFR, keying the census's owned map. The
+  per-workshop AVIF scan is gone. With the gate on, only unclaimed
+  settlements are gated.
 - **The player-pays leg (`source = player`)**: the RemoveItem path ran
   (the log's bill line fired: "the wage bill of 5320 caps came from
   the player's purse") but the caps never left the player's
@@ -171,11 +177,10 @@ knobs shipped and harness-pinned (27/27), then failed in the field:
 **The revert:** `sim.economy.stipend.requireOwned` defaults to 0 (every
 mind with a home market draws — the working behavior), the source
 stays `settlement` (minted), and the MCM toggles sit inert. The keys,
-the census ownership read, and the deduction edge stay in the tree,
-benched. **Unbench work:** the WorkshopParent quest-array read
-(ownership), and the RemoveItem count/reason investigation
-(player-pays). Both are recorded as 0.8.6c → 0.9.x candidates; the
-minted default must never regress.
+the census ownership read, and the deduction edge stay in the tree.
+**Unbench work, both done in 0.8.6c:** the WorkshopParent quest-array
+read (ownership, above) and the RemoveItem count/reason investigation
+(player-pays, below). The minted default never regressed.
 
 **The two questions, answered (as designed).**
 
@@ -195,8 +200,9 @@ minted default must never regress.
    census even finds them in cells like the Fens Street sewer).
    `sim.economy.stipend.requireOwned = 1` gates the draw on workshop
    ownership: the census already reads every persistent-cell workshop,
-   and the ownership read (`TESObjectREFR::GetOwner`, compared against
-   the player) rides the same census pass. An unowned settlement's
+   and the ownership read (the WorkshopParent quest-array set,
+   `QueryPlayerOwnedWorkshops`) rides the same census pass. An
+   unowned settlement's
    minds simply don't draw — the wage line omits them — until the
    player claims it. Default 1: you shouldn't pay wages for people you
   've never met.
