@@ -85,10 +85,14 @@ These are the hard calls. The author can overrule any of them.
   fights with the game's own animations; a bespoke scene driver is CK
   asset work with no player-visible payoff over real combat. If a
   scripted shove ever matters, revisit post-1.0.
-- **Cut: MCM from 1.0.0.** Honest as always: the INI already delivers
-  every tuning knob; the MCM page needs the MCM mod + the Creation Kit
-  (author-asset work, not sim work) and buys convenience, not show.
-  Post-1.0, optional.
+- **~~Cut: MCM from 1.0.0~~ — RESCINDED by the audit (0.8.6a).** The
+  original call: the INI already delivers every tuning knob; the MCM
+  page needs the MCM mod + the Creation Kit and buys convenience, not
+  show. 0.8.5 built it anyway — and it needed **no** Creation Kit (a
+  JSON page + an override INI the adapter overlays and hot-applies via
+  a stat-poll; no native Papyrus bridge). Verified in-game, and the
+  player confirmed its kill-switch value (stones on/off at whim).
+  **MCM stays**; the INI remains the source of truth.
 - **Cut: audio radio from 1.0.0.** Captions work and are verified; real
   voice needs assets. Deferred, as already scheduled — the radio is the
   channel, audio is dressing.

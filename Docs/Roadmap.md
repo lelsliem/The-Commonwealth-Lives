@@ -476,12 +476,14 @@ dependency — no MCM, the INI alone rules.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
-
-ReleasePlan's cut list revisited against what now exists — the hands
-pillar, pex scenes, MCM (built in 0.8.5 — re-assess), audio radio,
-provisioner naming, and anything the field tests flagged as noise.
-Each item is a decision, not an accident.
+STATUS: DONE — the audit is written (Run080 §0.8.6a, DecisionLog
+0060). Verdict: the ReleasePlan's cuts stand for hands/pex/audio/
+provisioner names; MCM is **overruled to KEEP** (0.8.5 proved it);
+visible children are redesigned to ship gated on the Baby Sim
+permission; and the field added two 0.8.6b items — **the earn-caps
+**economy (non-keepers are perpetually broke, 0.8.3) and **log
+**hygiene (~200KB/min decision chatter). Fight presentation bugs
+defer to 0.9.2a animations.
 
 0.8.6b — Redefine & Loose Ends
 

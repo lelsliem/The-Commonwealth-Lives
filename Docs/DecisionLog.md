@@ -1812,3 +1812,41 @@ a mind.
 hold-then-recover walked in 1 s steps (a mild case survives its hold),
 the fatal path, medicine's rescue, the fatigue toll's ease-off, and the
 child severity multiplier. **24/24 suites green.**
+
+## 0060 — 0.8.6a: The Audit (2026-08-14)
+
+**Date:** 2026-08-14
+
+ReleasePlan's cut list re-tested against what shipped 0.7.1–0.8.5.
+Every call below is a decision, not an accident:
+
+1. **Cut stands: hands pillar, pex scenes, audio radio, provisioner
+   first-names.** Nothing in the field changed the ReleasePlan's
+   reasoning; all four stay cut from 1.0.0.
+2. **Overruled: MCM.** The ReleasePlan cut MCM as "convenience, not
+   show" — then 0.8.5 built and verified it (no native Papyrus bridge;
+   override-file + stat-poll). The player confirmed its kill-switch
+   value (turning stones on/off at whim). MCM is KEPT; the INI stays
+   the source of truth, MCM the optional face.
+3. **Redesign: visible children.** 0.7.8's Baby Sim bridge works
+   (children spawn, are visible, age on our schedule) but rides a
+   dependency not yet granted. The bridge ships gated; sim-only
+   children are the fallback.
+4. **Kept as designed:** the species block (children/animals/enemies
+   don't trade), the pre-existing-family pool, companions
+   friendship-only, the market-is-the-bench model, the radio caption
+   throttle.
+5. **ADDED to 0.8.6b — the earn-caps economy.** The field's only real
+   missing feature: non-keepers are perpetually broke (0.8.3), so
+   sickness is a death sentence for the poor. Every mind needs a
+   non-keeper income source; the broke-gate (rest instead of buy)
+   stays.
+6. **ADDED to 0.8.6b — log hygiene.** Decision chatter runs ~200KB/min
+   at 649 minds; the refusal flood is dead, the ordinary chatter needs
+   a rate limit/condense.
+7. **Deferred:** the both-fall/ghost-push fight presentation bugs go to
+   0.9.2a animations, documented — not forgotten.
+
+The audit's verdict: the show is nearly complete. Remaining before the
+1.0.0 gate: the earn-caps economy, log hygiene, and the 0.9.x
+polish/animation passes.
