@@ -17,6 +17,116 @@ bench, arrive, trade, and the whole world survives save/load.
 
 ---
 
+## 0.8.6 — Scale in the Field (2026-08-14)
+
+The hard gate, measured: the adapter feeds the engine's TickReport and
+field-verified on a **646-mind save** — four consecutive reports at
+618–619 live minds, worst frame 4.13–8.17 ms against the 16.6 ms frame
+budget, game smooth throughout. The sim's whole share is roughly half a
+frame. Decide is the heaviest pass (1.5–2.5 ms — a later optimization
+target, not a gate failure).
+
+**The ownership read is unbenched for real** — the last 0.8.6b
+failure. `requireOwned` now reads the game's own
+`WorkshopPlayerOwnership` actor value (form 0x33C, the exact AV
+`SetOwnedByPlayer` writes), re-armed per world so the loaded save's
+restored state is read instead of the menu-world's fresh defaults.
+Field-verified: **28 of 28 workshops owned**, matching the player's
+map. The bug-hunt cleanup rode along: a cough idle null-guard (a crash
+waiting to happen), the quest-prop debug dump dropped from the hot
+path, and the 27/27 harness.
+
+## 0.8.6b — Redefine & Loose Ends (2026-08-14)
+
+The audit's two real gaps closed.
+
+- **Robots are robots.** A field find (Buddy the Mr. Handy seeded as
+  Human and caught the flu) became the Robot species: they talk but
+  have no biological needs — no hunger, no fatigue, no Health (never
+  ill), no pouch, no stipend, never walk to the market, never romance.
+  Befriends and feuds like anyone. Handy, Protectron, SentryBot,
+  Assaultron, EyeBot; pre-fix saves re-classify and heal on load.
+- **Everyone can earn caps.** The daily settlement stipend
+  (`sim.economy.stipend`, default-off) pays every mind in a settlement
+  a small daily wage — the non-keeper broke-gap that made sickness a
+  death sentence for the poor is closed. The household shares the
+  wage. The player opts in via the MCM's "Daily stipend" slider.
+- **Who pays the wage** — `sim.economy.stipend.source` (settlement
+  minted | player) and `sim.economy.stipend.requireOwned` (only
+  player-owned settlements pay). Both knobs field-failed, were
+  reverted to the working minted stipend, then each was unbenched:
+  player-pays fixed (the FO4 RemoveItem count's sign was the bug) and
+  ownership fixed in 0.8.6c.
+- **MCM restructured** — a dedicated Economy page (Market, Medicine,
+  Stipend together); Illness is sickness mechanics only.
+
+## 0.8.6a — The Audit (2026-08-14)
+
+The honest pass: every cut candidate from the Release Plan re-tested
+against what actually shipped. MCM was rescinded to KEEP (the tuning
+page proved its worth); the audit added the two real gaps to 0.8.6b —
+the earn-caps economy and log hygiene.
+
+## 0.8.5 — MCM + Settings Manager (2026-08-14)
+
+The player tunes the world in-game. A full MCM page — 5 pages / 53
+controls: Life, Interactions, Relationships, Illness, Birth & Fights —
+binds every player-facing knob to MCM's ModSettings. A slider change
+lands in the sim within a second: hot-applied, no rebuild, and it
+survives a restart. No native Papyrus bridge by design (the VM header
+has no registration surface; the override-file route achieves the same
+with zero crash risk). MCM stays a soft dependency — no MCM, the INI
+alone rules.
+
+## 0.8.4 — Random Interactions (2026-08-14)
+
+Settlers who cross paths sometimes speak unprompted — no hunger drive,
+no market. The interaction pass runs each second: a cooldown-expired,
+non-walking mind finds its nearest non-walking neighbour inside
+`sim.interact.radius` (400 u), rolls `sim.interact.chance` (0.4), and
+speaks. The pool follows the bond — family for family, a quiet row for
+rivals, greet/gossip for strangers. **Speech is local, not broadcast**:
+it logs, and subtitles only when the player is within
+`sim.subtitle.radius` of the speaker — the settlement radio never
+carries small talk. The trial passed in-game (186 genuinely-near
+speakers; the author judged it "added life").
+
+## 0.8.3 — The Sick Household (2026-08-14)
+
+Medicine is not an endless shelf, and a family cares for its own.
+
+- **Stocked medicine** — each market's doses per day ride the co-save;
+  a sold-out stall stays sold out across save/load until the next
+  market day, and a sick mind at an empty shelf rests instead.
+- **The family care-buy** — one shared dose path used twice: the sick
+  dose themselves, then a well buyer buys for the household — the
+  spouse first, then a sick child (who has no walk of its own to the
+  bench). The shared wallet pays; `X bought medicine for Y — a family
+  cares.`
+
+## 0.8.2 — The Burial (2026-08-13, verified 2026-08-14)
+
+The settlement lays its own to rest. A corpse no longer stays in the
+cell forever: after the mourning window (`sim.death.burialDays`,
+default 3), the sweep disables the body, logs `the settlement laid X
+to rest`, and the settlement hears it. The burial book rides the
+co-save, so a death whose window expires while the game is away is
+still buried on the next load.
+
+## 0.8.1 — The Illness Field Pass (2026-08-13)
+
+Two scale fixes the day-12 outbreak exposed — an outbreak is one
+story, not a wall of sound and a wall of names. The global cough gate
+(one cough anywhere per 4 s, on top of each mind's own interval) keeps
+the tell audible and kills the cacophony. Illness news is burst-paced
+(at most 4 new names per 10 s window) so the radio stays readable.
+Plus: **sickness takes the body** — the illness death now kills the
+game actor (the corpse appears; 0.8.2 buries it later) — and
+**children survive the cold** (childhood illness retuned; death stays
+rare and earned). The co-save audit made illness and pregnancy truly
+persist: a mid-hold sickness and an in-progress pregnancy restore
+exactly across save/load.
+
 ## 0.8.0 — Illness & Medicine (2026-08-13)
 
 The Commonwealth gets sick — and the market becomes the cure.

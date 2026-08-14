@@ -12,29 +12,22 @@ Project Roadmap
 
 Status
 
-Current Version : 0.8.0 — Illness & Medicine complete and verified
-                   in-game 2026-08-13, pushed to GitHub. A natural
-                   radstorm day proved the whole chain: 73 medicine
-                   buys, 4 sick-but-broke resters, 0 deaths. The
-                   market-cure fix (retune + hunger counter-toll) is
-                   committed (`c3e837b`).
+Current Version : 0.8.6 — the whole 0.8 run (0.8.0 → 0.8.6c) complete
+                   and verified in-game, tagged `0.8.6`. Illness,
+                   medicine as a stocked good, burial, the sick
+                   household, random interactions, MCM, the earn-caps
+                   stipend, robots, and the scale-in-the-field gate —
+                   all shipped and field-verified 2026-08-14.
 
-Current Stage   : 0.8.0 shipped — Health component, four contraction
-                   vectors (radstorm, food, wound, contagion), the
-                   hold-then-recover curve, the Fatigue toll + hunger
-                   counter-toll, medicine as the trade stone's second
-                   good, death at the bottom. 24/24 harness suites
-                   green.
+Current Stage   : 0.8.x shipped — every stone of the run landed. The
+                   scale gate measured ~620 live minds at half a
+                   frame; the ownership read (the last benched item)
+                   reads the game's own WorkshopPlayerOwnership AV,
+                   field-verified 28 of 28 owned. 27/27 harness
+                   suites green.
 
-Next Milestone  : the 0.8.x → 0.9.x run to the Nexus beta
+Next Milestone  : the 0.9.x run to the Nexus beta
                    (Docs/Design/Run080.md):
-                   0.8.1 illness field pass (shipped) →
-                   0.8.2 burial (verified 2026-08-14) →
-                   0.8.3 sick household (verified 2026-08-14) →
-                   0.8.4 random interactions (verified 2026-08-14) →
-                   0.8.5 MCM → 0.8.6a the audit →
-                   0.8.6b redefine & loose ends →
-                   0.8.6c scale in the field →
                    0.9.1a dialog → 0.9.1b timings & weights →
                    0.9.1c babies implemented → 0.9.2a animations →
                    0.9.2b final touches → 0.9.2c beta on Nexus

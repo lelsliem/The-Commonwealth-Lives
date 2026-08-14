@@ -1,4 +1,4 @@
-# 0.7.9 — The 0.7 Run: From Names to Babies
+# 0.8.6 — The 0.8 Run: From Sickness to the Field
 
 **Copy this into the GitHub release.**
 
@@ -6,116 +6,145 @@
 
 ## Title
 
-**The Living Commonwealth v0.7.9 — The 0.7 Run: From Names to Babies**
+**The Living Commonwealth v0.8.6 — The 0.8 Run: From Sickness to the Field**
 
 ## Tag
 
-`0.7.9`
+`0.8.6`
 
 ## Description
 
-The 0.7 run is complete: settlers have **names**, they **talk**, they
-**row**, they **trade with anyone**, they **fight** — with a real kick —
-and their **children are born, grow, and can be seen**. The whole world
-survives save/load. This release closes the run with a full codebase
-audit (no bugs found) and the clean hand to **0.8.0 Illness & Medicine**.
+The 0.8 run is complete. The Commonwealth gets **sick** — and the
+market becomes the cure. Medicine is a **stocked shelf** that can sell
+out, and a **family cares for its own**. The dead are **buried** by the
+settlement that mourned them. Settlers **talk to each other**
+unprompted. The player **tunes the whole world in-game** through MCM —
+no more INI hunting. Robots are finally **robots**. Every mind can
+**earn caps**. And the whole sim proved it **scales in the field**:
+~620 live minds on a real save, the sim's entire share roughly half a
+frame, the game smooth throughout.
 
 > A settler goes to market because they are hungry — no script.
 
 ---
 
-## Changelog — 0.7.0 → 0.7.9
+## Changelog — 0.8.0 → 0.8.6c
 
-### 0.7.0 — Identity & the Player Window (2026-08-11)
+### 0.8.0 — Illness & Medicine (2026-08-13)
 
-- **Names on the people themselves.** The workshop view, pip-boy and
-  hover read *Mara Price*, not "Settler" — the name is written onto the
-  actor and persists in the save. The game's own names always win
-  (Sturges stays Sturges). Four curated name lists in the INI
-  (`names.first.male/.female/.animal`, `names.last`); owned animals are
-  named (the junkyard dog is *Bandit*), strays stay nameless, pet names
-  are unique per world.
-- **The feud is real.** A hungry arrival at a **closed market** is a
-  slight — `the stall is shut — X went hungry and blames the keeper` —
-  the settlement's echo agrees, rival and enemy bonds form, and feuds
-  begin on their own: gossip through the settlement and mediation
-  (`Titus Pratt cooled the feud between …`).
-- **The player hears the world.** World events — bonds, feuds, births,
-  deaths, market openings — become one-line news: throttled **HUD
-  notifications** and a **settlement radio** that speaks the news as
-  on-screen captions while you're near.
+- **Every settler carries health.** A radstorm day, a bad meal, a wound
+  from a fight, or the sick passing it to the healthy — four ways to
+  fall ill. A sick mind holds at reduced health while the sickness
+  runs, tires faster and rests more, and **coughs** (the game's own
+  coughing idle) so you can hear the outbreak. Untreated, a severe
+  illness can end a mind — rare, earned, and remembered.
+- **The market cures.** A sick settler with 25 caps buys medicine at
+  the stall — the hold ends, recovery begins, the seller's pouch
+  grows. Broke sick settlers rest instead and ride it out honestly.
+  Verified in-game on a natural radstorm day: **73 medicine buys, 0
+  deaths.**
 
-### 0.7.1 — Talk (2026-08-11)
+### 0.8.1 — The illness field pass (2026-08-13)
 
-- **Settlers speak.** Curated dialogue pools (the good greet/gossip/
-  family, the bad trade/row, the ugly grief/fight/feud) say lines on
-  trade, family meals, and slights. A seeded picker gives each mind one
-  line per day — the same greeting all day, a new one tomorrow. The
-  pools are INI data, so the words are yours without a recompile.
+- **Sickness takes the body.** The illness death now actually kills the
+  game actor — the corpse appears (0.8.2 buries it later) and the dead
+  stay dead, no ghost re-entry.
+- **Children survive the cold.** Childhood illness retuned — a
+  contagion-child runs the hold and recovers; death stays rare and
+  earned.
+- **An outbreak is one story, not a wall of sound.** A global cough
+  gate (one cough per 4 s, on top of each mind's own) kills the
+  cacophony; illness news is burst-paced (at most 4 new names per 10 s
+  window) so the radio stays readable.
+- **The co-save audit.** Illness and pregnancy now truly persist —
+  a mid-hold sickness and an in-progress pregnancy restore exactly
+  across save/load (the audit caught components that claimed to ride
+  the record but never registered).
 
-### 0.7.2 — Rows: the verbal altercation (2026-08-11)
+### 0.8.2 — The burial (2026-08-13, verified 2026-08-14)
 
-- **Words before blows.** Rivals and enemies who cross paths at the
-  same bench have words. Each remembers the other wronged them, the
-  settlement hears the shouting, and the row can push a pair over the
-  feud line. Physical escalation came later (0.7.5).
+- **The settlement lays its own to rest.** A corpse no longer stays in
+  the cell forever: after the mourning window (`sim.death.burialDays`,
+  default 3), the sweep disables the body, logs `the settlement laid X
+  to rest`, and the settlement hears it. The burial book rides the
+  co-save, so a death whose window expires while the game is away is
+  still buried on the next load.
 
-### 0.7.3 — Names for everyone (2026-08-12)
+### 0.8.3 — The sick household (2026-08-14)
 
-- **Every unnamed mind gets a name.** Role titles gain the person:
-  "Provisioner Daisy", "Guard Cole". Two provisioners are no longer
-  interchangeable — they're distinguishable in memory and in trade.
-  Real names still win.
+- **Medicine is a stocked shelf.** Each market's doses per day ride the
+  co-save; a sold-out stall stays sold out across save/load until the
+  next market day, and a sick mind at an empty shelf rests instead of
+  buying.
+- **A family cares for its own.** The trade block's dose logic is one
+  shared path used twice: the sick dose themselves, then a well buyer
+  buys for the household — the spouse first, then a sick child (who
+  has no walk of its own). The shared wallet pays; the news reads
+  `X bought medicine for Y — a family cares.`
 
-### 0.7.4 — Trade with anyone who sells (2026-08-12)
+### 0.8.4 — Random interactions (2026-08-14)
 
-- **The hungry walk resolves to a person, not only the bench.** The
-  vendor census admits traders, merchants, and provisioners as minds;
-  a seller out-scores the bench while fresh. A vendor never shops at
-  their own stall; the bench stays the fallback.
+- **Settlers talk to each other.** A loaded human mind finds its
+  nearest non-walking neighbour inside `sim.interact.radius` (400 u),
+  rolls `sim.interact.chance`, and speaks unprompted — no hunger drive,
+  no market. The pool follows the bond: family lines for family, a
+  quiet row for rivals, greet/gossip for strangers. Speech is local:
+  log + subtitle only when the player is within hearing
+  (`sim.subtitle.radius`) — the radio never carries small talk.
+- The trial passed in-game: 186 genuinely-near speakers, bond-aware
+  pools, walking minds never interrupted. The author judged it
+  *"added life"*.
 
-### 0.7.5 — Fights: the physical escalation (2026-08-12)
+### 0.8.5 — MCM + Settings Manager (2026-08-14)
 
-- **The feud turns physical.** Temper + chance book a fight — once per
-  day, co-saved — the victim is shoved, and the exchange runs on beats:
-  push → fall → get-up → retaliation → slink off. Fight lines ride the
-  game's own subtitle queue as bottom-of-screen subtitles only when
-  you're close enough to hear (`sim.subtitle.radius`). Species and kin
-  splits keep the brawl human and families safe.
+- **The player tunes the world in-game.** A full MCM page (5 pages /
+  53 controls: Life, Interactions, Relationships, Illness, Birth &
+  Fights) binds every player-facing knob. A slider change lands in the
+  sim within a second — hot-applied, no rebuild, survives a restart.
+  No MCM installed? The INI alone still rules. MCM stays a soft
+  dependency.
 
-### 0.7.6 — The fight-feel pass: the kick is real (2026-08-13)
+### 0.8.6a — The Audit (2026-08-14)
 
-- **The kick finally plays for real.** The game's own push-kick idle
-  refuses to play outside combat, so the mod ships its own 380-byte ESP
-  (an unconditional clone of the proven recipe, byte-verified) — a real
-  kick on the first shove AND the retaliation.
-- **The fall tips instead of sliding** — the knock force drops to the
-  tip-over zone, so the victim falls in place. Both actors must be on
-  their feet before the next beat — no more double-collapses.
+- **The honest pass.** Every cut candidate re-tested against what
+  shipped: MCM was rescinded to KEEP, and the audit added the two real
+  gaps to 0.8.6b — the earn-caps economy and log hygiene.
 
-### 0.7.7 — Babies: the birth lifecycle (2026-08-13)
+### 0.8.6b — Redefine & loose ends (2026-08-14)
 
-- **A child is now born, not just created.** Bonded human couples
-  conceive (`sim.birth.chance`), carry a pregnancy through
-  `sim.birth.gestation` sim-days, and the birth fires on the due day —
-  the settlement hears it, the parents bond, the child is named and
-  fed. After `sim.birth.childhood` days the child grows up and walks to
-  market like any mind. Only humans conceive (no robot babies), and the
-  whole journey survives save/load.
+- **Robots are robots.** A field find (Buddy the Mr. Handy caught the
+  flu) became the species: robots talk but have no biological needs —
+  no hunger, no fatigue, never ill, no pouch, no stipend, never walk
+  to market, never romance. Befriends and feuds like anyone.
+- **Everyone can earn caps.** A daily settlement stipend
+  (`sim.economy.stipend`, default-off — the player opts in via the
+  MCM "Daily stipend" slider) closes the broke-gap that made sickness
+  a death sentence for the poor. The household shares the wage.
+- **Who pays the wage — settled.** `sim.economy.stipend.source`
+  (settlement minted | player — the bill comes out of the player's
+  caps) and `sim.economy.stipend.requireOwned` (only player-owned
+  settlements pay). Both field-failed, were reverted to the working
+  minted stipend, then each was unbenched: player-pays fixed (the
+  count's sign was the bug) and ownership fixed (see 0.8.6c).
+- **MCM restructured** — a dedicated Economy page (Market, Medicine,
+  Stipend); Illness is sickness mechanics only.
 
-### 0.7.8 — Visible children (2026-08-13)
+### 0.8.6c — Scale in the field (2026-08-14)
 
-- **Grown children can be seen.** The adapter scans the game for child
-  actors — from the Baby Sim mod or any source — and pairs a grown
-  sim-only child to a real actor: it walks, trades, and bonds like any
-  mind. All in code — no patch ESP. Without the mod, children stay
-  sim-only (`sim.birth.visible`, default off).
-
-### 0.7.9 — Bugs & polish (2026-08-13)
-
-- **The clean hand to Illness.** Full codebase audit — every INI
-  default vs the code, every comment, every doc — **no bugs found**.
-  Everything consistent, 23/23 tests green.
+- **The hard gate, measured and passed.** The adapter feeds the
+  engine's `TickReport`; field-verified on a 646-mind save — four
+  consecutive reports at 618–619 live minds: worst frame 4.13–8.17 ms
+  against the 16.6 ms budget, game smooth throughout. The sim's whole
+  share is roughly half a frame.
+- **The ownership read, unbenched for real.** `requireOwned` now reads
+  the game's own `WorkshopPlayerOwnership` actor value (form 0x33C —
+  the exact AV `SetOwnedByPlayer` writes), re-armed per world so the
+  loaded save's restored state is read instead of the menu-world's
+  defaults. Field-verified: **28 of 28 workshops owned**, matching the
+  player's map.
+- **Bug-hunt cleanup** — a cough idle null-guard (a crash waiting to
+  happen), the quest-prop debug dump dropped from the hot path, and
+  stale comments reconciled. Harness **27/27 suites green.**
 
 ---
 
@@ -137,11 +166,14 @@ audit (no bugs found) and the clean hand to **0.8.0 Illness & Medicine**.
 
 ## Optional
 
+- **MCM** — the in-game settings page (5 pages / 53 controls). Without
+  it the INI alone rules.
 - **Baby Sim - Babies That Grow Up** (Nexus 100934) — set
   `sim.birth.visible = 1` in the INI to pair grown children with real
   child actors.
 
 ## Note
 
-If you load a 0.5/0.6/0.7-era save, it migrates forward cleanly. The
-next package milestone is **0.8.0 — Illness & Medicine**.
+If you load a 0.5/0.6/0.7/0.8-era save, it migrates forward cleanly.
+The next package milestone is the **0.9.x run to the Nexus beta**
+(dialog depth, timings & weights, animations, and the release).

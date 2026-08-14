@@ -18,7 +18,7 @@
 set_xmakever("3.0.0")
 
 set_project("TheLivingCommonwealth")
-set_version("0.8.0")
+set_version("0.8.6")
 
 set_xmakever("3.0.0")
 set_plat("windows")

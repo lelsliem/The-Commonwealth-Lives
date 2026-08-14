@@ -54,13 +54,15 @@ like anyone). Handy, Protectron, SentryBot, Assaultron, and EyeBot
 races; pre-fix saves re-classify and heal on load.
 
 **The ownership read is unbenched** (the last 0.8.6b failure):
-`QueryPlayerOwnedWorkshops` reads the WorkshopParent quest's
-`PlayerOwnedWorkshops` array through the VM — the quest's handle,
-`FindBoundObject` to the attached script, the property, then each
-element's handle back to its REFR. The census's dead AVIF scan is
-gone; `requireOwned` now checks the quest-owned set. The log prints
-`economy: WorkshopParent quest records N owned workshop(s) — M read
-as the player's` on the next launch to verify the gate in-game.
+`QueryPlayerOwnedWorkshops` reads the game's own
+`WorkshopPlayerOwnership` actor value (form 0x33C — the exact AV
+`SetOwnedByPlayer` writes, per the vanilla WorkshopScript) straight
+off each workshop ref, re-armed per world so the loaded save's
+restored state is read instead of the menu-world's fresh defaults.
+Field-verified: the loaded save reads 28 of 28 workshops owned,
+matching the player's map. (ADR-0061 — the full road: GetOwner
+null, per-ref script defaults, the runtime-built quest array, both
+getav names.)
 
 ---
 

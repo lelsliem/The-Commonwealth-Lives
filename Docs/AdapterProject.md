@@ -74,15 +74,22 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.7.8 | Visible children pairing | ✅ verified in-game (2026-08-13) |
 | 0.7.9 | Bugs & polish | ✅ complete (2026-08-13) |
 | 0.8.0 | Illness & Medicine | ✅ verified in-game (2026-08-13) — natural radstorm, 73 medicine buys, 0 deaths |
-| 0.8.1 | The Illness Field Pass | ◐ in progress — co-save audit landed (Health/Pregnancy/BirthDay/CompanionTag now ride the record); balance, cough, news cadence, wound window remain |
-| 0.8.x–0.9.x | The run to the Nexus beta (Run080.md) | 🔲 0.8.2–0.9.2c planned |
+| 0.8.1 | The Illness Field Pass | ✅ shipped — cough gate, burst-paced news, sickness takes the body, children survive, co-save audit |
+| 0.8.2 | The Burial | ✅ verified in-game (2026-08-14) |
+| 0.8.3 | The Sick Household | ✅ verified in-game (2026-08-14) — stocked shelves + the family care-buy |
+| 0.8.4 | Random Interactions | ✅ verified in-game (2026-08-14) — "added life" |
+| 0.8.5 | MCM + Settings Manager | ✅ verified in-game (2026-08-14) — real values, hot-apply, persistence |
+| 0.8.6a | The Audit | ✅ done — cut list re-tested; MCM KEPT, earn-caps + log hygiene to 0.8.6b |
+| 0.8.6b | Redefine & Loose Ends | ✅ done — robots, the stipend, MCM Economy page; who-pays benched then unbenched |
+| 0.8.6c | Scale in the Field | ✅ PASSED (2026-08-14) — TickReport, ~620 live minds, half a frame; ownership read unbenched (28/28 owned) |
+| 0.9.x | The run to the Nexus beta (Run080.md) | 🔲 0.9.1a dialog → 0.9.1b timings → 0.9.1c babies → 0.9.2a animations → 0.9.2b final touches → 0.9.2c beta |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 
 **Build:** `xmake` (one command). Two targets:
 `TheLivingCommonwealth` (the DLL) and `TheLivingCommonwealth.Tests`
 (the harness — links LCE.Core only, no game; run as
-`xmake run TheLivingCommonwealth.Tests`). **25/25 suites green.**
+`xmake run TheLivingCommonwealth.Tests`). **27/27 suites green.**
 
 ---
 
