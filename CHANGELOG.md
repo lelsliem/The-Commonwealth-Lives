@@ -9,6 +9,24 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.x tooling — the load-order hello-world + caravan worker names (2026-08-14)
+
+- **The diagnostic self-test (`sim.diag.selfTest`).** A new `Diag`
+  module runs a short battery of pure, game-free checks at plugin
+  load — before the game world, before any save — and logs one
+  `diag:` line per check plus a summary (codec round-trip, seeded
+  needs, decay-jitter determinism, species behaviour split, names,
+  bond thresholds, translator, the co-save round-trip). Gated off by
+  default; a test profile sets `sim.diag.selfTest = 1` and a crash in
+  a heavy load order is provably "not us" (or provably ours) the
+  moment the summary lands. Documented in `tools/README.md`.
+- **Caravan workers get names.** `IsRoleName` now recognizes
+  "Caravan Worker" (alongside Caravan Guard, Provisioner, Trader…),
+  so the brahmin-tending road NPCs gain a personal name instead of
+  staying a bare role label.
+
+---
+
 ## 0.8.3 — the sick household: a stocked shelf, a family's care (2026-08-14)
 
 Medicine is not an endless shelf, and a family cares for its own.

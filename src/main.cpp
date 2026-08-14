@@ -11,6 +11,7 @@
 
 #include "Adapter.h"
 #include "CoSave.h"
+#include "Diag.h"
 #include "Tick.h"
 
 #include <F4SE/F4SE.h>
@@ -266,6 +267,17 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
         .trampoline = true,
         .trampolineSize = 128,
     });
+
+    // The load-order hello-world (0.8.x tooling): the sim's pure logic
+    // proves itself at plugin load — before the game world, before any
+    // save — when the test profile asks (sim.diag.selfTest = 1). A crash
+    // in a heavy load order is provably "not us" the moment the summary
+    // lands; a broken pure layer is provably ours the moment it doesn't.
+    // Gated off by default so normal play stays quiet.
+    if (TLC::Diag::SelfTestRequested())
+    {
+        TLC::Diag::RunSelfTest();
+    }
 
     // The simulation's heartbeat: once per frame on the game thread, the
     // adapter decays the world and executes what the minds decided.

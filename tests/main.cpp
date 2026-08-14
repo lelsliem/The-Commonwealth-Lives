@@ -3550,6 +3550,7 @@ namespace TLC::Tests
             || IsRoleName("guard") != "Guard"
             || IsRoleName("MINUTEMAN") != "Minuteman"
             || IsRoleName("Caravan Guard") != "Caravan Guard"
+            || IsRoleName("Caravan Worker") != "Caravan Worker"
             || !IsRoleName("Sturges").empty()
             || !IsRoleName("Junkyard Dog").empty())
         {

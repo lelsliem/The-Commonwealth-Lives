@@ -343,7 +343,7 @@ namespace TLC::Names
     {
         static constexpr std::string_view kRoles[] = {
             "Provisioner", "Guard", "Minuteman",
-            "Caravan Guard", "Trader", "Merchant",
+            "Caravan Guard", "Caravan Worker", "Trader", "Merchant",
         };
 
         for (const auto role : kRoles)
