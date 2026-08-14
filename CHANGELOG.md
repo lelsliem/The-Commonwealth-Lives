@@ -9,6 +9,16 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.5 — MCM + Settings Manager verified (2026-08-14)
+
+The in-game test passed end to end: the page renders with real
+values (no NaN), a slider change hot-applies within a second
+(`MCM override changed — hot-applied`), and the override survives a
+reload. The stat-poll is quiet between writes — no loop, 0 errors.
+The Gestation label was renamed to "Pregnancy length" for clarity.
+
+---
+
 ## 0.8.5 field fix — MCM NaN reads (2026-08-14)
 
 The first in-game pass of the MCM page showed every control reading

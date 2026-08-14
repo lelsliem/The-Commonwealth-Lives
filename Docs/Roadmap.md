@@ -451,7 +451,7 @@ on.
 
 ═══════════════════════════════════════════════
 
-STATUS: BUILT — awaiting the in-game page test (2026-08-14)
+STATUS: VERIFIED — the page renders with real values, sliders hot-apply within a second, and the override persists across reload (2026-08-14)
 
 A Mod Configuration Menu page exposing the tuning keys (hunger
 rhythm, market hours, bond thresholds, births gate, illness curve,

@@ -490,7 +490,7 @@
         {
           "id": "isim.birth.gestation:Main",
           "type": "slider",
-          "text": "Gestation",
+          "text": "Pregnancy length",
           "help": "Sim days a pregnancy runs before the child is born.",
           "valueOptions": {
             "sourceType": "ModSettingInt",
