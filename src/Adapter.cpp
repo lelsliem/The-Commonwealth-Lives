@@ -1907,6 +1907,51 @@ namespace TLC
         // are corrected by the per-second sweep.
         ReclassifyLoadedMinds();
 
+        // The tuning truth (0.8.x field find): the co-save serializes
+        // each mind's DecayRate — a mind's rhythm survives restore — but
+        // a save written under old tuning carries those old rates
+        // forever, so the INI stops mattering for a restored world (the
+        // 0.1/s flood under a 0.002 INI). Re-derive every rate from
+        // today's INI * the mind's deterministic jitter: the jitter is
+        // id-derived, so the desync survives; the value (where the need
+        // sits in its rhythm) stays as saved. The INI is authoritative;
+        // a stale save heals on its next load instead of flooding.
+        {
+            auto reDerived = 0U;
+
+            m_Registry.ForEachWithComponent<LCE::Simulation::Needs>(
+                [this, &reDerived](
+                    LCE::Simulation::EntityId a_entity,
+                    LCE::Simulation::Needs& a_needs)
+                {
+                    const auto rateFactor = 1.0f + IdJitter(a_entity, 0.40f);
+
+                    for (auto& need : a_needs.List)
+                    {
+                        float base = 0.0f;
+
+                        switch (need.Type)
+                        {
+                        case LCE::Simulation::NeedType::Hunger: base = m_Settings.Rates.Hunger; break;
+                        case LCE::Simulation::NeedType::Fatigue: base = m_Settings.Rates.Fatigue; break;
+                        case LCE::Simulation::NeedType::Safety: base = m_Settings.Rates.Safety; break;
+                        case LCE::Simulation::NeedType::Social: base = m_Settings.Rates.Social; break;
+                        case LCE::Simulation::NeedType::Comfort: base = m_Settings.Rates.Comfort; break;
+                        }
+
+                        need.DecayRate = std::max(0.0f, base * rateFactor);
+                    }
+
+                    ++reDerived;
+                });
+
+            REX::INFO(
+                "restore: re-derived decay rates for {} minds from "
+                "today's tuning (hunger base {:.4f}/s) — the INI "
+                "governs a restored world",
+                reDerived, m_Settings.Rates.Hunger);
+        }
+
         // The economy stone: a restored human without a pouch predates
         // the economy — the record had no caps to carry. Back-fill the
         // seed so a pre-economy save wakes into a living market instead of

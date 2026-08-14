@@ -9,6 +9,23 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.x field fix — the INI governs a restored world (2026-08-14)
+
+- **Decay rates re-derived on restore.** The co-save serializes each
+  mind's `DecayRate` so a mind's rhythm survives save/load — but a
+  save written under old tuning carried those old rates forever, so
+  the INI silently stopped mattering for a restored world (the
+  field-found 0.1/s flood under a 0.002 INI: every restored mind
+  starved on a perfect ~10 s cadence and the log ballooned).
+  `ApplyRestore` now re-derives every rate from today's INI × the
+  mind's deterministic jitter (id-derived, so the per-mind desync
+  survives; the need's *value* stays as saved). The INI is
+  authoritative again, a stale save heals on its next load instead of
+  flooding, and one `restore:` line logs the re-seed with the hunger
+  base it applied.
+
+---
+
 ## 0.8.x tooling — the load-order hello-world + caravan worker names (2026-08-14)
 
 - **The diagnostic self-test (`sim.diag.selfTest`).** A new `Diag`
