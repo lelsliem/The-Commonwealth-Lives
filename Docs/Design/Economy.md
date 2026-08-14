@@ -159,9 +159,14 @@ knobs shipped and harness-pinned (27/27), then failed in the field:
   inventory. **Root cause (2026-08-14): the count's sign.** The
   unified inventory native removes on a POSITIVE count and adds on a
   negative one — the first build passed `-totalOut`, so nothing
-  visibly moved. Fixed: positive count + `ITEM_REMOVE_REASON::kSelling`
-  (the game's own trade-money flow) + a before/after `GetGoldAmount`
-  diagnostic in the bill line. Field test pending.
+  visibly moved. **UNBENCHED + FIELD-VERIFIED 2026-08-14:** positive
+  count + `ITEM_REMOVE_REASON::kSelling` (the game's own trade-money
+  flow) with a before/after `GetGoldAmount` diagnostic — the log
+  reads `the wage bill of 5190 caps came from the player's purse
+  (25100 -> 19910)`. One benign edge: the world-start back-fill pay
+  can fire before the player's gold reads (0 -> 0 — the deduction is
+  then a no-op, the safe direction: the back-fill is covered in
+  spirit).
 
 **The revert:** `sim.economy.stipend.requireOwned` defaults to 0 (every
 mind with a home market draws — the working behavior), the source

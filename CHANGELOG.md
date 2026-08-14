@@ -26,8 +26,13 @@ field and were **reverted to the working minted stipend**:
   inventory; the FO4 count semantics need investigation.
 
 The keys, the census ownership read, and the deduction edge stay in
-  the tree, benched for 0.8.6c → 0.9.x (unbench: the WorkshopParent
-  quest-array read, and the RemoveItem semantics).
+  the tree; the ownership read remains benched for 0.8.6c → 0.9.x
+  (the WorkshopParent quest-array read). **Player-pays unbenched and
+  field-verified 2026-08-14:** the failure was the count's sign — the
+  unified inventory native removes on a positive count and adds on a
+  negative one — fixed with a positive count + `kSelling` reason, and
+  the bill line now carries a before/after gold diagnostic
+  (`25100 -> 19910`).
 
 Also in this pass: **the Robot species** (field find — Buddy the Mr.
 Handy seeded as Human and caught the flu). Robots are now their own

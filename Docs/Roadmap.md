@@ -531,11 +531,14 @@ that chugs at 600 minds is dead on arrival.
      Sanctuary workbench is rejected by the console ("not a
      function") — the AVIF record is vestigial, never registered in
      the game's AV table.
-  2. **Player-pays deduction** — root cause found 2026-08-14: the
-     unified inventory native removes on a POSITIVE count and adds on
-     a negative one; the first build passed `-totalOut`, so nothing
-     visibly moved. Fixed (positive count + `kSelling` reason +
-     before/after `GetGoldAmount` diagnostic); field test pending.
+  2. **Player-pays deduction — DONE, field-verified 2026-08-14**
+     (`the wage bill of 5190 caps came from the player's purse
+     (25100 -> 19910)`). Root cause was the count's sign: the unified
+     inventory native removes on a POSITIVE count and adds on a
+     negative one; the first build passed `-totalOut`. Fixed with
+     positive count + `kSelling` reason + the before/after
+     `GetGoldAmount` diagnostic. Only the ownership read (item 1)
+     remains benched.
 
   Both are small and independent; either may land before the scale
   gate closes, and neither blocks it.
