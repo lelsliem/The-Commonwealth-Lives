@@ -4500,7 +4500,13 @@ namespace TLC
         m_Burials.clear();
         m_MedicineStock.clear();
         m_Walks.clear();
-        m_WorkshopNames.clear();
+        // NOTE: m_WorkshopNames deliberately survives EndWorld — it has
+        // the same lifetime as m_Workshops (static per load order; a
+        // workshop's location name never changes). Clearing it here
+        // broke the post-restore pay line: the restore's EndWorld wiped
+        // the cache, the re-seed skipped the census (m_WorkshopsReady
+        // still true), and every settlement paid under a bare hex
+        // (2026-08-14 field find).
         m_ArrivedAt.clear();
         m_WalkRefusedUntil.clear();
         m_InteractCooldown.clear();
@@ -4789,6 +4795,39 @@ namespace TLC
             REX::INFO(
                 "economy: {} of {} workshops read as the player's.",
                 m_OwnershipOwned, m_OwnershipCount);
+        }
+
+        // The name-cache diagnostic (0.8.6b field): how many workshop
+        // names the census captured, and the first few — so the pay
+        // line's settlement naming is verifiable in-game (an empty
+        // cache with a full census says the capture read is wrong; a
+        // populated cache with hex pay lines says the pay's form ids
+        // don't match the census's). One-time.
+        if (m_CensusDiagnosed)
+        {
+            auto it = m_WorkshopNames.begin();
+            const auto end =
+                it != m_WorkshopNames.end()
+                ? std::next(it, std::min<std::size_t>(3, m_WorkshopNames.size()))
+                : it;
+
+            std::string sample;
+
+            for (; it != end; ++it)
+            {
+                if (!sample.empty())
+                {
+                    sample += ", ";
+                }
+
+                sample += FormatHex8(it->first) + "='" + it->second + "'";
+            }
+
+            REX::INFO(
+                "census: {} workshop names cached{}",
+                m_WorkshopNames.size(),
+                sample.empty() ? " (empty)."
+                               : " — " + sample + ".");
         }
     }
 
