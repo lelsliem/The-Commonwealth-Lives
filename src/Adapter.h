@@ -45,6 +45,7 @@
 namespace RE
 {
     class Actor;
+    class ActorValueInfo;
     class TESObjectREFR;
     class TESWeather;
 }
@@ -309,15 +310,16 @@ namespace TLC
         // the first seed) and the list survives worlds.
         void RefreshWorkshops();
 
-        // The ownership read (0.8.6c): the WorkshopParent quest's
-        // Workshops array (WorkshopScript[] — the game's master list),
-        // each script's OwnedByPlayer bool — the exact property the
-        // game's own SetOwnedByPlayer/CheckOwnership use. Runs before
-        // the census's per-workshop pass, so the requireOwned gate and
-        // the ownership summary see the same map. True when the quest
-        // read succeeded; a failure leaves the map empty (the gate's
-        // safe default) and is retried on the next census pass, like
-        // the census itself.
+        // The ownership read (0.8.6c): each workshop ref's bound
+        // WorkshopScript OwnedByPlayer bool — the exact property the
+        // game's own SetOwnedByPlayer/CheckOwnership use. Iterates the
+        // census's known workshops (form ids), resolves each ref, and
+        // reads its script flag through the VM; the caller SEH-guards
+        // the pass (the quest's Workshops array once crashed on stale
+        // objects). True when at least one OwnedByPlayer read landed;
+        // a failure leaves the map empty (the gate's safe default) and
+        // is retried from SeedMarket until the scripts bind or the
+        // attempt window closes.
         bool QueryPlayerOwnedWorkshops();
 
         // A workshop form becomes a market entity (a FormRef only — a
@@ -378,29 +380,37 @@ namespace TLC
 
         // Whether the player owns each workshop, keyed by the
         // workbench's form id. Populated by QueryPlayerOwnedWorkshops:
-        // each WorkshopScript's OwnedByPlayer bool from the
-        // WorkshopParent quest's Workshops array — the game's own
-        // ownership truth (SetOwnedByPlayer flips it when the player
-        // claims a settlement). Every other read died in the field:
-        // GetOwner() null everywhere, the WorkshopPlayerOwned AV reads
-        // 0 on every ref (the game never sets it — the Fandom
-        // decompile's WorkshopPlayerOwnership name was a red herring),
-        // and the console rejects getav on the bench. The stipend's
-        // requireOwned gate consults this map: a settler at a workshop
-        // you've never claimed doesn't draw a wage. A workshop missing
-        // from the map reads as unowned (the gate's safe default).
+        // each workshop ref's bound WorkshopScript OwnedByPlayer bool
+        // — the exact property the game's SetOwnedByPlayer flips when
+        // the player claims a settlement. Every other read died in the
+        // field: GetOwner() null everywhere; the WorkshopPlayerOwned
+        // AVIF reads 0 on every ref (the game never sets it);
+        // WorkshopPlayerOwnership is rejected by the console ("not
+        // found for perimeter actor value", verified in-game
+        // 2026-08-14); and the quest's Workshops array iteration
+        // crashed on unloaded workshops' stale script objects. The
+        // stipend's requireOwned gate consults this map: a settler at
+        // a workshop you've never claimed doesn't draw a wage. A
+        // workshop missing from the map reads as unowned (the gate's
+        // safe default).
         std::unordered_map<std::uint32_t, bool> m_WorkshopOwned;
 
-        // The ownership query ran this session (once — ownership is
-        // static per load, like the census).
+        // The ownership read's retry state: the workshop scripts may
+        // not be bound at the first census (world start), so the query
+        // retries from SeedMarket every few seconds until at least one
+        // OwnedByPlayer read lands, or the attempt window closes
+        // (~60s — then the map stays empty and the gate gates
+        // everyone, the safe default).
         bool m_OwnershipQueried = false;
+        std::chrono::steady_clock::time_point m_LastOwnershipAttempt{};
+        std::uint32_t m_OwnershipAttempts = 0;
 
-        // The census ownership diagnostics (0.8.6c): how many of the
-        // known workshops the quest's Workshops array reports as the
-        // player's, so the requireOwned gate is verified in-game — a
-        // zero-owned summary with a full census says the read is wrong
-        // (every settlement would be gated), not that the player owns
-        // nothing.
+        // The ownership diagnostics (0.8.6c): how many of the known
+        // workshops got an OwnedByPlayer read and how many read owned,
+        // so the requireOwned gate is verified in-game — a
+        // zero-owned summary with a full census says the read is
+        // wrong (every settlement would be gated), not that the
+        // player owns nothing.
         std::uint32_t m_OwnershipCount = 0;
         std::uint32_t m_OwnershipOwned = 0;
 
