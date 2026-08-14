@@ -174,6 +174,16 @@ namespace TLC::Tuning
         // the starved-world hunt proved a silent hard cap is a trap.
         std::size_t WalkCap = 16;
 
+        // The refusal cooldown (0.8.x field fix): how long a mind whose
+        // walk was refused — no actor or no AI process (an actor in a
+        // streamed-out cell, or the game's AI not yet started) — stays
+        // parked before it tries again (seconds). Without it, a handful
+        // of such minds re-decide MoveTo every frame, get refused, and
+        // the refusal DEBUG line floods the log (420/s in the field
+        // with the game running at speed). 30 s bounds a stuck mind to
+        // ~2 attempts a minute instead of ~60 a second.
+        float WalkRefusalCooldown = 30.0f;
+
         // The physical exchange (the economy stone): a meal's price in
         // caps. A buyer pays what they can afford up to this; the rest
         // the settlement covers. 5 caps, a modest market.
@@ -586,6 +596,10 @@ namespace TLC::Tuning
                 // keep the default — a broken line never breaks the world
             }
         }
+
+        // The refusal cooldown is a float like the wander cooldown.
+        settings.WalkRefusalCooldown =
+            read("sim.walk.refusalCooldown", settings.WalkRefusalCooldown);
 
         return settings;
     }

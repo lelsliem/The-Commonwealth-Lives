@@ -4036,6 +4036,7 @@ namespace TLC
         m_MedicineStock.clear();
         m_Walks.clear();
         m_ArrivedAt.clear();
+        m_WalkRefusedUntil.clear();
         m_MarketAttendance.clear();
         m_LastWander.clear();
         m_LastCough.clear();
@@ -6226,7 +6227,24 @@ namespace TLC
                     && now - arrivedIt->second.second
                         < std::chrono::seconds(10);
 
+                // The refusal cooldown (0.8.x field fix): a mind whose
+                // walk was refused — no actor or no AI process — stays
+                // parked until the cooldown passes. The refusal is a
+                // persistent state (a streamed-out actor), not a
+                // one-frame glitch; without the cooldown the mind
+                // re-decides MoveTo next frame, is refused again, and
+                // the refusal DEBUG line floods the log (~420/s with a
+                // handful of such minds). Treat the MoveTo as satisfied
+                // while parked — the mind re-attempts after the
+                // cooldown, and the moment its actor is ready the walk
+                // goes through.
+                const auto refusedIt = m_WalkRefusedUntil.find(entry.Entity);
+
+                const bool parked = refusedIt != m_WalkRefusedUntil.end()
+                    && now < refusedIt->second;
+
                 if (justArrived
+                    || parked
                     || (!session.Reached
                         && session.Target == targetFormId
                         && now - session.Issued < std::chrono::seconds(120)))
@@ -6273,8 +6291,16 @@ namespace TLC
                             // A refused walk ends the session — erase,
                             // don't reset (see the cap branch: a reset
                             // leaves a zombie that ProbeWalks logs as
-                            // instantly ended).
+                            // instantly ended). Park the mind for the
+                            // refusal cooldown so it does not retry
+                            // next frame and flood the log.
                             m_Walks.erase(entry.Entity);
+                            m_WalkRefusedUntil[entry.Entity] =
+                                now
+                                + std::chrono::duration_cast<
+                                    std::chrono::steady_clock::duration>(
+                                    std::chrono::duration<float>(
+                                        m_Settings.WalkRefusalCooldown));
                         }
                     }
                 }

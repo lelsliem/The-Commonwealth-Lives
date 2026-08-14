@@ -744,6 +744,16 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             m_LastLogged;
         std::unordered_map<LCE::Simulation::EntityId, WalkSession> m_Walks;
 
+        // The refusal cooldown (0.8.x field fix): when a mind's walk was
+        // refused — no actor or no AI process — the mind stays parked
+        // until this time before trying again. Without it, a few minds
+        // in streamed-out cells re-decide MoveTo every frame, get
+        // refused, and the refusal line floods the log (420/s observed).
+        // Ephemeral session state, never co-saved.
+        std::unordered_map<
+            LCE::Simulation::EntityId, std::chrono::steady_clock::time_point>
+            m_WalkRefusedUntil;
+
         // When each mind last arrived, and where (target form id + time).
         // The arrival-cooldown guard: a mind that just arrived at its
         // destination has its next MoveTo there treated as satisfied, so
