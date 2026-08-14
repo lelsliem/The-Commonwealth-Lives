@@ -1850,3 +1850,44 @@ Every call below is a decision, not an accident:
 The audit's verdict: the show is nearly complete. Remaining before the
 1.0.0 gate: the earn-caps economy, log hygiene, and the 0.9.x
 polish/animation passes.
+
+## 0061 — 0.8.6c: The ownership read, finally the truth (2026-08-14)
+
+**Date:** 2026-08-14
+
+The who-pays bench's first unbench item (ownership for `requireOwned`)
+is DONE + field-verified. The road was long; every candidate died in
+the field, and the resolution is worth recording so it is never
+re-walked:
+
+1. **GetOwner()** — null for every workshop (0 of 28 in the field).
+   Dead.
+2. **The per-ref `OwnedByPlayer` script property** — reads fresh
+   defaults until the workshop's cell streams in (bound script
+   verified, real `0` even for owned Sanctuary). Dead for unloaded
+   refs.
+3. **The quest's `Workshops` script array** — the master list, but
+   built at runtime from the `WorkshopsCollection` alias; stays empty
+   through the entire retry window. Dead.
+4. **Both `getav` console names** (`WorkshopPlayerOwned`,
+   `WorkshopPlayerOwnership`) — rejected ("not found for perimeter
+   actor value"); the AVIFs aren't in the console's name table. The
+   `workshopPlayerOwned` singleton member looked right but is the
+   wrong form. Dead.
+5. **THE TRUTH: the `WorkshopPlayerOwnership` AVIF, form 0x33C in
+   Fallout4.esm** — its editor ID is literally `WorkshopPlayerOwned`
+   (explaining the singleton confusion). The vanilla
+   `WorkshopScript.psc` is decisive: `SetOwnedByPlayer` writes
+   `SetValue(WorkshopParent.WorkshopPlayerOwnership, bIsOwned as
+   float)`, and the game's own checks read it (`> 0`). Read off each
+   census workshop ref by form ID, the AV survives save/load
+   regardless of cell streaming.
+
+The second half was timing, not plumbing: the query ran at the
+menu-world wake (quest props `Initialized = false`,
+`PlayerOwnsAWorkshop = false`), read fresh defaults, marked itself
+done, and never re-ran after the save loaded its real state. `EndWorld`
+now re-arms the query per world. Field log: menu wake reads 0 of 28
+(defaults), the loaded save reads 28 of 28 owned — matching the
+player's map. 0.8.6c's second unbench item (player-pays count sign)
+was already field-verified; the who-pays bench is now fully closed.

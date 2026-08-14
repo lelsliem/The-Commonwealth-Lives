@@ -143,22 +143,30 @@ sim.economy.stipend.requireOwned = 0     ; 0 = every mind with a home
 reverted to the minted stipend) recorded two field failures; both are
 now fixed and the minted default never regressed:
 
-- **The ownership read (`requireOwned`) — DONE (field test pending):**
-  vanilla FO4 does not store settlement ownership anywhere a wrapped
-  API can read it. `TESObjectREFR::GetOwner()` returns null for every
-  workshop (0 of 28 in the field); the `WorkshopPlayerOwned` actor
-  value is dead too — verified in-game 2026-08-14, the console
-  rejects `getav WorkshopPlayerOwned` on the Sanctuary workbench
-  ("not a function"); the AVIF record exists in the data but is never
-  registered in the game's AV table. The game's real ownership lives
-  in the WorkshopParent quest's Papyrus state (the
-  `PlayerOwnedWorkshops` array), readable only through VM plumbing —
-  which is exactly what the fix does: `QueryPlayerOwnedWorkshops`
-  resolves the quest's handle, `FindBoundObject`s the attached
-  WorkshopParentScript, pulls the array, and resolves each element's
-  handle back to its REFR, keying the census's owned map. The
-  per-workshop AVIF scan is gone. With the gate on, only unclaimed
-  settlements are gated.
+- **The ownership read (`requireOwned`) — DONE + FIELD-VERIFIED
+  2026-08-14.** The truth is the game's own `WorkshopPlayerOwnership`
+  actor value (form 0x33C in Fallout4.esm — its editor ID is
+  literally `WorkshopPlayerOwned`, which is why the console name
+  lookups and every wrong-AVIF attempt failed). The vanilla
+  `WorkshopScript.psc` settles it: `SetOwnedByPlayer` writes
+  `SetValue(WorkshopParent.WorkshopPlayerOwnership, bIsOwned as
+  float)` and the game's own checks read that AV (`> 0`).
+  `QueryPlayerOwnedWorkshops` resolves the AVIF by form ID and reads
+  it off each census workshop ref — the AV on the persistent ref
+  survives save/load regardless of cell streaming. The second half of
+  the fix was timing: the query once ran at the menu-world wake
+  (quest props read `Initialized = false`, `PlayerOwnsAWorkshop =
+  false`), read fresh defaults, and never re-ran after the save
+  loaded; `EndWorld` now re-arms the query per world. Field log: the
+  menu wake reads 0 of 28 (defaults), the loaded save reads 28 of 28
+  owned — matching the player's map. With the gate on, only unclaimed
+  settlements are gated. Every earlier candidate died in the field
+  and is recorded here so the road isn't re-walked: `GetOwner()`
+  returns null for every workshop; the per-ref `OwnedByPlayer` script
+  property reads fresh defaults until the cell streams; the quest's
+  `Workshops` script array is built at runtime from the
+  `WorkshopsCollection` alias and stays empty through the retry
+  window; the console rejects both `getav` names.
 - **The player-pays leg (`source = player`)**: the RemoveItem path ran
   (the log's bill line fired: "the wage bill of 5320 caps came from
   the player's purse") but the caps never left the player's
@@ -178,8 +186,8 @@ now fixed and the minted default never regressed:
 mind with a home market draws — the working behavior), the source
 stays `settlement` (minted), and the MCM toggles sit inert. The keys,
 the census ownership read, and the deduction edge stay in the tree.
-**Unbench work, both done in 0.8.6c:** the WorkshopParent quest-array
-read (ownership, above) and the RemoveItem count/reason investigation
+**Unbench work, both done in 0.8.6c:** the ownership AV read
+(above, field-verified) and the RemoveItem count/reason investigation
 (player-pays, below). The minted default never regressed.
 
 **The two questions, answered (as designed).**
@@ -200,8 +208,8 @@ read (ownership, above) and the RemoveItem count/reason investigation
    census even finds them in cells like the Fens Street sewer).
    `sim.economy.stipend.requireOwned = 1` gates the draw on workshop
    ownership: the census already reads every persistent-cell workshop,
-   and the ownership read (the WorkshopParent quest-array set,
-   `QueryPlayerOwnedWorkshops`) rides the same census pass. An
+   and the ownership read (`QueryPlayerOwnedWorkshops`, the
+   `WorkshopPlayerOwnership` AV read) rides the same census pass. An
    unowned settlement's
    minds simply don't draw — the wage line omits them — until the
    player claims it. Default 1: you shouldn't pay wages for people you

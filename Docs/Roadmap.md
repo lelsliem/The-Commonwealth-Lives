@@ -498,12 +498,12 @@ the cuts.
 - **Earn-caps economy (0.8.6b):** the settlement stipend is BUILT
   and harness-pinned (`StipendMark` + the once-per-day sweep, 27/27
   suites; Economy.md). The "who pays" extension shipped, failed in
-  the field, and is BENCHED (2026-08-14) — both knobs stay in the
+  the field, and was BENCHED (2026-08-14) — both knobs stayed in the
   tree, reverted to the working minted stipend: `requireOwned`
-  defaults 0 and `source` stays settlement. The two unbench items
-  ride 0.8.6c (below): the WorkshopParent quest-array ownership read,
-  and the RemoveItem count-semantics fix for player-pays. The minted
-  default never regresses.
+  defaults 0 and `source` stays settlement. Both unbench items
+  landed in 0.8.6c (below): the ownership AV read and the RemoveItem
+  count-semantics fix for player-pays. The minted default never
+  regressed.
 - **Log hygiene:** the decision-chatter rate limit (audit item 2).
 
 0.8.6c — Scale in the Field
@@ -525,28 +525,29 @@ that chugs at 600 minds is dead on arrival.
 
 - **The who-pays bench reopens (the two 0.8.6b failures, Economy.md §
   Who pays):**
-  1. **Ownership read — DONE, built 2026-08-14** (field test
-     pending): `QueryPlayerOwnedWorkshops` reads the WorkshopParent
-     quest's `PlayerOwnedWorkshops` array through the VM — resolve
-     the quest's handle (`GetHandleForObject(kQUST)`),
-     `FindBoundObject` the attached WorkshopParentScript, pull the
-     property, and resolve each element's handle back to its REFR.
-     The census's per-workshop AVIF scan is gone; the gate now
-     checks the quest-owned set. The field truth to beat (verified
-     in-game 2026-08-14): `GetOwner()` null everywhere, and `getav
-     WorkshopPlayerOwned` on the Sanctuary workbench is rejected by
-     the console ("not a function") — the AVIF record is vestigial,
-     never registered in the game's AV table.
+  1. **Ownership read — DONE + FIELD-VERIFIED 2026-08-14.** The
+     truth is the game's own `WorkshopPlayerOwnership` actor value
+     (form 0x33C in Fallout4.esm; its editor ID is literally
+     `WorkshopPlayerOwned`), read off each census workshop ref by
+     form ID — the exact storage `SetOwnedByPlayer` writes and the
+     game's own checks read. The second half was timing: the query
+     once ran at the menu-world wake, read fresh defaults, and never
+     re-ran after the save loaded — `EndWorld` now re-arms it per
+     world. Field log: menu wake 0 of 28, loaded save 28 of 28 owned,
+     matching the player's map. The road not re-walked (all died in
+     the field): `GetOwner()` null everywhere, the per-ref
+     `OwnedByPlayer` script property (fresh defaults until the cell
+     streams), the quest's `Workshops` script array (built at runtime
+     from `WorkshopsCollection`, empty through the retry window), and
+     both `getav` console names.
   2. **Player-pays deduction — DONE, field-verified 2026-08-14**
      (`the wage bill of 5190 caps came from the player's purse
      (25100 -> 19910)`). Root cause was the count's sign: the unified
      inventory native removes on a POSITIVE count and adds on a
      negative one; the first build passed `-totalOut`. Fixed with
      positive count + `kSelling` reason + the before/after
-     `GetGoldAmount` diagnostic. Both who-pays items are now done;
-     the only open field test is the ownership summary on the next
-     launch (`economy: WorkshopParent quest records N owned
-     workshop(s) — M read as the player's`).
+     `GetGoldAmount` diagnostic. Both who-pays items are now done and
+     field-verified.
 
 ═══════════════════════════════════════════════
 

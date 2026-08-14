@@ -210,14 +210,14 @@ namespace TLC::Tuning
 
         // Whose people draw (0.8.6b extension): 1 = only minds whose
         // home settlement the player owns draw the stipend; 0 = every
-        // mind with a home market draws, owned or not. Benched
-        // 2026-08-14: the ownership read failed in the field — vanilla
-        // FO4 keeps it in the WorkshopParent quest's Papyrus state,
-        // unreadable via any wrapped API (GetOwner returns null; the
-        // WorkshopPlayerOwned actor value is a Workshop-Framework
-        // mechanic, never set by vanilla) — so the gate defaults OFF
-        // (the working behavior). The key stays for the quest-array
-        // read on a later release.
+        // mind with a home market draws, owned or not. UNBENCHED
+        // 2026-08-14 (0.8.6c): the ownership read now works — the
+        // game's own WorkshopPlayerOwnership AV (form 0x33C, the exact
+        // storage SetOwnedByPlayer writes) read off each census
+        // workshop ref, field-verified 28 of 28 owned on the loaded
+        // save. The gate still defaults OFF (the working behavior —
+        // minted stipend pays everyone); flip it on to gate the draw
+        // to claimed settlements.
         bool StipendRequireOwned = false;
 
         // The meal-cadence wander (0.6.0 Stone 3.75): how often a

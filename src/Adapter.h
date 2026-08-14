@@ -380,15 +380,16 @@ namespace TLC
 
         // Whether the player owns each workshop, keyed by the
         // workbench's form id. Populated by QueryPlayerOwnedWorkshops:
-        // each workshop ref's bound WorkshopScript OwnedByPlayer bool
-        // — the exact property the game's SetOwnedByPlayer flips when
-        // the player claims a settlement. Every other read died in the
-        // field: GetOwner() null everywhere; the WorkshopPlayerOwned
-        // AVIF reads 0 on every ref (the game never sets it);
-        // WorkshopPlayerOwnership is rejected by the console ("not
-        // found for perimeter actor value", verified in-game
-        // 2026-08-14); and the quest's Workshops array iteration
-        // crashed on unloaded workshops' stale script objects. The
+        // the game's own WorkshopPlayerOwnership AV (form 0x33C, the
+        // exact storage SetOwnedByPlayer writes) read off each census
+        // workshop ref — field-verified 2026-08-14: the loaded save
+        // reads 28 of 28 owned, matching the player's map. Every
+        // earlier read died in the field and is recorded in
+        // DecisionLog 0061 so the road isn't re-walked: GetOwner()
+        // null everywhere; the per-ref OwnedByPlayer script property
+        // (fresh defaults until the cell streams); the quest's
+        // Workshops script array (built at runtime, empty through the
+        // retry window); both getav console names rejected. The
         // stipend's requireOwned gate consults this map: a settler at
         // a workshop you've never claimed doesn't draw a wage. A
         // workshop missing from the map reads as unowned (the gate's
