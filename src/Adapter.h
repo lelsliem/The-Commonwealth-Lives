@@ -396,12 +396,13 @@ namespace TLC
         // safe default).
         std::unordered_map<std::uint32_t, bool> m_WorkshopOwned;
 
-        // The ownership read's retry state: the workshop scripts may
-        // not be bound at the first census (world start), so the query
-        // retries from SeedMarket every few seconds until at least one
-        // OwnedByPlayer read lands, or the attempt window closes
-        // (~60s — then the map stays empty and the gate gates
-        // everyone, the safe default).
+        // The ownership read's retry state: the menu-world wake reads
+        // fresh defaults before the save's state applies, so the query
+        // retries from SeedMarket every few seconds until the restored
+        // world's reads land, or the attempt window closes (~60s — then
+        // the map stays empty and the gate gates everyone, the safe
+        // default; the gate defaults OFF anyway). Re-armed per world
+        // (EndWorld) so every load re-reads the restored quest.
         bool m_OwnershipQueried = false;
         std::chrono::steady_clock::time_point m_LastOwnershipAttempt{};
         std::uint32_t m_OwnershipAttempts = 0;

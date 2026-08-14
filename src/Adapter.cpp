@@ -4621,114 +4621,6 @@ namespace TLC
         m_OwnershipCount = 0;
         m_OwnershipOwned = 0;
 
-        // One-time diagnostic: dump the quest script's properties
-        // (name + raw type + simple value), so the game's real
-        // per-workshop ownership state is visible instead of guessed
-        // — the ref scripts read fresh defaults at world start, so
-        // the quest is the only initialized source of truth. The
-        // workshop refs' OwnedByPlayer flags only initialize when
-        // their cells stream in; the WorkshopParent quest's script
-        // is always loaded and initialized, so its properties are
-        // the game's authoritative ownership data.
-        if (m_OwnershipAttempts == 1)
-        {
-            auto* quest =
-                RE::TESForm::GetFormByEditorID("WorkshopParent");
-            auto* questAsQuest =
-                quest != nullptr ? quest->As<RE::TESQuest>()
-                                 : nullptr;
-
-            if (questAsQuest != nullptr)
-            {
-                const auto& handles =
-                    vm->GetObjectHandlePolicy();
-                const auto handle = handles.GetHandleForObject(
-                    RE::BSScript::GetVMTypeID<RE::TESQuest>(),
-                    questAsQuest);
-
-                if (handle != handles.EmptyHandle())
-                {
-                    RE::BSTSmartPointer<RE::BSScript::Object>
-                        questObject;
-
-                    if (vm->FindBoundObject(
-                            handle, "WorkshopParentScript", false,
-                            questObject, false)
-                        && questObject != nullptr)
-                    {
-                        if (const auto* typeInfo =
-                                questObject->GetTypeInfo())
-                        {
-                            for (auto* iter = typeInfo;
-                                 iter != nullptr;
-                                 iter = iter->GetParent())
-                            {
-                                const auto propCount =
-                                    iter->GetNumProperties();
-                                const auto* props =
-                                    iter->GetPropertyIter();
-
-                                if (propCount == 0)
-                                {
-                                    continue;
-                                }
-
-                                for (std::uint32_t i = 0;
-                                     i < propCount; ++i)
-                                {
-                                    const auto* var =
-                                        questObject->GetProperty(
-                                            props[i].name);
-
-                                    std::string value = "?";
-
-                                    if (var != nullptr)
-                                    {
-                                        if (var->is<bool>())
-                                        {
-                                            value =
-                                                RE::BSScript::get<bool>(
-                                                    *var)
-                                                    ? "true"
-                                                    : "false";
-                                        }
-                                        else if (
-                                            var->is<std::uint32_t>())
-                                        {
-                                            value = std::to_string(
-                                                RE::BSScript::get<
-                                                    std::uint32_t>(
-                                                    *var));
-                                        }
-                                        else if (var->is<float>())
-                                        {
-                                            value = std::to_string(
-                                                RE::BSScript::get<float>(
-                                                    *var));
-                                        }
-                                    }
-
-                                    REX::INFO(
-                                        "economy: quest prop '{}' (raw {:#x}) = {}.",
-                                        props[i].name.c_str(),
-                                        var != nullptr
-                                            ? static_cast<
-                                                  std::uint32_t>(
-                                                  var->GetType()
-                                                      .GetRawType())
-                                            : 0,
-                                        value);
-                                }
-
-                                break;   // the script's own level
-                                         // is what matters
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // The ownership AVIF (0.8.6c definitive): the game's own
         // WorkshopPlayerOwnership actor value — the exact AV the
         // vanilla WorkshopScript.SetOwnedByPlayer writes on the
@@ -5727,13 +5619,16 @@ namespace TLC
         }
 
         // The ownership read retries from here (after the first census
-        // fills the workshop list): the workshop scripts may not be
-        // bound at world start, so keep trying every few seconds until
-        // at least one OwnedByPlayer read lands or the attempt window
-        // closes (~60s — then the map stays empty and the requireOwned
-        // gate gates everyone, the safe default). SEH-guarded: the VM
-        // reads touch bound-script memory, and the quest's Workshops
-        // array once crashed on stale objects — a fault must log, not
+        // fills the workshop list): the WorkshopPlayerOwnership AVIF
+        // (form 0x33C) is a base-game form, always loaded, so the
+        // resolution itself rarely fails — but the menu-world wake
+        // reads fresh defaults before the save's state applies, and
+        // the retry window (every few seconds, ~60s total) lets the
+        // restored world's reads land; after the window the map stays
+        // empty and the requireOwned gate gates everyone (the safe
+        // default — the gate defaults OFF anyway). SEH-guarded: the
+        // per-ref AV reads touch game memory, and an earlier quest-array
+        // iteration crashed on stale objects — a fault must log, not
         // vanish silently.
         if (!m_OwnershipQueried && !m_Workshops.empty())
         {
@@ -6394,8 +6289,11 @@ namespace TLC
                                         RE::TESForm::GetFormByID<RE::TESIdleForm>(
                                             0x000EA85C))
                                 {
-                                    actor->currentProcess->PlayIdle(
-                                        *actor, cough, nullptr);
+                                    if (actor->currentProcess != nullptr)
+                                    {
+                                        actor->currentProcess->PlayIdle(
+                                            *actor, cough, nullptr);
+                                    }
                                 }
                             }
                         }

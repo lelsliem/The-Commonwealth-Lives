@@ -276,7 +276,7 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
     // Gated off by default so normal play stays quiet.
     if (TLC::Diag::SelfTestRequested())
     {
-        TLC::Diag::RunSelfTest();
+        (void)TLC::Diag::RunSelfTest();
     }
 
     // The simulation's heartbeat: once per frame on the game thread, the
