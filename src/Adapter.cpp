@@ -3293,7 +3293,8 @@ namespace TLC
         LCE::Simulation::EntityId a_speaker,
         LCE::Simulation::EntityId a_listener,
         Dialogue::Pool a_pool,
-        bool a_loud)
+        bool a_loud,
+        bool a_radio)
     {
         // One line, deterministic per mind and day — the same mind says
         // the same line all day and a different one tomorrow (Pick). An
@@ -3315,20 +3316,26 @@ namespace TLC
             "LCE: {} to {}: \"{}\"",
             MindLabelForm(speakerForm), MindLabelForm(listenerForm), line);
 
-        // The radio channel: the same feed the settlement radio reads as
-        // on-screen captions, so a conversation line pops while the
-        // player is near. (PushNews would also pop a HUD notification;
-        // speech is quieter — the feed alone is the radio's story.) A
-        // loud line is the exception: it rides the game's own subtitle
-        // display — a bottom-of-screen subtitle, like dialogue — and
-        // only when the player is close enough to hear it (0.7.5 field:
-        // the words were log-and-feed only, then a top-left news pop;
-        // a spoken threat reads as a subtitle, not a headline).
+        // The two channels a line can take beyond the log:
+        //   - a_radio: the settlement radio's feed, the same queue the
+        //     captions read from. Big news — births, deaths, feuds —
+        //     broadcasts; ordinary conversation does not (0.8.4 field
+        //     truth: the player should hear what is said nearby, not
+        //     the whole settlement's small talk).
+        //   - the ear: the game's own subtitle display — a
+        //     bottom-of-screen line, like dialogue — shown only when
+        //     the speaker is within sim.subtitle.radius of the player
+        //     (a loud line or a local interaction; a broadcast news
+        //     line never pops a subtitle on its own).
         const auto lineLabel =
             MindLabelForm(speakerForm) + ": \"" + line + "\"";
-        m_News.Add(lineLabel);
 
-        if (a_loud)
+        if (a_radio)
+        {
+            m_News.Add(lineLabel);
+        }
+
+        if (a_loud || !a_radio)
         {
             auto* speaker =
                 RE::TESForm::GetFormByID<RE::TESObjectREFR>(speakerForm);
@@ -3489,7 +3496,10 @@ namespace TLC
                 break;
             }
 
-            Say(a.Id, partner, pool);
+            // Local, not broadcast: the line logs and subtitles when
+            // the player is close enough to hear it — the settlement
+            // radio never carries small talk (0.8.4 field truth).
+            Say(a.Id, partner, pool, /*a_loud=*/false, /*a_radio=*/false);
 
             // The jittered cooldown: 0.5–1.5× the cadence, so a pair
             // never falls into lockstep chatter.

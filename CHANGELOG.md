@@ -36,11 +36,15 @@ non-walking neighbour inside `sim.interact.radius` (400 units),
 rolls `sim.interact.chance` (0.4), and speaks. The pool follows the
 bond — family for spouse/sweetheart/friend, a quiet row for
 enemy/rival, greet/gossip for strangers — via the existing `Say`
-channel (log + radio feed, no HUD spam). A walking mind never talks;
-the jittered `sim.interact.cadence` (30 s, 0.5–1.5×) keeps a pair
-from lockstep chatter. Tuning: `sim.interact.cadence/radius/chance`.
-Harness 26/26 green. The in-game trial decides whether it ships
-as 0.8.4 or closes as a documented finding.
+channel. The speech is local, not broadcast: it logs, and subtitles
+only when the player is within `sim.subtitle.radius` of the speaker
+— the settlement radio never carries small talk (the player hears
+what is said nearby, not the whole Commonwealth). A walking mind
+never talks; the jittered `sim.interact.cadence` (30 s, 0.5–1.5×)
+keeps a pair from lockstep chatter. Tuning:
+`sim.interact.cadence/radius/chance`. Harness 26/26 green. The
+in-game trial decides whether it ships as 0.8.4 or closes as a
+documented finding.
 
 ---
 

@@ -842,13 +842,18 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // on-screen HUD notification (throttled by the news cooldown,
         // like any news) — the fight's threats before the blows, so the
         // words land on screen, not just in the log and the feed.
-        // Ordinary conversation stays quiet: the feed alone is the
-        // radio's story.
+        // a_radio (0.8.4 field truth): whether the line also rides the
+        // radio feed. Big news broadcasts; ordinary conversation does
+        // not — a local interaction logs and subtitles when the player
+        // is within sim.subtitle.radius, and the settlement's small
+        // talk never reaches the feed (the player hears what is said
+        // nearby, not the whole Commonwealth).
         void Say(
             LCE::Simulation::EntityId a_speaker,
             LCE::Simulation::EntityId a_listener,
             Dialogue::Pool a_pool,
-            bool a_loud = false);
+            bool a_loud = false,
+            bool a_radio = true);
 
         // The random-interaction pass (0.8.4, the trial): minds who
         // cross paths sometimes speak unprompted — no hunger drive, no
