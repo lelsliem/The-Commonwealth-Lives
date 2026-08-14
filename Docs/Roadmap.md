@@ -510,14 +510,18 @@ the cuts.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: PASSED 2026-08-14
 
 The hard gate, measured: a normal save with hundreds of settlers
 must tick inside a frame budget (`TickReport` once a minute). A beta
 that chugs at 600 minds is dead on arrival.
 
 - Verify: a restored 600+ mind save holds frame time over a long
-  session
+  session — DONE: four reports at 618–619 live minds, worst single
+  Update 4.13–8.17 ms (typical ~5 ms) vs. the 16.6 ms frame budget;
+  game played smooth throughout. The sim's share is roughly half a
+  frame; Decide is the heaviest pass (a later optimization target,
+  not a gate failure).
 
 - **The who-pays bench reopens (the two 0.8.6b failures, Economy.md §
   Who pays):**

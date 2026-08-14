@@ -34,6 +34,17 @@ The keys, the census ownership read, and the deduction edge stay in
   the bill line now carries a before/after gold diagnostic
   (`25100 -> 19910`).
 
+## 0.8.6c — Scale in the Field (2026-08-14)
+
+The scale gate is wired and **passed**: the adapter fills the engine's
+`TickReport` every Update and logs once a minute (worst single frame +
+per-pass wall time). Field-verified on the 646-mind save — four
+consecutive reports at 618–619 live minds: worst frame **4.13–8.17 ms**
+(typical ~5 ms) against the 16.6 ms frame budget, game smooth
+throughout. The sim's whole share is roughly half a frame; Decide is
+the heaviest pass (1.5–2.5 ms — a later optimization target, not a
+gate failure).
+
 Also in this pass: **the Robot species** (field find — Buddy the Mr.
 Handy seeded as Human and caught the flu). Robots are now their own
 species: they talk but have no biological needs (no hunger, no
