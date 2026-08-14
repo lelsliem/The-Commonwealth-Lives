@@ -34,7 +34,8 @@ namespace TLC
     {
         Human,   // adult settlers — trade, talk, work
         Child,   // can talk, cannot trade — fed by the settlement
-        Animal   // cannot trade, buy, or talk — fed by the settlement
+        Animal,  // cannot trade, buy, or talk — fed by the settlement
+        Robot    // talks, cannot trade or fall ill — no biological needs
     };
 
     //-------------------------------------------------------------------------

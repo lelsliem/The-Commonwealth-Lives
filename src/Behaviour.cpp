@@ -39,12 +39,28 @@ namespace TLC
             .NeedsComfort = false,
         };
 
+        // A robot is a mind, not a body: it talks (Codsworth holds a
+        // conversation) but has no biological needs to seed — no hunger,
+        // no fatigue, no illness — so it never walks to the market and
+        // never falls sick. The game's own AI moves it; the sim only
+        // remembers and names it. The Aid market kind is defensive only
+        // (a robot never gets a hunger drive to arrive with).
+        static const BehaviourProfile kRobot{
+            .MarketKind   = Aid,
+            .CanTrade     = false,
+            .CanTalk      = true,
+            .NeedsSocial  = false,
+            .NeedsComfort = false,
+        };
+
         switch (a_species)
         {
         case Species::Animal:
             return kAnimal;
         case Species::Child:
             return kChild;
+        case Species::Robot:
+            return kRobot;
         case Species::Human:
             break;
         }
@@ -56,6 +72,16 @@ namespace TLC
         Species a_species, const NeedRates& a_rates)
     {
         using namespace LCE::Simulation;
+
+        // A robot is born with no biological needs at all — nothing to
+        // feed, nothing to tire, nothing to get ill from. The empty list
+        // means Decide finds no urgent need and the sim never commands
+        // it; the game's own AI runs the machine (the design note: no
+        // biological needs to seed).
+        if (a_species == Species::Robot)
+        {
+            return Needs{};
+        }
 
         Needs needs;
         needs.List.push_back(
@@ -104,9 +130,11 @@ namespace TLC
 
         case Species::Child:
         case Species::Animal:
+        case Species::Robot:
             // Fed by the feeder — nothing given in return: disposition
             // warms, no trust ledger, no barter. a_traded is ignored:
-            // they never trade.
+            // they never trade. Defensive for a robot — it never gets
+            // a hunger drive to arrive with.
             return Outcome{
                 a_other, InteractionKind::Aid, OutcomeResult::Success, 1.0f };
         }

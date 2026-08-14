@@ -501,9 +501,14 @@ namespace TLC::Bonds
                     // (HasBeenCompanionFaction — the CompanionTag) never
                     // romances: friends and feuds are fine, the dating
                     // pool is closed.
+                    // A robot never romances (0.8.6b): it can be a
+                    // friend and feud like anyone — the dating pool is
+                    // for people. Machines talk, they don't marry.
                     const bool kin =
                         tagA->Value == Species::Child
                         || tagB->Value == Species::Child
+                        || tagA->Value == Species::Robot
+                        || tagB->Value == Species::Robot
                         || a_kin.contains(key)
                         || a_registry.GetComponent<CompanionTag>(a_entity)
                         || a_registry.GetComponent<CompanionTag>(other);

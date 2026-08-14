@@ -303,7 +303,6 @@ namespace TLC
             case 0x0007ED1D:   // RadStagRace
             case 0x00090C33:   // FEVHoundRace
             case 0x000A0F2F:   // YaoGuaiRace
-            case 0x000A563A:   // EyeBotRace
             case 0x000A96BF:   // FeralGhoulGlowingRace
             case 0x000BB7D9:   // SupermutantBehemothRace — an animal,
                                // not a person: fed at the settlement,
@@ -318,6 +317,17 @@ namespace TLC
             case 0x000E12A6:   // MirelurkQueenRace
             case 0x00187AF9:   // RaiderDogRace
                 return Species::Animal;
+
+            // Robots — machines, not bodies (0.8.6b field find: Buddy
+            // the Mr. Handy seeded as Human and fell ill). A robot is a
+            // mind that talks but has no biological needs: never
+            // hungry, never tired, never sick, never at the market.
+            case 0x000359F4:   // HandyRace (Buddy, Codsworth)
+            case 0x000DFB33:   // ProtectronRace
+            case 0x000AE0B7:   // SentryBotRace
+            case 0x000D8417:   // AssaultronRace
+            case 0x000A563A:   // EyeBotRace
+                return Species::Robot;
 
             default:
                 break;
@@ -371,7 +381,6 @@ namespace TLC
             case 0x0007ED1D:   // RadStagRace
             case 0x00090C33:   // FEVHoundRace
             case 0x000A0F2F:   // YaoGuaiRace
-            case 0x000A563A:   // EyeBotRace
             case 0x000A96BF:   // FeralGhoulGlowingRace
             case 0x000BB7D9:   // SupermutantBehemothRace — an animal,
                                // not a person: fed at the settlement,
@@ -409,6 +418,8 @@ namespace TLC
                 return "child";
             case Species::Animal:
                 return "animal";
+            case Species::Robot:
+                return "robot";
             default:
                 return "settler";
             }
@@ -2596,7 +2607,14 @@ namespace TLC
         // The illness stone (0.8.0): every mind is born healthy. The
         // component is additive in the co-save — a pre-health save
         // restores with Value 1.0 and no sickness (the safe default).
-        m_Registry.AddComponent<Health>(id, Health{});
+        // A robot never carries one (0.8.6b field find — Buddy the
+        // Mr. Handy seeded as Human and caught the flu): machines have
+        // no biology to sicken, and the illness passes only touch minds
+        // with a Health component.
+        if (species != Species::Robot)
+        {
+            m_Registry.AddComponent<Health>(id, Health{});
+        }
 
         m_Translator.Add(formId, id);
     }
@@ -3452,10 +3470,12 @@ namespace TLC
                  const auto oldLabel =
                      tag->Value == Species::Animal ? "Animal"
                      : tag->Value == Species::Child ? "Child"
+                     : tag->Value == Species::Robot ? "Robot"
                                                     : "Human";
                  const auto newLabel =
                      fresh == Species::Animal ? "Animal"
                      : fresh == Species::Child ? "Child"
+                     : fresh == Species::Robot ? "Robot"
                                                : "Human";
 
                  REX::INFO(
@@ -3469,6 +3489,16 @@ namespace TLC
                  if (fresh != Species::Human)
                  {
                      m_Registry.RemoveComponent<CapPouch>(entity);
+                 }
+
+                 // A robot has no biology to sicken (0.8.6b): a
+                 // pre-fix save's robot was tagged Human and may carry
+                 // an illness — drop the Health component so the
+                 // re-classified machine is never ill again (the
+                 // illness passes only touch minds with one).
+                 if (fresh == Species::Robot)
+                 {
+                     m_Registry.RemoveComponent<Health>(entity);
                  }
              });
      }
