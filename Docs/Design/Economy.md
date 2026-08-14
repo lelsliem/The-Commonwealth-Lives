@@ -127,15 +127,73 @@ LCE: economy — Sanctuary paid its 47 people 5 caps each (235 caps out).
 sim.economy.stipend = 5        ; caps per mind per world-day (0 = the
                                ; stipend is off; the credit path alone
                                ; keeps the hungry fed)
+sim.economy.stipend.source = settlement  ; settlement = minted from the
+                               ; settlement's implied production (default)
+                               ; player = the wage bill comes out of the
+                               ; player's own caps each pay day
+sim.economy.stipend.requireOwned = 1     ; 0 = every mind with a home
+                               ; market draws, owned or not; 1 = only
+                               ; minds whose settlement the player owns
+                               ; draw (a settler at a workshop you've
+                               ; never claimed doesn't cost you)
 ```
+
+## Who pays the wage — "the settlement's treasury, or yours?" (0.8.6b, designed)
+
+**Status: DESIGNED 2026-08-14** — the two knobs above are the plan;
+BUILD is the next step. If the player-pays leg fails in the field
+(inventory APIs, fairness, or feel), the source key degrades to
+`settlement`-only and the player mode is recorded for 0.9.x — the
+minted default must never regress.
+
+**The two questions, answered.**
+
+1. **Who pays?** The stipend currently mints caps from the settlement's
+   implied production. The player's ask: an option to make it real —
+   the wage bill comes out of the player's own caps, since they run
+   the settlement. `sim.economy.stipend.source = player` does exactly
+   that: each pay day, the total bill (minds × stipend) is deducted
+   from the player's caps (the game's `GetGoldAmount`/`AddItem` API,
+   read at the edge). Default stays `settlement` — minting is the
+   feature, not a cheat: the show runs even when the player is broke,
+   and the broke-gate (rest instead of buy) is the honest fallback
+   either way. Player-pays is the "hard mode" toggle: 47 people × 25
+   caps/day is a real 1,175-caps-a-day bill out of the player's pocket.
+2. **Whose people?** Every mind with a pouch currently draws,
+   including settlers at workshops the player never claimed (and the
+   census even finds them in cells like the Fens Street sewer).
+   `sim.economy.stipend.requireOwned = 1` gates the draw on workshop
+   ownership: the census already reads every persistent-cell workshop,
+   and the ownership read (`TESObjectREFR::GetOwner`, compared against
+   the player) rides the same census pass. An unowned settlement's
+   minds simply don't draw — the wage line omits them — until the
+   player claims it. Default 1: you shouldn't pay wages for people you
+  've never met.
+
+**The seams.** Both reads are edge-side (game knowledge, ADR-0024):
+`GetOwner()` on the census REFR (cached with the workshop names),
+`GetGoldAmount`/`AddItem` on the player REFR when the source is
+player. The pure `PayStipends` sweep gains two inputs: a per-market
+"owned" flag and a source enum; the deduction happens at the edge
+around the pure call. Co-save untouched — the source and the gate are
+settings, not state.
+
+**The staged safety net.** The ownership gate ships with the source
+key (both are one census read + one setting read). The deeper question
+— should a mind even *exist* at a workshop the player never met — is
+NOT part of this stone: un-living settlements the player is about to
+discover would be a worse surprise. It waits for the audit's "who is
+the world" pass (0.9.x) and is recorded here so the decision isn't
+lost.
 
 **Honest notes**
 
-- **The stipend mints caps.** The caps come from the settlement's
-  implied production, not from any ledger — the same abstraction that
-  already lets a seller's pouch grow from thin air at the market. The
-  alternative (a real treasury that can run dry) is a later economy
-  stone, not this one.
+- **The stipend mints caps** (when the source is `settlement`). The
+  caps come from the settlement's implied production, not from any
+  ledger — the same abstraction that already lets a seller's pouch
+  grow from thin air at the market. Player-pays replaces the mint
+  with the player's wallet; the alternative (a real settlement
+  treasury that can run dry) is a later economy stone.
 - **The stall-keeper never pays for their own meal** — they set up the
   stall and the settlement feeds them (they are the market's first
   customer). Their pouch only grows from sales — and now the stipend.

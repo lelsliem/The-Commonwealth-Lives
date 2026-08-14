@@ -489,11 +489,22 @@ defer to 0.9.2a animations.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: IN PROGRESS — the earn-caps economy is the first item.
 
 Apply the audit: scope redefined to what the beta actually needs;
 the loose ends from 0.8.1–0.8.4 closed; the docs reconciled with
 the cuts.
+
+- **Earn-caps economy (0.8.6b):** the settlement stipend is BUILT
+  and harness-pinned (`StipendMark` + the once-per-day sweep, 27/27
+  suites; Economy.md). The "who pays" extension is DESIGNED —
+  `sim.economy.stipend.source` (settlement minted | player) and
+  `sim.economy.stipend.requireOwned` (1 = only player-owned
+  settlements pay wages); the census ownership read rides the same
+  pass as the workshop names. Fallback contract: if the player-pays
+  leg fails in the field it degrades to settlement-only and is
+  recorded for 0.9.x; the minted default never regresses.
+- **Log hygiene:** the decision-chatter rate limit (audit item 2).
 
 0.8.6c — Scale in the Field
 

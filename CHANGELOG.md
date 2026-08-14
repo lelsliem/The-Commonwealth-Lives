@@ -9,6 +9,21 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.6b — the earn-caps economy, who-pays designed (2026-08-14)
+
+The stipend's "who pays" extension is designed (Economy.md § Who
+pays): `sim.economy.stipend.source` (settlement minted | player —
+the wage bill comes out of the player's caps) and
+`sim.economy.stipend.requireOwned` (default 1 — only player-owned
+settlements pay wages; the census ownership read rides the same
+pass as the workshop names). Fallback contract: if the player-pays
+leg fails in the field it degrades to settlement-only and is
+recorded for 0.9.x — the minted default never regresses. The
+"should an unowned settlement have minds at all" question waits
+for the audit's who-is-the-world pass (0.9.x).
+
+---
+
 ## 0.8.6b — the earn-caps economy, machinery built (2026-08-14)
 
 The stipend's other half: `StipendMark` (a new co-save component,
