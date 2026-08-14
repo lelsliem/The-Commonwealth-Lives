@@ -140,11 +140,22 @@ sim.economy.stipend.requireOwned = 1     ; 0 = every mind with a home
 
 ## Who pays the wage — "the settlement's treasury, or yours?" (0.8.6b, designed)
 
-**Status: DESIGNED 2026-08-14** — the two knobs above are the plan;
-BUILD is the next step. If the player-pays leg fails in the field
-(inventory APIs, fairness, or feel), the source key degrades to
-`settlement`-only and the player mode is recorded for 0.9.x — the
-minted default must never regress.
+**Status: BUILT + HARNESS-VERIFIED 2026-08-14** — both knobs shipped:
+`sim.economy.stipend.source` (settlement | player) and
+`sim.economy.stipend.requireOwned` (1 = only player-owned settlements
+pay wages). The census captures each workshop's ownership
+(`GetOwner` vs. the player faction, one diagnostic line on first
+read), the player-pays leg removes the wage bill from the player's
+caps via the game's own `RemoveItem` path, and the owned gate leaves
+a gated mind's mark untouched — the wage waits for the claim, it
+isn't lost. Harness `StipendTest` pins the gate and the
+claim-landing leg — 27/27. **Fallback contract still holds:** if the
+player-pays leg fails in the field (inventory APIs, fairness, or
+feel), the source key degrades to `settlement`-only and the player
+mode is recorded for 0.9.x — the minted default must never regress.
+The ownership diagnostic line (`economy: workshop {:#x} reads
+owned/unowned by the player`) is the in-game verification of the
+census read before the gate is trusted.
 
 **The two questions, answered.**
 

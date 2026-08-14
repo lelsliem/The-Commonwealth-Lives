@@ -9,6 +9,23 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.6b — the earn-caps economy, who-pays built (2026-08-14)
+
+Both knobs shipped: `sim.economy.stipend.source` (settlement minted
+| player — the wage bill comes out of the player's caps via the
+game's own RemoveItem path) and `sim.economy.stipend.requireOwned`
+(default 1 — only player-owned settlements pay wages). The census
+captures each workshop's ownership against the player faction (one
+diagnostic line on first read so the gate is verifiable in-game),
+and a gated mind's mark stays put — the wage waits for the claim,
+it isn't lost. MCM: "Player pays the wage" + "Only owned
+settlements pay" switchers on the Economy page. Harness
+`StipendTest` pins the gate and the claim-landing leg — 27/27.
+Fallback contract: if the player-pays leg fails in the field it
+degrades to settlement-only and is recorded for 0.9.x.
+
+---
+
 ## 0.8.6b — the earn-caps economy, who-pays designed (2026-08-14)
 
 The stipend's "who pays" extension is designed (Economy.md § Who

@@ -481,6 +481,24 @@
       "max": 50,
       "step": 1
      }
+    },
+    {
+     "id": "bsim.economy.stipend.source:Main",
+     "type": "switcher",
+     "text": "Player pays the wage",
+     "help": "Off (default): the stipend is minted from the settlement's production. On: the wage bill comes out of your own caps each pay day — 47 people at 25 caps is a real 1,175-cap-a-day bill. The show never runs a deficit; a broke player just means broke minds (they rest instead of buying medicine).",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
+    },
+    {
+     "id": "bsim.economy.stipend.requireOwned:Main",
+     "type": "switcher",
+     "text": "Only owned settlements pay",
+     "help": "On (default): only minds whose settlement you own draw a wage — a settler at a workshop you've never claimed doesn't cost you. Off: every mind with a home market draws, owned or not.",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
     }
    ]
   },

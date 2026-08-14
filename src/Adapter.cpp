@@ -1213,6 +1213,22 @@ namespace TLC
 
         std::vector<TLC::StipendReceipt> receipts;
 
+        const auto ownedGate =
+            m_Settings.StipendRequireOwned
+            ? std::function<bool(std::uint32_t)>(
+                  [this](std::uint32_t a_marketFormId)
+                  {
+                      // The census's ownership read. A market with no
+                      // record (never censused, or the wastes — market
+                      // 0) reads unowned: the gate's safe default. A
+                      // mind in the wastes has no settlement to pay it
+                      // anyway.
+                      const auto it = m_WorkshopOwned.find(a_marketFormId);
+
+                      return it != m_WorkshopOwned.end() && it->second;
+                  })
+            : std::function<bool(std::uint32_t)>();
+
         TLC::PayStipends(
             m_Registry, stipend, day,
             [this](LCE::Simulation::EntityId a_entity)
@@ -1266,10 +1282,15 @@ namespace TLC
                 return NearestWorkshop(
                     pos.x, pos.y, m_Workshops, kMarketRadius);
             },
-            receipts);
+            receipts,
+            ownedGate);
+
+        std::uint64_t totalOut = 0;
 
         for (const auto& receipt : receipts)
         {
+            totalOut += receipt.Caps;
+
             const auto settlement =
                 receipt.MarketFormId != 0
                 ? MarketLabel(receipt.MarketFormId)
@@ -1278,6 +1299,31 @@ namespace TLC
             REX::INFO(
                 "LCE: economy — {} paid its {} people {} caps each ({} caps out).",
                 settlement, receipt.Paid, stipend, receipt.Caps);
+        }
+
+        // The player-pays leg (0.8.6b): when the source is the player,
+        // the wage bill comes out of the player's own caps — the game's
+        // gold API, read and written at the edge (game knowledge,
+        // ADR-0024). A player who can't cover the bill still pays what
+        // the pouches received (the settlement covers the shortfall in
+        // spirit); the show never runs a deficit.
+        if (m_Settings.StipendSourcePlayer && totalOut > 0)
+        {
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            auto* caps = RE::TESForm::GetFormByID(0x0000000Fu);
+
+            if (player != nullptr && caps != nullptr)
+            {
+                // The wage bill leaves the player's inventory: the game's
+                // own remove path (RemoveItemData, the same the game uses
+                // for every transaction), caps [ITEM:0000000F].
+                RE::TESObjectREFR::RemoveItemData data{ caps, -static_cast<std::int32_t>(totalOut) };
+                player->RemoveItem(data);
+
+                REX::INFO(
+                    "LCE: economy — the wage bill of {} caps came from the player's purse.",
+                    totalOut);
+            }
         }
     }
 
@@ -4584,6 +4630,36 @@ namespace TLC
                     if (name != nullptr)
                     {
                         m_WorkshopNames[workshopFormId] = name;
+                    }
+
+                    // The ownership read (0.8.6b): does the player own
+                    // this workshop? The stipend's requireOwned gate
+                    // answers "whose people draw a wage" — a settler at
+                    // a workshop the player never claimed doesn't cost
+                    // the player. GetOwner returns the ownership form:
+                    // the player faction (0001BF9D in the base game)
+                    // when the settlement is claimed, else null or
+                    // another faction.
+                    const auto* owner = a_ref->GetOwner();
+
+                    const bool owned =
+                        owner != nullptr
+                        && owner->GetFormID() == kPlayerFactionFormId;
+
+                    m_WorkshopOwned[workshopFormId] = owned;
+
+                    // The one-time diagnostic: the census's ownership
+                    // read, so the requireOwned gate can be verified
+                    // in-game before it's trusted (a wrong read would
+                    // silently stop wages at every settlement).
+                    if (!m_OwnershipDiagnosed)
+                    {
+                        m_OwnershipDiagnosed = true;
+
+                        REX::INFO(
+                            "economy: workshop {:#x} reads {} by the player (owner {:#x}).",
+                            workshopFormId, owned ? "owned" : "unowned",
+                            owner != nullptr ? owner->GetFormID() : 0);
                     }
 
                     return RE::BSContainer::ForEachResult::kContinue;

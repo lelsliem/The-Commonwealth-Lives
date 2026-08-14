@@ -59,13 +59,22 @@ namespace TLC
     // a_stipend == 0 is the off switch (the design ships default-off;
     // the credit path alone keeps the hungry fed).
     //-------------------------------------------------------------------------
+    // a_owned (optional): when given, a mind whose home market reads
+    // unowned (or has no market) draws nothing — the requireOwned gate
+    // (0.8.6b): you don't pay wages for people at workshops you've never
+    // claimed. The mark is NOT advanced for a gated mind — the moment
+    // the player claims the settlement, its people are paid from then
+    // on (the gate is about whose people they are, not a lost wage).
+    //-------------------------------------------------------------------------
     inline void PayStipends(
         LCE::Simulation::EntityRegistry& a_registry,
         std::uint32_t a_stipend,
         std::uint64_t a_today,
         const std::function<std::uint32_t(LCE::Simulation::EntityId)>&
             a_homeMarket,
-        std::vector<StipendReceipt>& a_receipts)
+        std::vector<StipendReceipt>& a_receipts,
+        const std::function<bool(std::uint32_t a_marketFormId)>&
+            a_owned = {})
     {
         if (a_stipend == 0)
         {
@@ -86,6 +95,16 @@ namespace TLC
                     return;   // already drew today — no double pay
                 }
 
+                const auto market = a_homeMarket(a_entity);
+
+                // The ownership gate (0.8.6b): an unowned settlement's
+                // minds don't draw — and their mark stays put, so the
+                // wage is not lost, just waiting for the claim.
+                if (a_owned && !a_owned(market))
+                {
+                    return;
+                }
+
                 // The wage lands in the household wallet — the pouch this
                 // entity carries IS that wallet (one pouch per couple).
                 a_pouch.Caps += a_stipend;
@@ -99,8 +118,6 @@ namespace TLC
                     a_registry.AddComponent<StipendMark>(
                         a_entity, StipendMark{ a_today });
                 }
-
-                const auto market = a_homeMarket(a_entity);
 
                 const auto it = index.find(market);
 

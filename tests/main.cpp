@@ -5200,17 +5200,89 @@ namespace TLC::Tests
             return false;
         }
 
+        // The ownership gate (0.8.6b): an unowned settlement's minds
+        // don't draw, and their mark stays put — the wage waits for the
+        // claim, it isn't lost.
+        const auto unowned = registry.CreateEntity();
+        registry.AddComponent<CapPouch>(unowned, CapPouch{ 0 });
+
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 104,
+            [&unowned](EntityId a_entity)
+            {
+                return a_entity == unowned ? 0x00046B0Bu : 0x000250FEu;
+            },
+            receipts,
+            [](std::uint32_t a_market)
+            {
+                return a_market == 0x000250FEu;   // only Sanctuary is owned
+            });
+
+        // The unowned mind draws nothing and keeps no mark (its Day
+        // stays 0 — still due); the owned ones pay normally. The receipt
+        // only books the owned settlement.
+        if (registry.GetComponent<CapPouch>(unowned)->Caps != 0
+            || registry.GetComponent<StipendMark>(unowned) != nullptr
+            || receipts.size() != 1
+            || receipts[0].MarketFormId != 0x000250FEu
+            || receipts[0].Paid != 2
+            || receipts[0].Caps != 10)
+        {
+            return false;
+        }
+
+        // The claim lands (the gate now says yes for both markets):
+        // the previously-gated mind is paid, back-paid since its mark
+        // was never advanced.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 5, 105,
+            [&unowned](EntityId a_entity)
+            {
+                return a_entity == unowned ? 0x00046B0Bu : 0x000250FEu;
+            },
+            receipts,
+            [](std::uint32_t) { return true; });
+
+        if (registry.GetComponent<CapPouch>(unowned)->Caps != 5
+            || receipts.size() != 2)
+        {
+            return false;
+        }
+
+        // The off switch: stipend 0 pays nothing, ever.
+        receipts.clear();
+
+        TLC::PayStipends(
+            registry, 0, 106,
+            [](EntityId) { return 0x000250FEu; },
+            receipts);
+
+        if (!receipts.empty()
+            || registry.GetComponent<CapPouch>(unowned)->Caps != 5)
+        {
+            return false;
+        }
+
         // The mark survives the co-save round-trip.
         const auto snapshot = registry.Capture();
         EntityRegistry restored;
         TLC::RegisterAllSerializers(restored);
         restored.Restore(snapshot);
 
-        // The marks hold their last-paid day (102 — the day-103 call
+        // The marks hold their last-paid day (105 — the day-106 call
         // was the off-switch, which pays nothing), and the pouches
-        // round-trip with them.
+        // round-trip with them. due drew 100 (0) + 101 (5) + 102 (10)
+        // + 104 (20) + 105 (25) = 25; unowned drew only once the claim
+        // landed (105) = 5.
         return restored.GetComponent<StipendMark>(due) != nullptr
-            && restored.GetComponent<StipendMark>(due)->Day == 102
-            && restored.GetComponent<CapPouch>(due)->Caps == 15;
+            && restored.GetComponent<StipendMark>(due)->Day == 105
+            && restored.GetComponent<CapPouch>(due)->Caps == 25
+            && restored.GetComponent<StipendMark>(unowned) != nullptr
+            && restored.GetComponent<StipendMark>(unowned)->Day == 105
+            && restored.GetComponent<CapPouch>(unowned)->Caps == 5;
     }
 }

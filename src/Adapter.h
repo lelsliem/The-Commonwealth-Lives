@@ -62,6 +62,11 @@ namespace TLC
     //-------------------------------------------------------------------------
     inline constexpr std::uint64_t kRngSeed = 0x4C43455700000001ull;   // 'LCEW' + 1
 
+    // The player faction — the ownership form a claimed settlement's
+    // workshop carries (0.8.6b). Base-game form id; the requireOwned
+    // gate compares the census GetOwner() read against it.
+    inline constexpr std::uint32_t kPlayerFactionFormId = 0x0001BF9Du;
+
     //-------------------------------------------------------------------------
     // Adapter — the plugin's one world object (owned by main.cpp, not a
     // hidden global). Holds the core's registry and the translator, and
@@ -364,6 +369,19 @@ namespace TLC
         // named even while its form is unloaded — the stipend's
         // per-settlement pay line reads "Sanctuary", not a bare hex.
         std::unordered_map<std::uint32_t, std::string> m_WorkshopNames;
+
+        // Whether the player owns each workshop, captured at census
+        // time (the ownership read rides the same persistent-cell pass
+        // as the names). The stipend's requireOwned gate consults it:
+        // a settler at a workshop you've never claimed doesn't draw a
+        // wage. A workshop missing from the map reads as unowned (the
+        // gate's safe default).
+        std::unordered_map<std::uint32_t, bool> m_WorkshopOwned;
+
+        // The one-time census diagnostic (0.8.6b): the first ownership
+        // read is logged so the requireOwned gate can be verified
+        // in-game before it's trusted.
+        bool m_OwnershipDiagnosed = false;
 
         bool m_WorkshopsReady = false;
         std::chrono::steady_clock::time_point m_LastCensus{};

@@ -198,6 +198,23 @@ namespace TLC::Tuning
         // (one wage per couple, Households::PouchOf).
         float Stipend = 0.0f;
 
+        // Who pays the wage (0.8.6b extension): settlement (default) =
+        // the stipend is minted from the settlement's implied
+        // production; player = the wage bill comes out of the player's
+        // own caps each pay day (the game's gold API, read at the
+        // edge). The minted default never regresses — if the
+        // player-pays leg fails in the field it degrades to
+        // settlement-only and the mode is recorded for 0.9.x.
+        bool StipendSourcePlayer = false;
+
+        // Whose people draw (0.8.6b extension): 1 (default) = only
+        // minds whose home settlement the player owns draw the stipend
+        // (a settler at a workshop you've never claimed doesn't cost
+        // you — the census ownership read rides the same pass as the
+        // workshop names); 0 = every mind with a home market draws,
+        // owned or not.
+        bool StipendRequireOwned = true;
+
         // The meal-cadence wander (0.6.0 Stone 3.75): how often a
         // resting or exploring mind is re-commanded to a real nearby
         // reference (seconds — re-issuing mid-walk would yank the
@@ -425,6 +442,22 @@ namespace TLC::Tuning
             }
         };
 
+        // The string form, for the enum-style keys (the stipend's
+        // source). Falls back on any parse problem — a broken line
+        // keeps the default, never breaks the world.
+        const auto readText =
+            [&a_config](std::string_view key, std::string_view fallback)
+        {
+            const auto raw = a_config.Get(key);
+
+            if (raw.empty())
+            {
+                return std::string(fallback);
+            }
+
+            return std::string(raw);
+        };
+
         settings.MarketOpenHour =
             read("market.open.hour", settings.MarketOpenHour);
         settings.MarketCloseHour =
@@ -441,6 +474,14 @@ namespace TLC::Tuning
         settings.SaleWarmth = read("sim.sale.warmth", settings.SaleWarmth);
         settings.MealPrice = read("sim.meal.price", settings.MealPrice);
         settings.Stipend = read("sim.economy.stipend", settings.Stipend);
+        settings.StipendSourcePlayer =
+            readText("sim.economy.stipend.source",
+                     settings.StipendSourcePlayer ? "player" : "settlement")
+            == "player";
+        settings.StipendRequireOwned =
+            readText("sim.economy.stipend.requireOwned",
+                     settings.StipendRequireOwned ? "1" : "0")
+            == "1";
         settings.RestRecovery =
             read("sim.rest.recovery", settings.RestRecovery);
 
