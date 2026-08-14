@@ -497,13 +497,13 @@ the cuts.
 
 - **Earn-caps economy (0.8.6b):** the settlement stipend is BUILT
   and harness-pinned (`StipendMark` + the once-per-day sweep, 27/27
-  suites; Economy.md). The "who pays" extension is DESIGNED —
-  `sim.economy.stipend.source` (settlement minted | player) and
-  `sim.economy.stipend.requireOwned` (1 = only player-owned
-  settlements pay wages); the census ownership read rides the same
-  pass as the workshop names. Fallback contract: if the player-pays
-  leg fails in the field it degrades to settlement-only and is
-  recorded for 0.9.x; the minted default never regresses.
+  suites; Economy.md). The "who pays" extension shipped, failed in
+  the field, and is BENCHED (2026-08-14) — both knobs stay in the
+  tree, reverted to the working minted stipend: `requireOwned`
+  defaults 0 and `source` stays settlement. The two unbench items
+  ride 0.8.6c (below): the WorkshopParent quest-array ownership read,
+  and the RemoveItem count-semantics fix for player-pays. The minted
+  default never regresses.
 - **Log hygiene:** the decision-chatter rate limit (audit item 2).
 
 0.8.6c — Scale in the Field
@@ -518,6 +518,25 @@ that chugs at 600 minds is dead on arrival.
 
 - Verify: a restored 600+ mind save holds frame time over a long
   session
+
+- **The who-pays bench reopens (the two 0.8.6b failures, Economy.md §
+  Who pays):**
+  1. **Ownership read** — `requireOwned`'s gate needs vanilla FO4's
+     real settlement ownership: the WorkshopParent quest's
+     `PlayerOwnedWorkshops` array, read through the VM
+     (`FindBoundObject` on the quest's WorkshopParent script), with
+     the census read falling back to "owned" until proven. The
+     field truth to beat: `GetOwner()` null everywhere,
+     WorkshopPlayerOwned AV never set by vanilla.
+  2. **Player-pays deduction** — `source = player`'s RemoveItem path
+     ran (the log's bill line fired) but the caps never moved; the
+     FO4 `RemoveItem` count/reason semantics need investigation
+     (negative count, ITEM_REMOVE_REASON, or a different gold API
+     like `GetGoldAmount`/`AddItem` round-trip) before the leg
+     returns.
+
+  Both are small and independent; either may land before the scale
+  gate closes, and neither blocks it.
 
 ═══════════════════════════════════════════════
 
