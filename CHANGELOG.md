@@ -26,6 +26,24 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.4 — random interactions: the trial's pass is built (2026-08-14)
+
+Settlers who cross paths sometimes speak unprompted — no hunger
+drive, no market. `Adapter::InteractPass` runs at the end of the
+per-second tick: loaded human minds gather their positions once, and
+each cooldown-expired, non-walking mind finds its nearest
+non-walking neighbour inside `sim.interact.radius` (400 units),
+rolls `sim.interact.chance` (0.4), and speaks. The pool follows the
+bond — family for spouse/sweetheart/friend, a quiet row for
+enemy/rival, greet/gossip for strangers — via the existing `Say`
+channel (log + radio feed, no HUD spam). A walking mind never talks;
+the jittered `sim.interact.cadence` (30 s, 0.5–1.5×) keeps a pair
+from lockstep chatter. Tuning: `sim.interact.cadence/radius/chance`.
+Harness 26/26 green. The in-game trial decides whether it ships
+as 0.8.4 or closes as a documented finding.
+
+---
+
 ## 0.8.x tooling — the load-order hello-world + caravan worker names (2026-08-14)
 
 - **The diagnostic self-test (`sim.diag.selfTest`).** A new `Diag`

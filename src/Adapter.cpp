@@ -3351,6 +3351,158 @@ namespace TLC
         }
     }
 
+    void Adapter::InteractPass()
+    {
+        using namespace LCE::Simulation;
+
+        // The candidates: loaded human minds (children are sim-only —
+        // no actor to stand near — and animals don't talk). Their
+        // positions are gathered once, so the pass is O(n²) over the
+        // loaded few, not the Commonwealth-wide hundreds.
+        struct Nearby
+        {
+            EntityId Id;
+            float X, Y, Z;
+        };
+
+        std::vector<Nearby> loaded;
+
+        m_Registry.ForEachWithComponent<FormRef>(
+            [&](EntityId a_entity, FormRef& a_ref)
+            {
+                const auto species =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                if (!species || species->Value != Species::Human)
+                {
+                    return;
+                }
+
+                auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(a_ref.FormId);
+
+                if (actor == nullptr)
+                {
+                    return;
+                }
+
+                const auto pos = actor->GetPosition();
+                loaded.push_back({ a_entity, pos.x, pos.y, pos.z });
+            });
+
+        if (loaded.size() < 2)
+        {
+            return;   // no one to cross paths with
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        const auto radiusSq = m_Settings.InteractRadius
+            * m_Settings.InteractRadius;
+
+        for (const auto& a : loaded)
+        {
+            // A walking mind keeps walking — the interaction never
+            // interrupts a walk. Resting minds may talk (they are
+            // idle, not moving).
+            const auto intent = m_Registry.GetComponent<Intent>(a.Id);
+
+            if (intent && intent->Action == ActionType::MoveTo)
+            {
+                continue;
+            }
+
+            // The cadence gate: each mind speaks at most once per
+            // jittered cadence.
+            const auto cooldownIt = m_InteractCooldown.find(a.Id);
+
+            if (cooldownIt != m_InteractCooldown.end()
+                && now < cooldownIt->second)
+            {
+                continue;
+            }
+
+            // The nearest other loaded, non-walking mind within the
+            // radius — the mind actually crossing paths.
+            EntityId partner;
+            float best = radiusSq;
+
+            for (const auto& b : loaded)
+            {
+                if (b.Id == a.Id)
+                {
+                    continue;
+                }
+
+                const auto bIntent =
+                    m_Registry.GetComponent<Intent>(b.Id);
+
+                if (bIntent && bIntent->Action == ActionType::MoveTo)
+                {
+                    continue;
+                }
+
+                const float dx = a.X - b.X;
+                const float dy = a.Y - b.Y;
+                const float dz = a.Z - b.Z;
+                const float d = dx * dx + dy * dy + dz * dz;
+
+                if (d < best)
+                {
+                    best = d;
+                    partner = b.Id;
+                }
+            }
+
+            if (!partner.IsValid())
+            {
+                continue;   // alone — nothing to say
+            }
+
+            // The chance gate: a cooldown-expired mind in company does
+            // not always speak — a crowd stays sparse.
+            if (m_Rng.NextFloat() >= m_Settings.InteractChance)
+            {
+                continue;
+            }
+
+            // The pool follows the bond: family for a strong bond, a
+            // quiet row for an enemy, greet/gossip for everyone else.
+            Dialogue::Pool pool = Dialogue::Pool::Greet;
+
+            switch (Bonds::CurrentKind(m_Bonds, a.Id, partner))
+            {
+            case Bonds::BondKind::Spouse:
+            case Bonds::BondKind::Sweetheart:
+            case Bonds::BondKind::Friend:
+                pool = Dialogue::Pool::Family;
+                break;
+            case Bonds::BondKind::Enemy:
+            case Bonds::BondKind::Rival:
+                pool = Dialogue::Pool::Row;
+                break;
+            case Bonds::BondKind::None:
+                // Small talk beats a hello in the crowd: gossip reads
+                // as life, a bare greet reads as an NPC line.
+                pool = m_Rng.NextFloat() < 0.3f
+                    ? Dialogue::Pool::Gossip
+                    : Dialogue::Pool::Greet;
+                break;
+            }
+
+            Say(a.Id, partner, pool);
+
+            // The jittered cooldown: 0.5–1.5× the cadence, so a pair
+            // never falls into lockstep chatter.
+            m_InteractCooldown[a.Id] =
+                now
+                + std::chrono::duration_cast<
+                    std::chrono::steady_clock::duration>(
+                    std::chrono::duration<float>(
+                        m_Settings.InteractCadence
+                        * (0.5f + m_Rng.NextFloat())));
+        }
+    }
+
     void Adapter::ShowSubtitle(
         RE::TESObjectREFR* a_speaker,
         const std::string& a_line)
@@ -4037,6 +4189,7 @@ namespace TLC
         m_Walks.clear();
         m_ArrivedAt.clear();
         m_WalkRefusedUntil.clear();
+        m_InteractCooldown.clear();
         m_MarketAttendance.clear();
         m_LastWander.clear();
         m_LastCough.clear();
@@ -6088,6 +6241,10 @@ namespace TLC
 
         ExecutePlan(plan);
         ProbeWalks();
+
+        // The random-interaction trial (0.8.4): after the plan runs,
+        // so walking minds are known — a mind mid-walk never speaks.
+        InteractPass();
 
         // One-time proof the whole first pass completed. If the intent
         // lines printed but this is missing, the pass is stuck in

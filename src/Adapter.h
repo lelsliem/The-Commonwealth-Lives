@@ -754,6 +754,13 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             LCE::Simulation::EntityId, std::chrono::steady_clock::time_point>
             m_WalkRefusedUntil;
 
+        // The interaction cooldown (0.8.4 trial): when each mind may
+        // next speak unprompted (sim.interact.cadence, jittered).
+        // Ephemeral session state, never co-saved, cleared on EndWorld.
+        std::unordered_map<
+            LCE::Simulation::EntityId, std::chrono::steady_clock::time_point>
+            m_InteractCooldown;
+
         // When each mind last arrived, and where (target form id + time).
         // The arrival-cooldown guard: a mind that just arrived at its
         // destination has its next MoveTo there treated as satisfied, so
@@ -842,6 +849,14 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             LCE::Simulation::EntityId a_listener,
             Dialogue::Pool a_pool,
             bool a_loud = false);
+
+        // The random-interaction pass (0.8.4, the trial): minds who
+        // cross paths sometimes speak unprompted — no hunger drive, no
+        // market. Bounded by the sim.interact.* tuning (cadence,
+        // radius, chance) and by never interrupting a walk; the pool
+        // follows the pair's bond. Runs once per second, after the
+        // plan executes, so walking minds are known.
+        void InteractPass();
 
         // The loud line's on-screen home (0.7.5 field): a spoken line
         // rides the game's own subtitle display — SubtitleManager's

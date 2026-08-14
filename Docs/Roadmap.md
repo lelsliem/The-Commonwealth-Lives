@@ -428,7 +428,7 @@ family that cares).
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED (a trial, not a promise)
+STATUS: BUILT — awaiting the in-game trial (2026-08-14)
 
 Settlers interact with each other unprompted — not only when hunger
 drives them to a bench. The trial first: watch what the existing sim
@@ -437,6 +437,11 @@ proximity), run test trials, and implement only what succeeds. If
 the trial fails, it closes as a documented finding and the run moves
 on.
 
+- The proximity pass: loaded humans, nearest non-walking neighbour
+  within `sim.interact.radius`, roll `sim.interact.chance`, speak
+  via the existing `Say` — the pool follows the bond (family /
+  row / greet-gossip), a jittered `sim.interact.cadence` keeps it
+  sparse, and a walking mind never talks. All adapter-side.
 - Verify: two settlers who cross paths sometimes greet, talk, or
   trade without a hunger drive; rate-limited, never spammy
 

@@ -198,6 +198,21 @@ namespace TLC::Tuning
         float WanderCooldown = 30.0f;
         float WanderRadius = 4000.0f;
 
+        // The random-interaction trial (0.8.4): a mind who crosses
+        // paths with another sometimes speaks unprompted — no hunger
+        // drive, no market. Cadence is the seconds between a mind's
+        // interaction attempts (jittered 0.5–1.5× so a pair never
+        // locks into lockstep chatter); radius is game units (~1.4 cm
+        // each — 400 is a body's throw, "crossing paths"); chance is
+        // the probability a cooldown-expired mind actually speaks,
+        // keeping it sparse in a crowd. A walking mind never talks
+        // (the walk is never interrupted), and the pool is the pair's
+        // bond: family for a strong bond, a quiet row for an enemy,
+        // greet/gossip for everyone else.
+        float InteractCadence = 30.0f;
+        float InteractRadius = 400.0f;
+        float InteractChance = 0.4f;
+
         // The grief arc (0.6.0 Stone 5): how much faster a grieving
         // mind's Social need empties, per second — they seek company.
         // 0.01/s is a quiet ache; higher makes the bereaved visibly
@@ -423,6 +438,13 @@ namespace TLC::Tuning
             read("sim.wander.cooldown", settings.WanderCooldown);
         settings.WanderRadius =
             read("sim.wander.radius", settings.WanderRadius);
+
+        settings.InteractCadence =
+            read("sim.interact.cadence", settings.InteractCadence);
+        settings.InteractRadius =
+            read("sim.interact.radius", settings.InteractRadius);
+        settings.InteractChance =
+            read("sim.interact.chance", settings.InteractChance);
 
         settings.GriefDecay =
             read("sim.arc.grief.decay", settings.GriefDecay);
