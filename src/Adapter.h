@@ -62,11 +62,6 @@ namespace TLC
     //-------------------------------------------------------------------------
     inline constexpr std::uint64_t kRngSeed = 0x4C43455700000001ull;   // 'LCEW' + 1
 
-    // The player faction — the ownership form a claimed settlement's
-    // workshop carries (0.8.6b). Base-game form id; the requireOwned
-    // gate compares the census GetOwner() read against it.
-    inline constexpr std::uint32_t kPlayerFactionFormId = 0x0001BF9Du;
-
     //-------------------------------------------------------------------------
     // Adapter — the plugin's one world object (owned by main.cpp, not a
     // hidden global). Holds the core's registry and the translator, and

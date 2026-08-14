@@ -4636,15 +4636,19 @@ namespace TLC
                     // this workshop? The stipend's requireOwned gate
                     // answers "whose people draw a wage" — a settler at
                     // a workshop the player never claimed doesn't cost
-                    // the player. GetOwner returns the ownership form:
-                    // the player faction (0001BF9D in the base game)
-                    // when the settlement is claimed, else null or
-                    // another faction.
-                    const auto* owner = a_ref->GetOwner();
+                    // the player. The game stores settlement ownership
+                    // as the workshop's WorkshopPlayerOwned actor value
+                    // (set to 1 when the player claims the settlement) —
+                    // the same read the game's GetValue(WorkshopPlayerOwned)
+                    // Papyrus uses. (GetOwner returns null here: workshop
+                    // ownership is an AV, not an ExtraOwnership.)
+                    static const auto* kWorkshopOwnedAv =
+                        RE::TESForm::GetFormByEditorID<RE::ActorValueInfo>(
+                            "WorkshopPlayerOwned");
 
                     const bool owned =
-                        owner != nullptr
-                        && owner->GetFormID() == kPlayerFactionFormId;
+                        kWorkshopOwnedAv != nullptr
+                        && a_ref->GetActorValue(*kWorkshopOwnedAv) >= 0.5f;
 
                     m_WorkshopOwned[workshopFormId] = owned;
 
@@ -4652,17 +4656,21 @@ namespace TLC
                     // reads, so the requireOwned gate can be verified
                     // in-game before it's trusted (a wrong read would
                     // silently stop wages at every settlement). The
-                    // first few reads show what GetOwner actually
-                    // returns (the player faction, another faction, or
-                    // null) and the summary counts owned vs unowned.
+                    // first few reads show the AV value (1 = claimed,
+                    // 0 = never) and the summary counts owned vs unowned.
                     if (m_OwnershipSamples < 3)
                     {
                         ++m_OwnershipSamples;
 
+                        const float ownedValue =
+                            kWorkshopOwnedAv != nullptr
+                            ? a_ref->GetActorValue(*kWorkshopOwnedAv)
+                            : -1.0f;   // the AV form didn't resolve
+
                         REX::INFO(
-                            "economy: workshop {:#x} reads {} by the player (owner {:#x}).",
+                            "economy: workshop {:#x} reads {} by the player (WorkshopPlayerOwned = {}).",
                             workshopFormId, owned ? "owned" : "unowned",
-                            owner != nullptr ? owner->GetFormID() : 0);
+                            ownedValue);
                     }
 
                     m_OwnershipCount += 1;
