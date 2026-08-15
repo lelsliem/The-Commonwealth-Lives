@@ -3732,8 +3732,15 @@ namespace TLC
 
         const auto* npc = actor->GetNPC();
 
-        if (npc == nullptr || npc->voiceType == nullptr)
+        if (npc == nullptr)
         {
+            return std::nullopt;
+        }
+
+        if (npc->voiceType == nullptr)
+        {
+            REX::DEBUG(
+                "vfx: {:#x} has no voice type on its NPC base.", a_formId);
             return std::nullopt;
         }
 
@@ -3741,6 +3748,9 @@ namespace TLC
 
         if (editorId == nullptr)
         {
+            REX::DEBUG(
+                "vfx: {:#x} voice {:#x} has no editor id.", a_formId,
+                npc->voiceType->GetFormID());
             return std::nullopt;
         }
 
@@ -3763,6 +3773,8 @@ namespace TLC
             { "GuardFemaleVault81", Dialogue::Voice::GuardFemaleVault81 },
             { "MaleChild", Dialogue::Voice::MaleChild },
             { "FemaleChild", Dialogue::Voice::FemaleChild },
+            { "MaleGhoul", Dialogue::Voice::GhoulMale },
+            { "FemaleGhoul", Dialogue::Voice::GhoulFemale },
         };
 
         for (const auto& entry : kVoices)
@@ -3772,6 +3784,11 @@ namespace TLC
                 return entry.Voice;
             }
         }
+
+        REX::DEBUG(
+            "vfx: {:#x} voice editor id '{}' is not a settler/guard/"
+            "child bank — caption-only.",
+            a_formId, editorId);
 
         return std::nullopt;
     }

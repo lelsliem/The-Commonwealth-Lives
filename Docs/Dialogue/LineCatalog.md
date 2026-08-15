@@ -406,6 +406,25 @@ Warmth said at home — couple and household moments. The sim's bonds drive
 Jake, Austin, Emogene), chem-drama, player-directed thanks, religious chants,
 and insults.
 
+## Ghoul survey — 0.9.1b addendum
+
+The ghoul banks (FemaleGhoul 1,416 files, MaleGhoul 1,442; ~1,495 unique
+formids) were surveyed for a small dedicated ghoul pool — ghoul settlers
+resolve to their own voice types (never the settler banks), so before this
+pass they were caption-only. The finding: **the ghoul bank has no genuine
+ghoul-exclusive generic register** — its own lines are nearly all
+player-directed (chems, quests, the Slog's tarberry/Daisy/Wiseman business,
+kidnapping cries) — but it **recorded the same 8v generic lines as the
+settlers** (52 of the settler pool's 8v lines, same formids, verified in
+the Voices BA2). So the ghoul pool is the shared lines, honestly: **64
+curated lines now carry ghoul voice coverage** (bits 14–15 in the
+coverage table), and a ghoul voice speaks them from the same table — "Looking
+to buy?", "Why's it gotta be so quiet?", "Leave me alone!", "I'm truly
+sorry.", etc. Guard-only ("No loitering.") and child-only lines stay
+unreachable for ghouls. The 313-strong auto-classified ghoul catalog
+(`Not for github/ghoul_catalog.md`) documents why the rest was cut
+(quest/NPC/player-directed).
+
 ---
 
 ## Pool summary
@@ -427,11 +446,13 @@ cross-listed in Row, not extra recordings). Sources: settler UNSORTED bucket
 2 Fight), child bank (192 lines, 2 voices → 24: 3 Greet + 7 Gossip + 6 Row +
 5 Trade + 3 Family). Synth bank (214 lines, 4 Gen3 voices): **nothing usable**
 — all Institute quest dialogue; synth settlers already speak via the settler
-pool. ~2,760 total eliminated across all banks as quest/combat/pain/player/
-named/location filler.
+pool. Ghoul bank (~1,495 formids, 2 voices): no exclusive register — 64
+curated lines shared with the settler pool carry ghoul coverage. ~2,760
+total eliminated across all banks as quest/combat/pain/player/named/location
+filler.
 
-**Banks now fully surveyed:** settlers, guards, Gen3 synths, children. The
-voiced catalog is complete. Remaining dialogue work is the **subtitle
-(caption) pools** — the sim's own memory-driven lines — and the
+**Banks now fully surveyed:** settlers, guards, Gen3 synths, children,
+ghouls. The voiced catalog is complete. Remaining dialogue work is the
+**subtitle (caption) pools** — the sim's own memory-driven lines — and the
 HybridArchitecture design (triggering these voiced lines via Say/PlayIdle vs.
 captions).

@@ -3875,6 +3875,28 @@ namespace TLC::Tests
             return false;
         }
 
+        // The ghoul banks (0.9.1b addendum): FemaleGhoul/MaleGhoul
+        // recorded the same 8v generic lines as the settlers, so a
+        // ghoul settler speaks them from the same table — "Looking to
+        // buy?" is speakable by a ghoul, while the guard-only "No
+        // loitering." still is not.
+        if (!CanSpeak(CoverageFor("Looking to buy?"), Voice::GhoulFemale)
+            || !CanSpeak(CoverageFor("Looking to buy?"), Voice::GhoulMale)
+            || CanSpeak(CoverageFor("No loitering."), Voice::GhoulFemale)
+            || CanSpeak(CoverageFor("Hello."), Voice::GhoulFemale))
+        {
+            return false;
+        }
+
+        const auto ghoulTrade = PickForVoice(
+            pool, Pool::Trade, id, 10, Voice::GhoulFemale);
+
+        if (ghoulTrade.empty()
+            || !CanSpeak(CoverageFor(ghoulTrade), Voice::GhoulFemale))
+        {
+            return false;
+        }
+
         return true;
     }
 
