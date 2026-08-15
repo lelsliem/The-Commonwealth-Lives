@@ -237,7 +237,7 @@ is proven by the tuning stone). The missing half is the *UI page*,
 which needs the MCM mod (a soft dependency) and a Papyrus surface
 compiled with the Creation Kit. Both are an author-side asset task,
 not a sim task; the INI does the job meanwhile. Real radio *audio* is
-scheduled after 0.9.0 — voice needs assets; captions don't, so the
+scheduled after 0.8.6c — voice needs assets; captions don't, so the
 settlement radio speaks in text now.
 
 ## What the adapter asked from the engine — answered
@@ -273,7 +273,7 @@ group echo).
       crossing, feud mediated at formation (gossip dies in ~4.5 s)
 - [x] Stone 3 — The radio: the news feed (HUD notifications + feed),
       then settlement-radio captions — **verified in-game**; audio
-      radio scheduled after 0.9.0
+      radio scheduled after 0.8.6c
 - [ ] MCM + Settings Manager — **deferred**: the INI already delivers
       the tuning behavior; the UI page needs MCM + the CK (author-side
       asset task)
@@ -283,6 +283,6 @@ group echo).
       `sim.group.inheritance` + legacy keys — all in the shipped INI
 
 **Deferred, honestly:** MCM's UI page (above), the radio's real audio
-(after 0.9.0 — voice needs assets), the famine arc's scarcity engine
+(after 0.8.6c — voice needs assets), the famine arc's scarcity engine
 (shares Stone 2's machinery), 0.8.0's agency pillar (hands in the
 world).

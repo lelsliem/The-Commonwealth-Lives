@@ -170,4 +170,4 @@ What this changes in this design, at audit time:
 This stone is **designed and ready, not scheduled**. The 0.8.6a
 audit weighs it against the beta scope; if it doesn't fit the beta,
 it is the first post-beta stone. Either way, nothing here blocks the
-run to 0.9.2c, and the engine needs no change for it.
+run to 0.8.12, and the engine needs no change for it.

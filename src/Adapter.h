@@ -568,7 +568,7 @@ namespace TLC
         [[nodiscard]] std::string MindNameOnly(std::uint32_t a_formId) const;
         [[nodiscard]] std::string MarketLabel(std::uint32_t a_formId) const;
 
-        // The voice-aware picker's game seam (0.9.1b): resolve a mind's
+        // The voice-aware picker's game seam (0.8.7): resolve a mind's
         // spoken voice from its actor's NPC voice type — the 8 settler
         // voices, the 4 guards, the 2 children — so the picker only
         // offers lines that voice actually recorded. nullopt (no actor,

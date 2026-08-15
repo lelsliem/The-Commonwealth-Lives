@@ -156,7 +156,7 @@ already happens. No engine change.
   family meal).
 - INI line pools + a picker (seeded, like names).
 - Say the line in-game (voice-less is fine — the caption carries it;
-  real audio stays post-0.9.0 per the radio decision).
+  real audio stays post-0.8.6c per the radio decision).
 
 ---
 

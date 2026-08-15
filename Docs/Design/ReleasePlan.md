@@ -51,7 +51,7 @@ serves the show.
 | **0.7.9 — Bugs & polish** | Every stone's field feedback folded in, docs reconciled, perf sanity at scale | The clean run into Illness |
 | **0.8.0 — Illness & Medicine** | A `Health` component (adapter-owned, hold-then-recover — the engine's locked shape); radstorm/food/wound/contagion vectors; the sick rest and buy medicine; untreated sickness can die | The wasteland has a price beyond hunger — settlements feel seasons, the radio reports the ill, and medicine makes the economy real |
 
-**The reliability gate (0.9.0, hard):**
+**The reliability gate (0.8.6c in Run080, hard):**
 
 - **Performance at scale, verified in-game** — the engine proved 5000
   minds round-trip and year-long soaks; the adapter must prove a normal
@@ -117,7 +117,7 @@ gets spawned — the whole life/death cycle?*
    (`sim.death.burialDays`), the adapter disables the corpse ref and
    logs `the settlement laid X to rest` (+ a news line). Body state is
    game state — the adapter owns it, no engine change. Lands with the
-   life/death polish, before 0.9.0's gate.
+   life/death polish, before 0.8.6c's gate.
 2. **A child is a mind, not a body — honestly, and with a reachable
    path.** Born children are sim-only by design: no FormRef, no actor.
    Making a child visible means a Creation Kit child template (race,
@@ -144,7 +144,7 @@ gets spawned — the whole life/death cycle?*
 0.7.8   Baby & kid items — bottles, cribs, visible children (external mod)
 0.7.9   Bugs & polish — every stone's field feedback folded in
 0.8.0   Illness & Medicine — health holds, recovers, or ends
-0.9.0   The release gate — scale verified, docs, news polish
+0.8.6c  The release gate (Run080) — scale verified, docs, news polish
 1.0.0   Freeze, ship
 ```
 

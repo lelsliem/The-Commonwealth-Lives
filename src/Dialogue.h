@@ -597,7 +597,7 @@ namespace TLC::Dialogue
     }
 
     //-------------------------------------------------------------------------
-    // PickForVoice — the voice-aware picker (0.9.1b): only draws lines
+    // PickForVoice — the voice-aware picker (0.8.7): only draws lines
     // the speaker's voice bank actually recorded, so the audio layer
     // never plays a wrong-voice line. A pool where the voice has
     // nothing is silence — the mute rule: if the game doesn't provide

@@ -12,33 +12,33 @@ Project Roadmap
 
 Status
 
-Current Version : 0.9.1a — dialog. The 0.8 run (0.8.0 → 0.8.6c)
-                   shipped and was field-verified 2026-08-14 (tag
-                   `0.8.6`); the dialogue work then landed as the
-                   first 0.9.x stone (see the 0.9.1a section): every
-                   dialogue pool re-curated from the game's own
-                   settler/guard/child recordings (Docs/Dialogue/
-                   LineCatalog.md), shipped in code + INI, plus the
-                   Realistic Conversations compatibility (0.8.7 — the
-                   33-GMST overrides re-delivered as a tuning file,
-                   no ESP).
+Current Version : 0.8.7 — dialog growth. The 0.8 run (0.8.0 →
+                   0.8.6c) shipped and was field-verified 2026-08-14
+                   (tag `0.8.6`); the dialogue work then landed as
+                   this stone (see the 0.8.7 section): every dialogue
+                   pool re-curated from the game's own
+                   settler/guard/child/ghoul recordings
+                   (Docs/Dialogue/LineCatalog.md), shipped in code +
+                   INI, plus the Realistic Conversations
+                   compatibility (the 33-GMST overrides re-delivered
+                   as a tuning file, no ESP).
 
-Current Stage   : 0.9.x begun — the voiced dialog stone (0.9.1a)
-                   is DONE and verified in-game: subtitles now speak
-                   the game's real lines with names attached. The
-                   voice-aware picker (0.9.1b) is BUILT — the pure
-                   picker, the per-line voice coverage table (ground
-                   truth from the game's own Voices BA2), and the
-                   actor voice-type resolution — 27/27 harness suites
-                   green; the audio *trigger* (playing a line's .fuz)
-                   is the remaining in-game probe. See the 0.9.1b
-                   section.
+Current Stage   : 0.8.7 begun — the dialog stone's first half is
+                   DONE and verified in-game: subtitles now speak the
+                   game's real lines with names attached, and the
+                   voice-aware picker (a line only speaks if the
+                   speaker's voice bank recorded it; no match → mute)
+                   is built on ground truth from the game's own
+                   Voices BA2 — 27/27 harness suites green. The audio
+                   *trigger* (playing a line's .fuz) is the remaining
+                   in-game probe. See the 0.8.7 section.
 
-Next Milestone  : the 0.9.1b audio trigger probe (can the DLL
+Next Milestone  : the 0.8.7 audio trigger probe (can the DLL
                    reliably play a line's recording on an actor?) →
-                   0.9.1c timings & weights → 0.9.1d babies
-                   implemented → 0.9.2a animations → 0.9.2b final
-                   touches → 0.9.2c beta on Nexus
+                   0.8.8 timings & weights → 0.8.9 babies
+                   implemented → 0.8.10 animations + fight-feel →
+                   0.8.11 log hygiene + loose ends → 0.8.12 final
+                   touches + beta on Nexus
 
 ═══════════════════════════════════════════════
 
@@ -484,7 +484,7 @@ visible children are redesigned to ship gated on the Baby Sim
 permission; and the field added two 0.8.6b items — **the earn-caps
 **economy (non-keepers are perpetually broke, 0.8.3) and **log
 **hygiene (~200KB/min decision chatter). Fight presentation bugs
-defer to 0.9.2a animations.
+defer to 0.8.10 animations.
 
 0.8.6b — Redefine & Loose Ends
 
@@ -552,58 +552,39 @@ that chugs at 600 minds is dead on arrival.
 
 ═══════════════════════════════════════════════
 
-0.8.7 — Realistic Conversations compatibility
+0.8.7 — Dialog growth
 
 ═══════════════════════════════════════════════
 
-STATUS: DONE — built and field-tested with the 0.9.1a swap.
+STATUS: DONE (first half) — the curated catalog, the voice-aware
+         picker, the ghoul bank, and the Realistic Conversations
+         compatibility all shipped and verified in-game 2026-08-15;
+         27/27 harness suites green. The audio trigger (playing a
+         line's .fuz) is the remaining in-game probe.
 
-The 2018 "Realistic Conversations" ESP's 33 GMST overrides
-re-delivered as a tuning file (`Realistic Conversations.ini` next to
-the DLL): the adapter applies each key to the game's own
-`GameSettingCollection` at load — no xedit patch, no ESP, no
-load-order slot. A missing file is the off switch; a setting the
-game no longer has is skipped, never fatal. The NPC-to-NPC voiced
-chatter it drives is the game's own system; our sim's subtitle lines
-are a separate text channel that never touches those settings.
-
-0.9.1a — Dialog: the curated catalog replaces the drafted lines
-
-═══════════════════════════════════════════════
-
-STATUS: DONE — verified in-game 2026-08-15. The audio trigger
-(0.9.1b) is the next stone.
-
-The pools are no longer the author's drafted one-liners: every pool
-was re-curated from the game's own recordings. The voice-bank survey
+**The curated catalog replaces the drafted lines.** Every pool was
+re-curated from the game's own recordings. The voice-bank survey
 (Docs/Dialogue/LineCatalog.md) extracted and classified the game's
-settler bank (~17,500 files), guards (4 voices), Gen3 synths, and
-children, and each pool now carries the game's real lines — Greet
-30, Gossip 23, Row 32, Trade 30, Family 16, Grief 15, Fight 2,
-Feud 2 — with per-voice coverage recorded (`(8v)` = all 8 settler
-voices recorded it). Shipped in both `src/Dialogue.h` (defaults) and
-the INI (`dialogue.*`), one content swap, zero new machinery. The
-comma gotcha was handled: the list parser splits on commas, so
-mid-line pauses use em-dashes. Fight/Feud stay thin by design —
-rare events whose real content (who, why) is memory-driven caption
-text.
+settler bank (~17,500 files), guards (4 voices), Gen3 synths,
+children, and ghouls, and each pool now carries the game's real
+lines — Greet 30, Gossip 23, Row 32, Trade 30, Family 16, Grief 15,
+Fight 2, Feud 2 — with per-voice coverage recorded (`(8v)` = all 8
+settler voices recorded it). Shipped in both `src/Dialogue.h`
+(defaults) and the INI (`dialogue.*`), one content swap, zero new
+machinery. The comma gotcha was handled: the list parser splits on
+commas, so mid-line pauses use em-dashes. Fight/Feud stay thin by
+design — rare events whose real content (who, why) is
+memory-driven caption text.
 
-0.9.1b — Voice-aware audio picking
-
-═══════════════════════════════════════════════
-
-STATUS: BUILT — the picker half is done and harness-green (27/27);
-         the audio trigger is the remaining in-game probe.
-
-The design rule (decided with the author): a line only speaks if
-the speaker's voice bank recorded it — the game resolves audio by
-voice type, so a voice can never say a line its bank lacks; when no
-line exists for that voice, the mind stays mute (captions only), and
+**The voice-aware picker (ground truth from the Voices BA2).** The
+design rule (decided with the author): a line only speaks if the
+speaker's voice bank recorded it — the game resolves audio by voice
+type, so a voice can never say a line its bank lacks; when no line
+exists for that voice, the mind stays mute (captions only), and
 nothing can be done if the game simply doesn't provide it.
 
-Built so far:
 - **Voice** (Dialogue.h) — the 8 settler voices, 4 guards, 2
-  children, as a bitset (VoiceSet).
+  children, 2 ghouls, as a bitset (VoiceSet).
 - **Coverage table** — every curated line's recorded voices, as
   **ground truth from the game's own `Fallout4 - Voices.ba2`** name
   table (a formid → voice-set map keyed by normalized text; NOT the
@@ -621,6 +602,22 @@ Built so far:
   VTYP table); nullopt → caption-only. Say() uses PickForVoice when
   a voice resolves and logs `[voice]` vs `[cap]` per line, so the
   in-game log proves which path ran.
+- **The ghoul bank** — ghoul settlers resolve to their own voice
+  types; the survey found they recorded the same 8v generic lines as
+  the settlers (52 of the pool's lines, same formids), so 64
+  curated lines carry ghoul coverage and a ghoul speaks them from
+  the same table. Named voices (Sturges, Marcy, companions) have no
+  recording of the generic lines — the mute rule stands for them.
+
+**The Realistic Conversations compatibility.** The 2018 ESP's 33
+GMST overrides re-delivered as a tuning file
+(`Realistic Conversations.ini` next to the DLL): the adapter applies
+each key to the game's own `GameSettingCollection` at load — no
+xedit patch, no ESP, no load-order slot. A missing file is the off
+switch; a setting the game no longer has is skipped, never fatal.
+The NPC-to-NPC voiced chatter it drives is the game's own system;
+our sim's subtitle lines are a separate text channel that never
+touches those settings.
 
 The remaining piece is the audio trigger: playing a line's actual
 .fuz on an actor (the vendored commonlibf4 has no direct Say
@@ -628,7 +625,7 @@ wrapper — the probe tests the ProcessGreet / dialogue-package
 route). Nothing engine-side is needed: voice types and audio are
 purely game-facing, which the adapter already owns.
 
-0.9.1c — Timings & Weights
+0.8.8 — Timings & Weights
 
 ═══════════════════════════════════════════════
 
@@ -638,7 +635,7 @@ The new interactions' cadence and probability, tuned in INI
 (`sim.interact.*`): when a crossing becomes a greeting, a chat, a
 row, or a trade; the per-day and per-mind rate limits.
 
-0.9.1c — Babies, implemented
+0.8.9 — Babies, implemented
 
 ═══════════════════════════════════════════════
 
@@ -649,7 +646,7 @@ soft/optional dependency (permission requested), bottles/cribs as
 walk targets, the market selling baby goods, the whole journey
 co-save-safe.
 
-0.9.2a — Animations
+0.8.10 — Animations + fight-feel
 
 ═══════════════════════════════════════════════
 
@@ -658,9 +655,21 @@ STATUS: PLANNED
 The interactions get bodies: the ESP/idle pattern proven by the kick
 (0.7.6) extends to the new interactions — greeting gestures, chat
 stances, the altercation's shove — with graceful fallback when the
-ESP is absent.
+ESP is absent. The deferred fight presentation bugs (the both-fall
+look, the ghost-push slide) land here with the animation pass.
 
-0.9.2b — Final Touches
+0.8.11 — Log hygiene + loose ends
+
+═══════════════════════════════════════════════
+
+STATUS: PLANNED
+
+The audit's second gap (the decision-chatter rate limit) plus the
+parked questions — "should an unowned settlement have minds?" and
+the other who-is-the-world loose ends — closed before the release
+materials.
+
+0.8.12 — Final Touches + beta
 
 ═══════════════════════════════════════════════
 
@@ -668,14 +677,6 @@ STATUS: PLANNED
 
 The clean run before the beta: every field note folded in, docs
 reconciled, warnings cleared, harness at full green, the README
-written for players, the release package assembled.
-
-0.9.2c — Beta on Nexus
-
-═══════════════════════════════════════════════
-
-STATUS: PLANNED
-
-The first public release: the beta ships on Nexus with the release
-description and changelog; GitHub stays the source; beta feedback
-feeds the post-beta run.
+written for players, the release package assembled — then the first
+public release ships on Nexus; GitHub stays the source; beta
+feedback feeds the post-beta run.

@@ -406,7 +406,7 @@ Warmth said at home — couple and household moments. The sim's bonds drive
 Jake, Austin, Emogene), chem-drama, player-directed thanks, religious chants,
 and insults.
 
-## Ghoul survey — 0.9.1b addendum
+## Ghoul survey — 0.8.7
 
 The ghoul banks (FemaleGhoul 1,416 files, MaleGhoul 1,442; ~1,495 unique
 formids) were surveyed for a small dedicated ghoul pool — ghoul settlers

@@ -14,7 +14,7 @@ That sentence is the test plan. In-game verified end to end: hungry settlers dec
 
 ## Roadmap
 
-Where this project is and where it's going: `Docs/Roadmap.md`. Every stone through **0.7.9** is in and verified (0.7.x fully in-game; 0.8.0 Illness & Medicine built and harness-verified, in-game test pending). The staged run to **1.0.0** is planned (`Docs/Design/ReleasePlan.md`): 0.8.0 Illness & Medicine (in-game) → 0.9.0 the release gate → 1.0.0 freeze and ship. The milestone stones so far:
+Where this project is and where it's going: `Docs/Roadmap.md`. Every stone through **0.8.6c** is in and verified in-game. The staged run to **1.0.0** is planned (`Docs/Design/Run080.md`): 0.8.7 dialog growth (the curated catalog + the voice-aware audio gate, in progress) → 0.8.8 timings & weights → 0.8.9 babies → 0.8.10 animations + fight-feel → 0.8.11 log hygiene + loose ends → 0.8.12 final touches + the Nexus beta → 1.0.0 freeze and ship. The milestone stones so far:
 
 - **0.1** the heartbeat — the plugin loads and breathes.
 - **0.2** the translation — settler-faction actors become minds.

@@ -228,7 +228,7 @@ key (both are one census read + one setting read). The deeper question
 — should a mind even *exist* at a workshop the player never met — is
 NOT part of this stone: un-living settlements the player is about to
 discover would be a worse surprise. It waits for the audit's "who is
-the world" pass (0.9.x) and is recorded here so the decision isn't
+the world" pass (0.8.7+) and is recorded here so the decision isn't
 lost.
 
 **Honest notes**

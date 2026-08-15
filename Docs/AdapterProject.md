@@ -24,7 +24,7 @@ events), `Identity.md` (0.7.0 — names, conflict source, the radio),
 `RealEvents.md` (0.7.1-0.7.5 — talk, rows, names, trade, fights),
 `FutureStones.md` (0.7.6-0.8.0 — fight-feel, babies, illness),
 `ReleasePlan.md` (the staged path to 1.0.0, including the honest cuts),
-`Run080.md` (the 0.8.x–0.9.x run to the Nexus beta — the working plan),
+`Run080.md` (the 0.8.x run to the Nexus beta — the working plan),
 `InterSettlementTrade.md` (the roads candidate — designed, not
 scheduled; the 0.8.6a audit weighs it),
 `Landscape.md` (the Nexus survey — what exists, what we own, what to
@@ -82,10 +82,12 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.8.6a | The Audit | ✅ done — cut list re-tested; MCM KEPT, earn-caps + log hygiene to 0.8.6b |
 | 0.8.6b | Redefine & Loose Ends | ✅ done — robots, the stipend, MCM Economy page; who-pays benched then unbenched |
 | 0.8.6c | Scale in the Field | ✅ PASSED (2026-08-14) — TickReport, ~620 live minds, half a frame; ownership read unbenched (28/28 owned) |
-| 0.8.7 | Realistic Conversations compatibility | ✅ built + field-tested — the 33 GMST overrides as a tuning file (Realistic Conversations.ini next to the DLL), applied to the game's own GameSettingCollection, no ESP |
-| 0.9.1a | Dialog — curated catalog | ✅ verified in-game (2026-08-15) — every pool re-curated from the game's own settler/guard/child recordings (Docs/Dialogue/LineCatalog.md), shipped in code + INI |
-| 0.9.1b | Voice-aware audio picking | 🔲 in build — a line only speaks if the speaker's voice bank recorded it; no match → mute, captions only |
-| 0.9.x | The run to the Nexus beta (Run080.md) | 🔲 0.9.1b audio → 0.9.1c timings → 0.9.1d babies → 0.9.2a animations → 0.9.2b final touches → 0.9.2c beta |
+| 0.8.7 | Dialog growth | ✅ first half verified in-game (2026-08-15) — curated catalog + Realistic Conversations compat + the voice-aware picker (ground truth from the Voices BA2, ghoul bank); the audio trigger probe is the remaining piece |
+| 0.8.8 | Timings & Weights | 🔲 planned — the sim.interact.* cadence and probability |
+| 0.8.9 | Babies, implemented | 🔲 planned — the birth journey made visible/real |
+| 0.8.10 | Animations + fight-feel | 🔲 planned — the ESP/idle pattern extends; the both-fall/ghost-push fix lands here |
+| 0.8.11 | Log hygiene + loose ends | 🔲 planned — the audit's second gap plus the parked questions |
+| 0.8.12 | Final Touches + beta | 🔲 planned — the clean run, README, package, Nexus beta |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 

@@ -3808,7 +3808,7 @@ namespace TLC::Tests
             return false;
         }
 
-        // ---- The voice-aware picker (0.9.1b) ----
+        // ---- The voice-aware picker (0.8.7) ----
 
         // A settler voice can speak a line its bank recorded: "Looking
         // to buy?" is 8v (all settler voices) — MaleEvenToned says it,
@@ -3875,7 +3875,7 @@ namespace TLC::Tests
             return false;
         }
 
-        // The ghoul banks (0.9.1b addendum): FemaleGhoul/MaleGhoul
+        // The ghoul banks (0.8.7 addendum): FemaleGhoul/MaleGhoul
         // recorded the same 8v generic lines as the settlers, so a
         // ghoul settler speaks them from the same table — "Looking to
         // buy?" is speakable by a ghoul, while the guard-only "No

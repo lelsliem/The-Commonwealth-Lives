@@ -3808,7 +3808,7 @@ namespace TLC
     {
         // One line, deterministic per mind and day — the same mind says
         // the same line all day and a different one tomorrow. The
-        // voice-aware picker (0.9.1b): the speaker's voice decides
+        // voice-aware picker (0.8.7): the speaker's voice decides
         // which lines are even offered — a line only speaks if the
         // speaker's voice bank recorded it, so the audio layer can
         // never play a wrong-voice line. An unresolvable voice (or a
@@ -3839,7 +3839,7 @@ namespace TLC
 
         // The verify channel: the log reads as dialogue — who said what
         // to whom, and in whose voice. The voice tag proves the
-        // voice-aware picker ran (0.9.1b): a known voice means the line
+        // voice-aware picker ran (0.8.7): a known voice means the line
         // came from PickForVoice (the speaker's bank recorded it);
         // "cap" means the voice was unresolvable or had nothing in the
         // pool and the plain picker ran — captions only, never
