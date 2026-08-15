@@ -43,6 +43,7 @@
 #include <RE/P/PlayerCharacter.h>
 #include <RE/P/ProcessLists.h>
 #include <RE/S/SendHUDMessage.h>
+#include <RE/S/Setting.h>          // GameSettingCollection — the Realistic Conversations compatibility applies GMST overrides to the game's own settings
 #include <RE/S/Sky.h>
 #include <RE/S/SubtitleManager.h>   // the game's own subtitle queue — the loud line's screen
 #include <RE/T/TESDataHandler.h>
@@ -720,6 +721,121 @@ namespace TLC
         }
 
         ApplyConfig(m_Config, ini);
+
+        // The Realistic Conversations compatibility (0.8.7): applied
+        // here, after the sim tuning reads, so the game's settings land
+        // before the first world starts — the NPC social behavior is
+        // in place from the first frame.
+        ApplyRealisticConversations();
+    }
+
+    void Adapter::ApplyRealisticConversations()
+    {
+        // The Realistic Conversations compatibility (0.8.7): the 2018
+        // ESP's 33 GMST overrides, re-delivered as a tuning file next
+        // to the DLL — applied here to the game's own setting
+        // collection, so the mod's social behavior (NPC-to-NPC voiced
+        // chatter, natural greeting distances and timers, dinner
+        // hours) lands on the Next-Gen build with no xedit patch, no
+        // ESP, no load-order slot. A missing file is the off switch.
+        wchar_t modulePath[MAX_PATH]{};
+        HMODULE module = nullptr;
+
+        if (!GetModuleHandleExW(
+                GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                reinterpret_cast<LPCWSTR>(&ModuleAnchor),
+                &module)
+            || GetModuleFileNameW(module, modulePath, MAX_PATH) == 0)
+        {
+            return;
+        }
+
+        std::filesystem::path ini{ modulePath };
+        ini.replace_filename(L"Realistic Conversations.ini");
+
+        std::error_code error;
+
+        if (!std::filesystem::exists(ini, error))
+        {
+            return;   // not installed — nothing to apply
+        }
+
+        std::ifstream stream(ini);
+        std::stringstream buffer;
+        buffer << stream.rdbuf();
+
+        const auto config = Tuning::ParseConfig(buffer.str());
+
+        auto* collection = RE::GameSettingCollection::GetSingleton();
+
+        if (collection == nullptr)
+        {
+            REX::WARN(
+                "rc: game settings unavailable — overrides not applied.");
+            return;
+        }
+
+        // The Setting's own type (derived from the key's prefix letter
+        // — f/i/b — the game's convention) decides how the value is
+        // written back, so the file needs no type annotations: the
+        // setting itself says what it is.
+        auto applied = 0U;
+        auto missing = 0U;
+
+        config.ForEach(
+            [&](std::string_view a_key, std::string_view a_value)
+            {
+                auto* setting = collection->GetSetting(a_key);
+
+                if (setting == nullptr)
+                {
+                    REX::INFO(
+                        "rc: setting '{}' not found in this build — skipped.",
+                        a_key);
+                    ++missing;
+                    return;
+                }
+
+                switch (setting->GetType())
+                {
+                    case RE::Setting::SETTING_TYPE::kFloat:
+                    {
+                        const float value =
+                            std::strtof(std::string(a_value).c_str(), nullptr);
+                        setting->SetFloat(value);
+                        ++applied;
+                        break;
+                    }
+                    case RE::Setting::SETTING_TYPE::kInt:
+                    {
+                        const int value =
+                            std::strtol(std::string(a_value).c_str(), nullptr, 10);
+                        setting->SetInt(value);
+                        ++applied;
+                        break;
+                    }
+                    case RE::Setting::SETTING_TYPE::kBinary:
+                    {
+                        const auto value =
+                            a_value == "1" || a_value == "true"
+                            || a_value == "yes";
+                        setting->SetBinary(value);
+                        ++applied;
+                        break;
+                    }
+                    default:
+                        REX::INFO(
+                            "rc: setting '{}' has an unsupported type — skipped.",
+                            a_key);
+                        ++missing;
+                        break;
+                }
+            });
+
+        REX::INFO(
+            "rc: Realistic Conversations overrides applied ({} settings, "
+            "{} skipped).",
+            applied, missing);
     }
 
     void Adapter::ApplyConfig(

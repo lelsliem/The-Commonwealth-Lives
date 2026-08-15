@@ -3720,16 +3720,21 @@ namespace TLC::Tests
             return false;
         }
 
-        // The author's five-line row ramp is the pool's core: the
-        // complaint, the dare, the taunt, the break point, and the
-        // escalation, in order.
+        // The curated catalog's Row pool (LineCatalog.md) is the guard
+        // bank's escalation plus the settler edges — the verbal ramp
+        // the sim walks before a fight. Its signature lines are the
+        // guard register settlers never got ("Last warning.",
+        // "I'm warning you. Back off!") and the cold openers.
         const auto& row = pool.Row;
 
-        if (row.size() < 5 || row[0] != "You ripped me off"
-            || row[1] != "You do that again, I dare you"
-            || row[2] != "Go on, one more time"
-            || row[3] != "I've had it with you"
-            || row[4] != "Want some? Let's go")
+        auto has = [&](const std::string& s)
+        {
+            return std::find(row.begin(), row.end(), s) != row.end();
+        };
+
+        if (row.size() < 20 || !has("I'm warning you. Back off!")
+            || !has("Last warning.") || !has("No loitering.")
+            || !has("Don't talk to me."))
         {
             return false;
         }

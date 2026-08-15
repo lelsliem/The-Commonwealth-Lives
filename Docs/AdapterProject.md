@@ -82,7 +82,10 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.8.6a | The Audit | ✅ done — cut list re-tested; MCM KEPT, earn-caps + log hygiene to 0.8.6b |
 | 0.8.6b | Redefine & Loose Ends | ✅ done — robots, the stipend, MCM Economy page; who-pays benched then unbenched |
 | 0.8.6c | Scale in the Field | ✅ PASSED (2026-08-14) — TickReport, ~620 live minds, half a frame; ownership read unbenched (28/28 owned) |
-| 0.9.x | The run to the Nexus beta (Run080.md) | 🔲 0.9.1a dialog → 0.9.1b timings → 0.9.1c babies → 0.9.2a animations → 0.9.2b final touches → 0.9.2c beta |
+| 0.8.7 | Realistic Conversations compatibility | ✅ built + field-tested — the 33 GMST overrides as a tuning file (Realistic Conversations.ini next to the DLL), applied to the game's own GameSettingCollection, no ESP |
+| 0.9.1a | Dialog — curated catalog | ✅ verified in-game (2026-08-15) — every pool re-curated from the game's own settler/guard/child recordings (Docs/Dialogue/LineCatalog.md), shipped in code + INI |
+| 0.9.1b | Voice-aware audio picking | 🔲 in build — a line only speaks if the speaker's voice bank recorded it; no match → mute, captions only |
+| 0.9.x | The run to the Nexus beta (Run080.md) | 🔲 0.9.1b audio → 0.9.1c timings → 0.9.1d babies → 0.9.2a animations → 0.9.2b final touches → 0.9.2c beta |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 

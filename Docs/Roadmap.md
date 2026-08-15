@@ -12,24 +12,29 @@ Project Roadmap
 
 Status
 
-Current Version : 0.8.6 — the whole 0.8 run (0.8.0 → 0.8.6c) complete
-                   and verified in-game, tagged `0.8.6`. Illness,
-                   medicine as a stocked good, burial, the sick
-                   household, random interactions, MCM, the earn-caps
-                   stipend, robots, and the scale-in-the-field gate —
-                   all shipped and field-verified 2026-08-14.
+Current Version : 0.9.1a — dialog. The 0.8 run (0.8.0 → 0.8.6c)
+                   shipped and was field-verified 2026-08-14 (tag
+                   `0.8.6`); the dialogue work then landed as the
+                   first 0.9.x stone (see the 0.9.1a section): every
+                   dialogue pool re-curated from the game's own
+                   settler/guard/child recordings (Docs/Dialogue/
+                   LineCatalog.md), shipped in code + INI, plus the
+                   Realistic Conversations compatibility (0.8.7 — the
+                   33-GMST overrides re-delivered as a tuning file,
+                   no ESP).
 
-Current Stage   : 0.8.x shipped — every stone of the run landed. The
-                   scale gate measured ~620 live minds at half a
-                   frame; the ownership read (the last benched item)
-                   reads the game's own WorkshopPlayerOwnership AV,
-                   field-verified 28 of 28 owned. 27/27 harness
-                   suites green.
+Current Stage   : 0.9.x begun — the voiced dialog stone (0.9.1a)
+                   is DONE and verified in-game: subtitles now speak
+                   the game's real lines with names attached. The
+                   audio layer (voice-aware picking — a line only
+                   speaks if the speaker's voice recorded it, silent
+                   fallback otherwise) is the next build. 27/27
+                   harness suites green.
 
-Next Milestone  : the 0.9.x run to the Nexus beta
-                   (Docs/Design/Run080.md):
-                   0.9.1a dialog → 0.9.1b timings & weights →
-                   0.9.1c babies implemented → 0.9.2a animations →
+Next Milestone  : 0.9.1b — voice-aware audio picking (a voice can
+                   only say lines its bank recorded; no match → stay
+                   mute, captions only) → 0.9.1c timings & weights →
+                   0.9.1d babies implemented → 0.9.2a animations →
                    0.9.2b final touches → 0.9.2c beta on Nexus
 
 ═══════════════════════════════════════════════
@@ -544,17 +549,58 @@ that chugs at 600 minds is dead on arrival.
 
 ═══════════════════════════════════════════════
 
-0.9.1a — Dialog: more random lines
+0.8.7 — Realistic Conversations compatibility
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: DONE — built and field-tested with the 0.9.1a swap.
 
-The pools grow for the interactions 0.8.4 proved — new greets,
-gossip, trades, and banter, feeding the seeded picker. Pools are
-data; no new machinery.
+The 2018 "Realistic Conversations" ESP's 33 GMST overrides
+re-delivered as a tuning file (`Realistic Conversations.ini` next to
+the DLL): the adapter applies each key to the game's own
+`GameSettingCollection` at load — no xedit patch, no ESP, no
+load-order slot. A missing file is the off switch; a setting the
+game no longer has is skipped, never fatal. The NPC-to-NPC voiced
+chatter it drives is the game's own system; our sim's subtitle lines
+are a separate text channel that never touches those settings.
 
-0.9.1b — Timings & Weights
+0.9.1a — Dialog: the curated catalog replaces the drafted lines
+
+═══════════════════════════════════════════════
+
+STATUS: DONE — verified in-game 2026-08-15. The audio trigger
+(0.9.1b) is the next stone.
+
+The pools are no longer the author's drafted one-liners: every pool
+was re-curated from the game's own recordings. The voice-bank survey
+(Docs/Dialogue/LineCatalog.md) extracted and classified the game's
+settler bank (~17,500 files), guards (4 voices), Gen3 synths, and
+children, and each pool now carries the game's real lines — Greet
+30, Gossip 23, Row 32, Trade 30, Family 16, Grief 15, Fight 2,
+Feud 2 — with per-voice coverage recorded (`(8v)` = all 8 settler
+voices recorded it). Shipped in both `src/Dialogue.h` (defaults) and
+the INI (`dialogue.*`), one content swap, zero new machinery. The
+comma gotcha was handled: the list parser splits on commas, so
+mid-line pauses use em-dashes. Fight/Feud stay thin by design —
+rare events whose real content (who, why) is memory-driven caption
+text.
+
+0.9.1b — Voice-aware audio picking
+
+═══════════════════════════════════════════════
+
+STATUS: IN BUILD — the next stone.
+
+The audio layer: trigger the game's actual .fuz recordings for the
+curated lines, gated on the feasibility test of reliably triggering
+a specific INFO record. The design rule is voice-aware picking: the
+game resolves audio by voice type, so a line only speaks if the
+speaker's voice bank recorded it (each catalog line's `(nv)`
+coverage says which); when the speaker's voice has no recording of
+the line, they stay mute — captions only, no wrong-voice audio.
+Nothing can be done when the game simply doesn't provide the line.
+
+0.9.1c — Timings & Weights
 
 ═══════════════════════════════════════════════
 

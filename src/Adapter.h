@@ -279,6 +279,15 @@ namespace TLC
         // never written by the plugin.
         void LoadConfiguration();
 
+        // The Realistic Conversations compatibility (0.8.7): the 33
+        // GMST overrides of the 2018 ESP of the same name, re-delivered
+        // as a tuning file (Realistic Conversations.ini next to the
+        // DLL) and applied to the game's own GameSettingCollection at
+        // load — no xedit patch, no ESP, no load-order slot. A missing
+        // file is the off switch; a setting the game no longer has is
+        // skipped, never fatal.
+        void ApplyRealisticConversations();
+
         // The MCM override (0.8.5): the player tunes in-game through the
         // Mod Configuration Menu page; MCM stores the changes in
         // Data\MCM\Settings\TheLivingCommonwealth.ini, and the adapter
