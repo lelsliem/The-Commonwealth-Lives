@@ -568,6 +568,17 @@ namespace TLC
         [[nodiscard]] std::string MindNameOnly(std::uint32_t a_formId) const;
         [[nodiscard]] std::string MarketLabel(std::uint32_t a_formId) const;
 
+        // The voice-aware picker's game seam (0.9.1b): resolve a mind's
+        // spoken voice from its actor's NPC voice type — the 8 settler
+        // voices, the 4 guards, the 2 children — so the picker only
+        // offers lines that voice actually recorded. nullopt (no actor,
+        // no NPC, an unknown voice type) means the speaker stays
+        // caption-only — the mute rule.
+        [[nodiscard]] std::optional<Dialogue::Voice> VoiceOf(
+            LCE::Simulation::EntityId a_entity) const;
+        [[nodiscard]] std::optional<Dialogue::Voice> VoiceOfForm(
+            std::uint32_t a_formId) const;
+
         // The identity stone's visible half (0.7.0 Stone 1): write a
         // mind's name onto its actor's extra data (the same mechanism as
         // the console SetDisplayName), so the name shows in-game — the

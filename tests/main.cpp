@@ -3808,6 +3808,73 @@ namespace TLC::Tests
             return false;
         }
 
+        // ---- The voice-aware picker (0.9.1b) ----
+
+        // A settler voice can speak a line its bank recorded: "Looking
+        // to buy?" is 8v (all settler voices) — MaleEvenToned says it,
+        // and it is a real pool line.
+        if (!CanSpeak(CoverageFor("Looking to buy?"),
+                      Voice::MaleEvenToned))
+        {
+            return false;
+        }
+
+        // The guard bank's escalation is guard-only: a settler voice
+        // must never be offered "No loitering." — that is the whole
+        // voice-aware rule. (Ground truth from the BA2 name table: the
+        // shared "Last warning." line is actually recorded by all 8
+        // settler voices *and* the guards — 0x0FFF — so the test pins
+        // the genuinely guard-only line instead.)
+        if (CanSpeak(CoverageFor("No loitering."), Voice::MaleEvenToned)
+            || !CanSpeak(CoverageFor("No loitering."),
+                         Voice::GuardMaleDiamondCity1))
+        {
+            return false;
+        }
+
+        // A custom INI line the survey never saw has no recording:
+        // coverage 0 — caption-only, never offered for audio.
+        if (CoverageFor("Mornin'") != 0)
+        {
+            return false;
+        }
+
+        // PickForVoice only draws lines the speaker's voice recorded.
+        const auto guardRow = PickForVoice(
+            pool, Pool::Row, id, 10, Voice::GuardMaleDiamondCity1);
+
+        if (guardRow.empty()
+            || !CanSpeak(CoverageFor(guardRow), Voice::GuardMaleDiamondCity1))
+        {
+            return false;
+        }
+
+        // Deterministic, and it never returns a settler-only line to a
+        // guard: every draw across a week of days is guard-speakable.
+        for (std::uint64_t day = 11; day < 18; ++day)
+        {
+            const auto line2 = PickForVoice(
+                pool, Pool::Row, id, day, Voice::GuardMaleDiamondCity1);
+
+            if (line2.empty()
+                || !CanSpeak(CoverageFor(line2), Voice::GuardMaleDiamondCity1))
+            {
+                return false;
+            }
+        }
+
+        // A settler voice drawing the same pool also gets only
+        // settler-recorded lines — the guard's "Last warning." never
+        // leaks to a settler.
+        const auto settlerRow = PickForVoice(
+            pool, Pool::Row, id, 10, Voice::MaleEvenToned);
+
+        if (settlerRow.empty()
+            || !CanSpeak(CoverageFor(settlerRow), Voice::MaleEvenToned))
+        {
+            return false;
+        }
+
         return true;
     }
 

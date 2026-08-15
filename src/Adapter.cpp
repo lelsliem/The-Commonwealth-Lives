@@ -3713,6 +3713,75 @@ namespace TLC
         }
     }
 
+    std::optional<Dialogue::Voice> Adapter::VoiceOfForm(
+        std::uint32_t a_formId) const
+    {
+        // The speaker's voice is game data: the actor's NPC base's
+        // voiceType (TESActorBaseData::voiceType). Resolve its editor
+        // id to our enum — the vanilla voice-type form ids are stable
+        // in Fallout4.esm, so a small name map (verified against the
+        // ESM's VTYP table) is all it takes. A null actor, a null NPC,
+        // or an unknown voice type is nullopt — the mind stays
+        // caption-only.
+        auto* actor = RE::TESForm::GetFormByID<RE::Actor>(a_formId);
+
+        if (actor == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        const auto* npc = actor->GetNPC();
+
+        if (npc == nullptr || npc->voiceType == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        const auto* editorId = npc->voiceType->GetFormEditorID();
+
+        if (editorId == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        static const struct VoiceName
+        {
+            const char* Name;
+            Dialogue::Voice Voice;
+        } kVoices[] = {
+            { "MaleOld", Dialogue::Voice::MaleOld },
+            { "FemaleOld", Dialogue::Voice::FemaleOld },
+            { "MaleEvenToned", Dialogue::Voice::MaleEvenToned },
+            { "FemaleEvenToned", Dialogue::Voice::FemaleEvenToned },
+            { "MaleRough", Dialogue::Voice::MaleRough },
+            { "FemaleRough", Dialogue::Voice::FemaleRough },
+            { "MaleBoston", Dialogue::Voice::MaleBoston },
+            { "FemaleBoston", Dialogue::Voice::FemaleBoston },
+            { "GuardMaleDiamondCity01", Dialogue::Voice::GuardMaleDiamondCity1 },
+            { "GuardMaleDiamondCity02", Dialogue::Voice::GuardMaleDiamondCity2 },
+            { "GuardMaleVault81", Dialogue::Voice::GuardMaleVault81 },
+            { "GuardFemaleVault81", Dialogue::Voice::GuardFemaleVault81 },
+            { "MaleChild", Dialogue::Voice::MaleChild },
+            { "FemaleChild", Dialogue::Voice::FemaleChild },
+        };
+
+        for (const auto& entry : kVoices)
+        {
+            if (std::strcmp(editorId, entry.Name) == 0)
+            {
+                return entry.Voice;
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    std::optional<Dialogue::Voice> Adapter::VoiceOf(
+        LCE::Simulation::EntityId a_entity) const
+    {
+        return VoiceOfForm(m_Translator.FormFor(a_entity));
+    }
+
     void Adapter::Say(
         LCE::Simulation::EntityId a_speaker,
         LCE::Simulation::EntityId a_listener,
@@ -3721,10 +3790,27 @@ namespace TLC
         bool a_radio)
     {
         // One line, deterministic per mind and day — the same mind says
-        // the same line all day and a different one tomorrow (Pick). An
-        // empty pool says nothing: silence is a safe default.
-        const auto line =
-            Dialogue::Pick(m_Dialogue, a_pool, a_speaker, CurrentDay());
+        // the same line all day and a different one tomorrow. The
+        // voice-aware picker (0.9.1b): the speaker's voice decides
+        // which lines are even offered — a line only speaks if the
+        // speaker's voice bank recorded it, so the audio layer can
+        // never play a wrong-voice line. An unresolvable voice (or a
+        // voice with nothing in the pool) falls back to the plain
+        // picker — captions still carry the story; silence is a safe
+        // default.
+        std::string line;
+        const auto voice = VoiceOf(a_speaker);
+
+        if (voice.has_value())
+        {
+            line = Dialogue::PickForVoice(
+                m_Dialogue, a_pool, a_speaker, CurrentDay(), *voice);
+        }
+
+        if (line.empty())
+        {
+            line = Dialogue::Pick(m_Dialogue, a_pool, a_speaker, CurrentDay());
+        }
 
         if (line.empty())
         {
@@ -3735,10 +3821,16 @@ namespace TLC
         const auto listenerForm = m_Translator.FormFor(a_listener);
 
         // The verify channel: the log reads as dialogue — who said what
-        // to whom.
+        // to whom, and in whose voice. The voice tag proves the
+        // voice-aware picker ran (0.9.1b): a known voice means the line
+        // came from PickForVoice (the speaker's bank recorded it);
+        // "cap" means the voice was unresolvable or had nothing in the
+        // pool and the plain picker ran — captions only, never
+        // wrong-voice audio.
         REX::INFO(
-            "LCE: {} to {}: \"{}\"",
-            MindLabelForm(speakerForm), MindLabelForm(listenerForm), line);
+            "LCE: {} to {} [{}]: \"{}\"",
+            MindLabelForm(speakerForm), MindLabelForm(listenerForm),
+            voice.has_value() ? "voice" : "cap", line);
 
         // The two channels a line can take beyond the log:
         //   - a_radio: the settlement radio's feed, the same queue the

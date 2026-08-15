@@ -26,16 +26,19 @@ Current Version : 0.9.1a — dialog. The 0.8 run (0.8.0 → 0.8.6c)
 Current Stage   : 0.9.x begun — the voiced dialog stone (0.9.1a)
                    is DONE and verified in-game: subtitles now speak
                    the game's real lines with names attached. The
-                   audio layer (voice-aware picking — a line only
-                   speaks if the speaker's voice recorded it, silent
-                   fallback otherwise) is the next build. 27/27
-                   harness suites green.
+                   voice-aware picker (0.9.1b) is BUILT — the pure
+                   picker, the per-line voice coverage table (ground
+                   truth from the game's own Voices BA2), and the
+                   actor voice-type resolution — 27/27 harness suites
+                   green; the audio *trigger* (playing a line's .fuz)
+                   is the remaining in-game probe. See the 0.9.1b
+                   section.
 
-Next Milestone  : 0.9.1b — voice-aware audio picking (a voice can
-                   only say lines its bank recorded; no match → stay
-                   mute, captions only) → 0.9.1c timings & weights →
-                   0.9.1d babies implemented → 0.9.2a animations →
-                   0.9.2b final touches → 0.9.2c beta on Nexus
+Next Milestone  : the 0.9.1b audio trigger probe (can the DLL
+                   reliably play a line's recording on an actor?) →
+                   0.9.1c timings & weights → 0.9.1d babies
+                   implemented → 0.9.2a animations → 0.9.2b final
+                   touches → 0.9.2c beta on Nexus
 
 ═══════════════════════════════════════════════
 
@@ -589,16 +592,41 @@ text.
 
 ═══════════════════════════════════════════════
 
-STATUS: IN BUILD — the next stone.
+STATUS: BUILT — the picker half is done and harness-green (27/27);
+         the audio trigger is the remaining in-game probe.
 
-The audio layer: trigger the game's actual .fuz recordings for the
-curated lines, gated on the feasibility test of reliably triggering
-a specific INFO record. The design rule is voice-aware picking: the
-game resolves audio by voice type, so a line only speaks if the
-speaker's voice bank recorded it (each catalog line's `(nv)`
-coverage says which); when the speaker's voice has no recording of
-the line, they stay mute — captions only, no wrong-voice audio.
-Nothing can be done when the game simply doesn't provide the line.
+The design rule (decided with the author): a line only speaks if
+the speaker's voice bank recorded it — the game resolves audio by
+voice type, so a voice can never say a line its bank lacks; when no
+line exists for that voice, the mind stays mute (captions only), and
+nothing can be done if the game simply doesn't provide it.
+
+Built so far:
+- **Voice** (Dialogue.h) — the 8 settler voices, 4 guards, 2
+  children, as a bitset (VoiceSet).
+- **Coverage table** — every curated line's recorded voices, as
+  **ground truth from the game's own `Fallout4 - Voices.ba2`** name
+  table (a formid → voice-set map keyed by normalized text; NOT the
+  catalog's `(nv)` counts, which say how many voices but not which).
+  The survey corrected two assumptions: "Last warning." is recorded
+  by all 8 settler voices *and* the guards (0x0FFF — shared), while
+  "No loitering." is genuinely guard-only (0x0F00).
+- **PickForVoice** — the voice-aware picker: only draws lines the
+  speaker's voice recorded; a voice with nothing in the pool returns
+  empty (mute). The seed folds the voice, so two voices of the same
+  mind disagree. Custom INI lines (no catalog entry) have coverage 0
+  — caption-only, never wrong-voice audio.
+- **VoiceOf / VoiceOfForm** (Adapter) — resolves a mind's voice from
+  its actor's NPC voiceType editor id (verified against the ESM's
+  VTYP table); nullopt → caption-only. Say() uses PickForVoice when
+  a voice resolves and logs `[voice]` vs `[cap]` per line, so the
+  in-game log proves which path ran.
+
+The remaining piece is the audio trigger: playing a line's actual
+.fuz on an actor (the vendored commonlibf4 has no direct Say
+wrapper — the probe tests the ProcessGreet / dialogue-package
+route). Nothing engine-side is needed: voice types and audio are
+purely game-facing, which the adapter already owns.
 
 0.9.1c — Timings & Weights
 
