@@ -358,6 +358,32 @@ namespace TLC::Names
     }
 
     //-------------------------------------------------------------------------
+    // IsRoadRole — is this a road role (0.8.9 road-feed stone)? The
+    // travelers the game spawns with the brahmin caravans and the
+    // supply lines — Provisioner, Caravan Guard, Caravan Worker. They
+    // are minds (named, remembered, bonded), but their bodies follow
+    // the game's caravan AI: they feed on the road, never at a
+    // settlement market. Guards and traders stay city people — they
+    // keep their market.
+    //-------------------------------------------------------------------------
+    inline bool IsRoadRole(std::string_view a_name) noexcept
+    {
+        static constexpr std::string_view kRoadRoles[] = {
+            "Provisioner", "Caravan Guard", "Caravan Worker",
+        };
+
+        for (const auto role : kRoadRoles)
+        {
+            if (EqualsFold(a_name, role))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    //-------------------------------------------------------------------------
     // HasRolePrefix — does this name already carry the role's title?
     // "Provisioner Cole" has the "Provisioner" prefix; "Cole Hart"
     // and a bare "Provisioner" do not. The converge rule uses it to

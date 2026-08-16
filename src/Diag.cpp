@@ -289,7 +289,8 @@ namespace
                 12 } },
             { { 0x00012345u, 0x00012346u, 11, 12 } },
             { { 0x0000000Du, 17 } },
-            { { 0x000250FEu, 4 } });
+            { { 0x000250FEu, 4 } },
+            { { 0x000250FEu, 0x00014E39u, 5 } });
 
         RegistrySnapshot decoded;
         std::uint64_t rngState = 0;
@@ -298,9 +299,11 @@ namespace
         std::vector<TLC::CoSave::ConflictGatePair> gates;
         std::vector<TLC::CoSave::BurialEntry> burials;
         std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
+        std::vector<TLC::CoSave::BabyHold> babyHolds;
 
         if (!TLC::CoSave::Decode(
-                record, decoded, rngState, stalls, bonds, gates, burials, medicineStock))
+                record, decoded, rngState, stalls, bonds, gates, burials,
+                medicineStock, &babyHolds))
         {
             return false;
         }
@@ -313,7 +316,11 @@ namespace
             && burials.size() == 1
             && medicineStock.size() == 1
             && medicineStock[0].MarketFormId == 0x000250FEu
-            && medicineStock[0].Stock == 4;
+            && medicineStock[0].Stock == 4
+            && babyHolds.size() == 1
+            && babyHolds[0].MotherFormId == 0x000250FEu
+            && babyHolds[0].BundleFormId == 0x00014E39u
+            && babyHolds[0].BornDay == 5;
     }
 
     // The earn-caps economy (0.8.6b): the once-per-day stipend sweep.

@@ -34,6 +34,7 @@
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <limits>
 #include <optional>
 #include <string>
@@ -46,8 +47,10 @@ namespace RE
 {
     class Actor;
     class ActorValueInfo;
+    class TESNPC;
     class TESObjectREFR;
     class TESWeather;
+    enum class DIALOGUE_SUBTYPE : std::int32_t;
 }
 
 namespace TLC
@@ -170,7 +173,9 @@ namespace TLC
             std::vector<TLC::CoSave::BondPair> a_bonds,
             std::vector<TLC::CoSave::ConflictGatePair> a_gates,
             std::vector<TLC::CoSave::BurialEntry> a_burials,
-            std::vector<TLC::CoSave::MedicineStockPair> a_medicineStock);
+            std::vector<TLC::CoSave::MedicineStockPair> a_medicineStock,
+            std::vector<TLC::CoSave::BabyHold> a_babyHolds,
+            std::vector<TLC::CoSave::VisualChild> a_visualChildren);
 
         // The stall-keepers in durable form — (market FormID, keeper
         // FormID) pairs, translated from the session-local entity ids via
@@ -212,6 +217,10 @@ namespace TLC
         // across save/load until the next market day refills it.
         [[nodiscard]] std::vector<TLC::CoSave::MedicineStockPair>
         MedicineStockForSave() const;
+        [[nodiscard]] std::vector<TLC::CoSave::BabyHold>
+        BabyHoldsForSave() const;
+        [[nodiscard]] std::vector<TLC::CoSave::VisualChild>
+        VisualChildrenForSave() const;
 
         // The per-frame heartbeat of the simulation: decay, remember,
         // decide, then execute. Called by the Tick hook on the game thread.
@@ -346,6 +355,20 @@ namespace TLC
         // have forgotten it. a_announce logs the "market is open" line;
         // the tick's periodic refresh passes false (idempotent, silent).
         void SeedMarket(bool a_announce);
+
+        // ScrubRoadMarketMemories (0.8.9): a road person's co-save can
+        // carry a stale Trade memory pointing at a settlement bench —
+        // seeded by an older build before the road-feed stone, and
+        // idempotently preserved by every later seed (the seed only
+        // ever adds, never removes). That stale memory is exactly the
+        // pull that walks a provisioner to the workbench: the engine's
+        // hunger branch follows Trade memories, and each bench arrival
+        // re-warms the fact. The scrub removes Trade-kind memories
+        // whose target is a market entity (a workshop — FormRef only,
+        // no SpeciesTag) from road people's minds, so their hunger
+        // resolves to the road feed alone. Idempotent and safe to run
+        // every seed pass.
+        void ScrubRoadMarketMemories();
 
         // 0.7.4 Trade with anyone: the vendor census and its seed. Who
         // sells in the loaded world (SimRelevant::IsVendor — a merchant
@@ -494,6 +517,11 @@ namespace TLC
         std::uint64_t m_LastBirthDay =
             std::numeric_limits<std::uint64_t>::max();
 
+        // The visible-child pass's last check (0.8.9 deferred-spawn
+        // find): a couple of checks a second is plenty — the child
+        // stays invisible until a load completes it.
+        std::chrono::steady_clock::time_point m_LastVisualChildFollow{};
+
         // World facts (0.5.0): the doors the world shuts. The market
         // closes outside its trading hours — a remembered { invalid,
         // Trade } fact blocks the hungry walk until it fades — and a
@@ -618,6 +646,141 @@ namespace TLC
         // on both sides. Test-only: off when either form id is 0.
         void ForceFightLoop();
 
+        // The audio trigger probe (0.8.7): when sim.diag.audioProbe
+        // is on, the probe makes a nearby settler actually SPEAK a
+        // curated line's .fuz every AudioProbeEvery seconds — the
+        // vendored commonlibf4 has no direct Say wrapper, so it
+        // drives the AI process's greeting entry (ProcessGreet, the
+        // same family as the kick's PlayIdle seam) — the seam that
+        // proved the in-world exchange. Test-only: off by default,
+        // never ships in a release INI.
+        void AudioProbeLoop();
+
+        // The in-world exchange (0.8.7b): one shared slot for the
+        // whole world — A voices a greeting at B, B's answer is due a
+        // short beat later, and nothing else opens while one is in
+        // flight (a crowd never all talks at once). OpenExchange fires
+        // the opener and books the answer; ProcessExchange (per tick)
+        // re-resolves the pair by form id and fires the answer, or
+        // drops it if the pair parted. VoiceAt is the one game call
+        // the exchange rides — the greeting entry targeted at the
+        // other NPC — and returns the INFO the game actually voiced
+        // (0 = refused or silent).
+        struct GreetResult
+        {
+            bool Accepted = false;
+            std::uint32_t Played = 0;
+        };
+
+        // The voice outcome plus the register the game was actually
+        // asked for (0.8.9): "family" or "family(hello)" after the
+        // fallback — the log tags the truth, so the field test can
+        // see whether the family register voiced anything different.
+        struct VoiceOutcome
+        {
+            GreetResult Result;
+            const char* RegisterName = "greet";
+        };
+
+        // The register a voiced exchange asks the game to speak (0.8.9
+        // register stone): the bond names the register, the register
+        // names the game's greeting subtype. The game's NPC->NPC
+        // voicing surface only has greeting registers — kMisc_Hello is
+        // proven — so the map is honest about what the game can voice:
+        // Family tries the general greeting (kMisc_Greeting), which
+        // may voice a different line where the voice has one, falling
+        // back to the proven hello if the game refuses; Flirt has no
+        // distinct game INFO bank and voices the proven hello — the
+        // register is the moment (a compatible, unpaired pair), the
+        // game's words are its own.
+        enum class ExchangeRegister
+        {
+            Greet,   // kMisc_Hello — the proven NPC->NPC register
+            Family,  // kMisc_Greeting first; hello fallback on refusal
+            Flirt,   // kMisc_Hello — the moment, not a distinct line
+        };
+
+        void OpenExchange(
+            RE::Actor* a_speaker, RE::Actor* a_target,
+            ExchangeRegister a_register);
+        void ProcessExchange();
+        [[nodiscard]] GreetResult VoiceAt(
+            RE::Actor* a_speaker, RE::Actor* a_target,
+            RE::DIALOGUE_SUBTYPE a_subtype);
+        // The register's voice call with the hello fallback (0.8.9):
+        // family first asks the game for its general greeting
+        // (kMisc_Greeting) and retries the proven hello once if the
+        // game refuses outright — an accepted-but-queued greeting is
+        // never retried (it may still voice late; a second call would
+        // double-book). Greet and flirt voice the proven hello.
+        [[nodiscard]] VoiceOutcome VoiceRegister(
+            RE::Actor* a_speaker, RE::Actor* a_target,
+            ExchangeRegister a_register);
+        // The bond's register for a crossing pair (0.8.9): family for
+        // a bonded household, flirt for a compatible unpaired pair,
+        // greet otherwise — the exchange's moment, named before the
+        // game picks its words.
+        [[nodiscard]] ExchangeRegister RegisterFor(
+            LCE::Simulation::EntityId a_a,
+            LCE::Simulation::EntityId a_b,
+            Bonds::BondKind a_kind);
+        // The compatible-pair gate behind the flirt register: two
+        // single, human adults who are warm to each other — neither
+        // married, neither kin or companion (the never-romance gate),
+        // shared disposition at or above the friend line.
+        [[nodiscard]] bool CompatiblePair(
+            LCE::Simulation::EntityId a_a,
+            LCE::Simulation::EntityId a_b);
+        // The road people (0.8.9 road-feed stone): a mind whose actor
+        // is a non-settler road role — Provisioner, Caravan Guard,
+        // Caravan Worker — the travelers the game spawns with the
+        // caravans and supply lines. Their bodies follow the game's
+        // caravan AI; the sim minds them but never yanks them to a
+        // settlement market.
+        [[nodiscard]] bool IsRoadPerson(
+            LCE::Simulation::EntityId a_entity) const;
+        // The 0.8.9 birth journey: at birth, equip the mother with a
+        // baby bundle from the mod (a random ethnicity); the hold rides
+        // the co-save. Each day AdvanceBabyHolds ages every hold — a
+        // hold past sim.baby.holdDays sheds its bundle, and the sim
+        // child goes on growing inside the household. A real child is
+        // spawned at the mother's feet, deliberately deferred (the
+        // invisible-child find — 2026-08-16: every attempt to spawn a
+        // vanilla child actor through a full init either left a
+        // headless, T-posing, immobile child (the low-level forced
+        // spawn) or CTD'd the session (the PlaceAtMe VM dispatch);
+        // leaving it un-initialized lets the game's own load routine
+        // complete it into a fully real child).
+        void EquipBabyBundle(
+            LCE::Simulation::EntityId a_mother,
+            LCE::Simulation::EntityId a_child);
+        void AdvanceBabyHolds();
+        void RestoreBabyHolds(
+            const std::vector<TLC::CoSave::BabyHold>& a_babyHolds);
+        // The visible child (0.8.9, the deferred-spawn find): when the
+        // bundle comes off, a real child actor is spawned at the
+        // mother's feet — deliberately left un-initialized, so it is
+        // invisible until the game's own save/load routine completes it
+        // (facegen, AI process, animation) and the child steps out
+        // fully real. The child is dressed by the game's own path —
+        // the base NPC's default outfit (defOutfit) is set to a
+        // ChildOutfit* OTFT bundle at spawn, so the init that
+        // materializes the child also applies its clothes; the per-tick
+        // pass confirms and re-equips as a fallback (equipping the
+        // bundle's ARMOs). The record rides the co-save (v11) so the
+        // pending child survives the very load that materializes it.
+        void AdvanceVisualChildren();
+        void RestoreVisualChildren(
+            const std::vector<TLC::CoSave::VisualChild>& a_visualChildren);
+
+        // The road feed (0.8.9 road-feed stone): a road person eats
+        // from the caravan's supplies when its hunger falls to
+        // sim.road.feedThreshold — the same meal a market arrival
+        // gives a settler, without the walk to the bench. Runs every
+        // tick before the sim update, so the restored belly shapes the
+        // day's decisions.
+        void FeedRoadPeople();
+
         // The scuffle's second beat (0.7.5): a hot-headed victim
         // answers the punch after a beat — push, fall, get up, push
         // back — instead of both shoves landing in the same instant
@@ -645,7 +808,10 @@ namespace TLC
         // as a HUD notification, throttled by sim.news.cooldown so a
         // flood of lines is not a flood of windows. The caller's own
         // log line stays the verify channel; this is the human window.
-        void PushNews(const std::string& a_line);
+        void PushNews(
+            const std::string& a_line,
+            Tuning::AdapterSettings::NewsCategory a_category =
+                Tuning::AdapterSettings::NewsCategory::Bonds);
 
         // The settlement radio (0.7.0 Stone 3): while a radio the player
         // built is near, the news feed plays as on-screen captions on the
@@ -748,7 +914,7 @@ namespace TLC
             LCE::Simulation::EntityId a_child) const;
 
         // 0.7.8: pair sim-only children with visible game actors.
-        void PairVisibleChildren();
+
 
         // The illness stone (0.8.0 — Illness & Medicine). Three passes,
         // all in the per-second block and the per-tick loop:
@@ -891,6 +1057,26 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
             LCE::Simulation::EntityId, std::chrono::steady_clock::time_point>
             m_InteractCooldown;
 
+        // The per-pair cooldown (0.8.8): when a specific pair last
+        // spoke — keyed by the unordered pair of entity values (min,
+        // max) — so the same two settlers never re-exchange within
+        // sim.interact.pairCooldown seconds (the 0.8.7b field note:
+        // Gabriel and Lucas greeting each other twice a minute).
+        // Ephemeral session state, never co-saved, cleared on EndWorld.
+        std::map<
+            std::pair<std::uint64_t, std::uint64_t>,
+            std::chrono::steady_clock::time_point>
+            m_InteractPairCooldown;
+
+        // The daily-open ledger (0.8.8): EntityId → (sim day, opens
+        // that day) for the sim.interact.dailyCap gate (0 = off).
+        // Rolled to the current day on read; ephemeral session state,
+        // never co-saved, cleared on EndWorld.
+        std::unordered_map<
+            LCE::Simulation::EntityId,
+            std::pair<std::uint64_t, std::uint32_t>>
+            m_InteractOpenedToday;
+
         // When each mind last arrived, and where (target form id + time).
         // The arrival-cooldown guard: a mind that just arrived at its
         // destination has its next MoveTo there treated as satisfied, so
@@ -996,13 +1182,13 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // The loud line's on-screen home (0.7.5 field): a spoken line
         // rides the game's own subtitle display — SubtitleManager's
         // priority array, the same queue dialogue lines use — so it
-        // reads as a bottom-of-screen subtitle instead of a top-left
-        // news pop. The caller has already checked the speaker is
-        // within sim.subtitle.radius of the player (a brawl nearby is
-        // loud; a cross-settlement squabble is not).
-        void ShowSubtitle(
-            RE::TESObjectREFR* a_speaker,
-            const std::string& a_line);
+        // reads as a top-left notification instead of a bottom
+        // dialogue box (the first presentation read as fake
+        // in-conversation dialogue with no audio — 0.8.7). The caller
+        // has already checked the speaker is within
+        // sim.subtitle.radius of the player (a brawl nearby is loud; a
+        // cross-settlement squabble is not).
+        void ShowChatter(const std::string& a_line);
 
         // The physical escalation (0.7.5 Fights): when a feud's words
         // fail — an enemy pair's row, or a slighted mind facing an
@@ -1026,6 +1212,7 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // each last fired, so a world of news does not flood the player.
         std::chrono::steady_clock::time_point m_LastNews{};
         std::chrono::steady_clock::time_point m_LastRadioCaption{};
+        std::chrono::steady_clock::time_point m_LastChatter{};
 
         // The recent deaths (the grief announce, 0.6.0 Stone 5): entity
         // value → form id, set when a death is booked and the dead is
@@ -1079,6 +1266,8 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         // restores the map directly — market form ids need no
         // translation).
         std::vector<TLC::CoSave::MedicineStockPair> m_PendingMedicineStock;
+        std::vector<TLC::CoSave::BabyHold> m_PendingBabyHolds;
+        std::vector<TLC::CoSave::VisualChild> m_PendingVisualChildren;
 
         // Rebuilds m_StallKeepers from durable (market, keeper) FormID
         // pairs after a restore — the market entity and the keeper entity
@@ -1128,6 +1317,42 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         void RestoreMedicineStock(
             const std::vector<TLC::CoSave::MedicineStockPair>& a_medicineStock);
 
+        // The held newborns (0.8.9 birth journey): mother form id ->
+        // (bundle form id, born day). Set when a birth happens — the
+        // mother visibly carries the newborn (the game's own Shaun
+        // bundle, or the baby mod's variants when installed). The
+        // per-day advance removes the bundle (and its holding flavor)
+        // once the hold passes sim.baby.holdDays; the visible child is
+        // then spawned at her feet, deferred (the 0.8.9 find).
+        // Persisted in the co-save (v10) so a mid-carry survives
+        // save/load. Form ids, not entity ids (the mother is a game
+        // actor; the child is sim-only until its body materializes).
+        std::unordered_map<std::uint32_t, TLC::CoSave::BabyHold>
+            m_BabyHolds;
+
+        // The visible children (0.8.9, deferred-spawn find): mother
+        // form id -> the spawned child actor (deferred, invisible until
+        // the game's load routine completes it). Spawned at the shed;
+        // the per-tick pass dresses each child the moment it reads
+        // fully initialized (3D + AI process), then retires the
+        // record. Persisted in the co-save (v11) so a pending child
+        // survives the load that materializes it.
+        std::unordered_map<std::uint32_t, TLC::CoSave::VisualChild>
+            m_VisualChildren;
+
+        // The baby-mod soft dependency (0.8.9 birth journey): whether
+        // the "Baby Sim - Babies That Grow Up" plugin is loaded,
+        // cached after the first read (the load order never changes
+        // mid-session). BabyForm shifts a record id into the plugin's
+        // index (0 when the mod is absent). The bundle equip and the
+        // visible journey gate on it; without the mod a newborn stays
+        // sim-only (the sim's own child mind, fed by the household).
+        [[nodiscard]] bool BabyModLoaded();
+        [[nodiscard]] std::uint32_t BabyForm(
+            std::uint32_t a_recordId);
+        mutable bool m_BabyModChecked = false;
+        mutable bool m_BabyModLoaded = false;
+
 
         // The 0.8.2 burial sweep: for every ledger entry whose mourning
         // window has passed, disable the corpse ref (the game corpse
@@ -1154,6 +1379,22 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         std::chrono::steady_clock::time_point m_LastForceFight{};
         std::uint64_t m_ForceFightCount = 0;
 
+        // The in-flight exchange (0.8.7b): A opened with a greeting at
+        // B, and B's answer is due a short beat later. Stored as form
+        // ids, never raw refs across ticks; the answer re-resolves and
+        // drops if the pair parted. One slot for the whole world — the
+        // lock that keeps a crowd from all talking at once. Session
+        // state; cleared with the world.
+        struct Exchange
+        {
+            std::uint32_t AnswererForm = 0;
+            std::uint32_t AddresseeForm = 0;
+            ExchangeRegister Register = ExchangeRegister::Greet;
+            std::chrono::steady_clock::time_point Due{};
+        };
+
+        std::chrono::steady_clock::time_point m_LastAudioProbe{};
+        std::optional<Exchange> m_Exchange;
         // The scuffle's queued beats (0.7.5): every physical beat of a
         // fight is scheduled, never fired in the same frame — the
         // flinch plays, then the fall lands a beat later (a same-frame

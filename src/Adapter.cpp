@@ -30,10 +30,15 @@
 #include <RE/A/AIProcess.h>   // the game's knockback — the punch's shove
 #include <RE/A/Actor.h>
 #include <RE/B/BSContainer.h>
+#include <RE/B/BSScript_IStackCallbackFunctor.h>   // the audio probe — Say's null callback
 #include <RE/B/BSScriptUtil.h>   // BSScript::GetVMTypeID — the OwnedByPlayer ownership read
-#include <RE/B/BSSpinLock.h>     // BSAutoWriteLock — the subtitle queue's lock
+#include <RE/C/Console.h>        // the holding flavor — PRID + ChangeAnimFlavor, the game's own parser
 #include <RE/D/DamageImpactData.h>
+#include <RE/D/DIALOGUE_SUBTYPE.h>   // the audio probe — ProcessGreet's greeting sub-type
+#include <RE/D/DIALOGUE_TYPE.h>      // the audio probe — ProcessGreet's dialogue type
+#include <RE/D/DialogueItem.h>       // the audio probe — greetTopic's info read-back
 #include <RE/H/HitData.h>      // the melee hit-reaction — the standing shove
+#include <RE/Fallout.h>              // the audio probe — HighProcessData (nextGreeting seed); the fork's umbrella includes it with its transitive deps in order
 #include <RE/K/KNOCK_STATE_ENUM.h>   // the standing guard — a beat never fires into a down actor
 #include <RE/T/TESIdleForm.h>   // the paired push — the game's real shove animation
 #include <RE/S/STAGGER_MAGNITUDE.h>
@@ -45,14 +50,17 @@
 #include <RE/S/SendHUDMessage.h>
 #include <RE/S/Setting.h>          // GameSettingCollection — the Realistic Conversations compatibility applies GMST overrides to the game's own settings
 #include <RE/S/Sky.h>
-#include <RE/S/SubtitleManager.h>   // the game's own subtitle queue — the loud line's screen
 #include <RE/T/TESDataHandler.h>
 #include <RE/T/TESFullName.h>
+#include <RE/T/TESTopicInfo.h>   // the audio probe — INFO -> parentTopic -> Say
 #include <RE/T/TESForm.h>
 #include <RE/T/TESObjectCELL.h>
 #include <RE/T/TESWorldSpace.h>
 #include <RE/T/TESFormUtil.h>   // the header-only definition of TESForm::As<T>
 #include <RE/T/TESObjectREFR.h>
+#include <RE/B/BGSOutfit.h>   // the child's clothes — the ChildOutfit* records are OTFT bundles, not ARMOs
+#include <RE/T/TESObjectARMO.h>   // the ARMOs inside those bundles — the runtime dress fallback
+#include <RE/T/TESNPC.h>   // the child base — defOutfit (WNAM) is the game's own child-dressing path
 #include <RE/T/TESRace.h>
 #include <RE/T/TESWeather.h>
 
@@ -599,6 +607,111 @@ namespace TLC
             std::snprintf(buffer, sizeof(buffer), "%02d:%02d", whole, minutes);
             return buffer;
         }
+
+        // The visible child (0.8.9, the deferred-spawn find): when the
+        // bundle comes off, a real child actor is spawned at the
+        // mother's feet — but DELIBERATELY left un-initialized (no
+        // clearStillLoadingFlag, no forced Load3D). A ref created like
+        // this is invisible while the cell holds it; the game's own
+        // save/load routine completes the actor — facegen, AI process,
+        // animation — the next time the world reloads, and the child
+        // steps out fully real (the 2026-08-16 field find: exactly this
+        // happened; the invisible child "became real" on load, with
+        // only the clothes missing). The alternative — forcing the
+        // init immediately — produces the half-born headless, T-posing,
+        // immobile child that even survives saves; and the game's own
+        // PlaceAtMe dispatch is the documented PackVariables CTD. So:
+        // deferred, real after a load. The per-tick pass dresses the
+        // child the moment it reads fully initialized (3D + AI
+        // process). Base and outfit form ids verified in Fallout4.esm
+        // 2026-08-16 (child-race NPCs; ChildOutfit* OTFT bundles).
+        //
+        // The safe bases: the farm children — generic child NPCs with
+        // no quest strings attached (the Vault 81 and Diamond City
+        // school kids are quest actors; spawning copies of them risks
+        // script interference).
+        constexpr std::uint32_t kFemaleChildBases[] = {
+            0x00156a23,   // Farm05FemaleChild
+        };
+        constexpr std::uint32_t kMaleChildBases[] = {
+            0x00156a21,   // Farm05MaleChild
+            0x00156a13,   // Farm02MaleChild
+        };
+
+        // The child's clothes — the game's own child-sized outfit
+        // bundles. FIELD FIND (2026-08-16): these "ChildOutfit*"
+        // records are OTFT bundles (BGSOutfit), NOT ARMOs — a cast to
+        // TESBoundObject always fails, which is exactly why the first
+        // dressing attempt silently equipped nothing while the log
+        // still claimed "dressed and fully real". Each bundle carries
+        // the real child ARMOs (ClothesKids01..04 on slot 0x8, plus a
+        // hat on the RagsWithHat bundle). The game applies such a
+        // bundle through the NPC base's default outfit (WNAM /
+        // defOutfit) at actor init — the same path that dresses the
+        // game's own children; the bundles are orphans (no NPC record
+        // references them), so we reuse that mechanism. ChildNatOutfit
+        // (ClothesNat) is Nat Wright's unique dress and is excluded;
+        // the dress (ChildOutfitDress) is female-only.
+        constexpr std::uint32_t kChildOutfitMale[] = {
+            0x001681b5,   // ChildOutfitStripedShirtAndJeans (ClothesKids01)
+            0x001681b7,   // ChildOutfitStreetUrchinRags (ClothesKids02)
+            0x001681b8,   // ChildOutfitStreetUrchinRagsWithHat (+hat)
+            0x00164164,   // ChildOutfitPajamas (ClothesKids04)
+        };
+        constexpr std::uint32_t kChildOutfitFemale[] = {
+            0x001681b5,   // ChildOutfitStripedShirtAndJeans (ClothesKids01)
+            0x001681b7,   // ChildOutfitStreetUrchinRags (ClothesKids02)
+            0x001681b8,   // ChildOutfitStreetUrchinRagsWithHat (+hat)
+            0x00164164,   // ChildOutfitPajamas (ClothesKids04)
+            0x0015d310,   // ChildOutfitDress (ClothesKids03)
+        };
+
+        // The materialize pass's cadence — a couple of checks a second
+        // is plenty; the child stays invisible until a load completes it.
+        constexpr double kVisualChildCheckSeconds = 0.5;
+
+        //-------------------------------------------------------------------------
+        // The visible baby (0.8.9 field find): the swaddled bundle the
+        // mother carries is NOT the armor's mesh — babybundled and the
+        // baby mod's Cyber_* bundles all ship an empty MODL. The visible
+        // baby is the AnimObject (Objects\BabyBundled.nif) that the
+        // AnimFlavorHoldingBaby anim flavor attaches. The baby mod's
+        // bundles carry a script (Cyber_BabyOnEquip, decompiled
+        // 2026-08-15) that calls Actor.ChangeAnimFlavor(AnimFlavorHoldingBaby)
+        // on equip — that is what makes the bundle visible; the vanilla
+        // fallback (babybundled) has no script, so equipping it shows
+        // nothing. This applies the flavor ourselves through the game's
+        // own console parser (PRID selects the ref, ChangeAnimFlavor
+        // sets or clears the flavor) — the identical native the script
+        // calls, without the VM: the papyrus-dispatch route is the
+        // documented PackVariables crasher, while the console parser is
+        // the game's own stable seam (a bad arg at worst does nothing).
+        // Idempotent: next to the mod's own OnEquipped call it is a
+        // harmless duplicate.
+        //-------------------------------------------------------------------------
+        void ApplyHoldingFlavor(RE::Actor* a_actor, bool a_set)
+        {
+            if (a_actor == nullptr)
+            {
+                return;
+            }
+
+            RE::Console::ExecuteCommand(
+                std::format("PRID {:08x}", a_actor->GetFormID()).c_str());
+
+            if (a_set)
+            {
+                // AnimFlavorHoldingBaby (0x000E52D9, Fallout4.esm) —
+                // the flavor whose anim object is the swaddled baby.
+                RE::Console::ExecuteCommand("ChangeAnimFlavor 000E52D9");
+            }
+            else
+            {
+                // No keyword = the papyrus default (None): the flavor
+                // drops and the anim object detaches.
+                RE::Console::ExecuteCommand("ChangeAnimFlavor");
+            }
+        }
     }
 
     Adapter::Adapter()
@@ -846,6 +959,12 @@ namespace TLC
             LCE::Simulation::SimulationTuning::FromConfiguration(a_config);
         m_Settings = Tuning::AdapterSettingsFrom(a_config);
 
+        // The crash-hunt bisect gate (0.8.7, sim.diag.noWalks): every
+        // Movement command refuses without touching the game, so the
+        // sim never issues a command-mode travel package. Applied at
+        // every config load — the gate flips live on INI reload.
+        TLC::Movement::SetCommandsEnabled(!m_Settings.NoWalks);
+
         // The identity stone's pool (0.7.0 Stone 1): the author's own
         // name lists — names.first.male / .female / .animal, names.last
         // — comma-separated, each overriding its default list. The
@@ -1049,7 +1168,9 @@ namespace TLC
         std::vector<TLC::CoSave::BondPair> a_bonds,
         std::vector<TLC::CoSave::ConflictGatePair> a_gates,
         std::vector<TLC::CoSave::BurialEntry> a_burials,
-        std::vector<TLC::CoSave::MedicineStockPair> a_medicineStock)
+        std::vector<TLC::CoSave::MedicineStockPair> a_medicineStock,
+        std::vector<TLC::CoSave::BabyHold> a_babyHolds,
+        std::vector<TLC::CoSave::VisualChild> a_visualChildren)
     {
         m_PendingRestore = std::move(a_snapshot);
         m_PendingRngState = a_rngState;
@@ -1058,6 +1179,8 @@ namespace TLC
         m_PendingGates = std::move(a_gates);
         m_PendingBurials = std::move(a_burials);
         m_PendingMedicineStock = std::move(a_medicineStock);
+        m_PendingBabyHolds = std::move(a_babyHolds);
+        m_PendingVisualChildren = std::move(a_visualChildren);
     }
 
     std::vector<TLC::CoSave::StallKeeperPair> Adapter::StallKeepersForSave() const
@@ -1316,7 +1439,9 @@ namespace TLC
             REX::INFO(
                 "burials: the settlement laid {} to rest.", graveLabel);
 
-            PushNews(graveLabel + " was laid to rest.");
+            PushNews(
+                graveLabel + " was laid to rest.",
+                Tuning::AdapterSettings::NewsCategory::Death);
 
             it = m_Burials.erase(it);
         }
@@ -1489,6 +1614,97 @@ namespace TLC
         m_MedicineStock[a_marketFormId] = left > 0 ? left - 1 : 0;
     }
 
+    void Adapter::RestoreBabyHolds(
+        const std::vector<TLC::CoSave::BabyHold>& a_babyHolds)
+    {
+        m_BabyHolds.clear();
+
+        for (const auto& entry : a_babyHolds)
+        {
+            m_BabyHolds[entry.MotherFormId] = entry;
+        }
+
+        // The game save keeps the equipped bundle, but the holding
+        // flavor is runtime state — re-apply it so a restored carry is
+        // visible again (best-effort: a streamed-out mother is skipped
+        // and re-applied on her next shed-day pass).
+        for (const auto& [motherFormId, hold] : m_BabyHolds)
+        {
+            ApplyHoldingFlavor(
+                RE::TESForm::GetFormByID<RE::Actor>(motherFormId),
+                true);
+        }
+
+        if (!m_BabyHolds.empty())
+        {
+            REX::INFO(
+                "birth: {} newborn hold{} restored from the co-save.",
+                m_BabyHolds.size(),
+                m_BabyHolds.size() == 1 ? "" : "s");
+        }
+    }
+
+    bool Adapter::BabyModLoaded()
+    {
+        if (m_BabyModChecked)
+        {
+            return m_BabyModLoaded;
+        }
+
+        m_BabyModChecked = true;
+
+        // The soft dependency (0.8.9): resolve the baby mod's plugin by
+        // name — the load order never changes mid-session, so the read
+        // is cached. Loaded once, the sim knows the world provides
+        // babies: the pairing, the crib walk, and the visible journey
+        // all gate on it, and everything degrades to sim-only children
+        // without it.
+        auto* handler = RE::TESDataHandler::GetSingleton();
+
+        if (handler == nullptr)
+        {
+            return false;
+        }
+
+        m_BabyModLoaded = handler->GetLoadedModIndex(
+            "Baby Sim - Babies That Grow Up.esp").has_value();
+
+        REX::INFO(
+            "birth: baby mod {} — the visible journey {}.",
+            m_BabyModLoaded ? "found" : "not found",
+            m_BabyModLoaded ? "enabled" : "stays sim-only");
+
+        return m_BabyModLoaded;
+    }
+
+    std::uint32_t Adapter::BabyForm(std::uint32_t a_recordId)
+    {
+        // The plugin's form ids carry its load index in the top byte.
+        // 0 when the mod is absent — callers check BabyModLoaded first.
+        if (!m_BabyModLoaded)
+        {
+            return 0;
+        }
+
+        auto* handler = RE::TESDataHandler::GetSingleton();
+
+        if (handler == nullptr)
+        {
+            return 0;
+        }
+
+        const auto index = handler->GetLoadedModIndex(
+            "Baby Sim - Babies That Grow Up.esp");
+
+        if (!index.has_value())
+        {
+            return 0;
+        }
+
+        return (static_cast<std::uint32_t>(*index) << 24)
+            | (a_recordId & 0xFFFFFFu);
+    }
+
     void Adapter::ReplenishMedicineStock() noexcept
     {
         const auto full = m_Settings.Illness.Stock;
@@ -1541,6 +1757,23 @@ namespace TLC
         {
             result.push_back(
                 TLC::CoSave::MedicineStockPair{ marketFormId, stock });
+        }
+
+        return result;
+    }
+
+    std::vector<TLC::CoSave::BabyHold>
+    Adapter::BabyHoldsForSave() const
+    {
+        // The held newborns (0.8.9 birth journey): the map is already
+        // durable — (mother form id, bundle form id, born day) holds,
+        // co-save v10 — nothing to translate.
+        std::vector<TLC::CoSave::BabyHold> result;
+        result.reserve(m_BabyHolds.size());
+
+        for (const auto& [motherFormId, hold] : m_BabyHolds)
+        {
+            result.push_back(hold);
         }
 
         return result;
@@ -1708,6 +1941,560 @@ namespace TLC
             : 0.0f;
     }
 
+    void Adapter::EquipBabyBundle(
+        LCE::Simulation::EntityId a_mother,
+        LCE::Simulation::EntityId a_child)
+    {
+        // The 0.8.9 birth journey: when a birth fires, the mother
+        // visibly carries her newborn — a swaddled-bundle armor in the
+        // body slot. With the baby mod loaded, the bundle is one of
+        // its ethnicity variants (random per household); without it,
+        // the game's own Shaun bundle (babybundled, Fallout4.esm)
+        // fills in — the very item the mod's bundles are copies of
+        // (same body slot, same isPlayerChild keyword, surveyed
+        // 2026-08-15). The sim never touches the mod's scripts; it
+        // equips the item like any armor, and the holding flavor plays
+        // on the player while the item itself is the NPC's visible
+        // carry. The gate is BirthVisible alone — everyone gets a
+        // visible bundle, mod or not.
+        const auto motherForm = m_Translator.FormFor(a_mother);
+
+        if (motherForm == 0)
+        {
+            return;
+        }
+
+        if (!m_Settings.BirthVisible)
+        {
+            return;
+        }
+
+        auto* motherActor =
+            RE::TESForm::GetFormByID<RE::Actor>(motherForm);
+
+        if (motherActor == nullptr || motherActor->Get3D() == nullptr)
+        {
+            return;   // not loaded — the bundle can't be seen anyway
+        }
+
+        std::uint32_t bundleForm = 0;
+
+        if (BabyModLoaded())
+        {
+            // The bundle variants the baby mod provides (surveyed from
+            // the plugin, 2026-08-15): five ethnicities, clean and
+            // wasteland. One is picked at random so two households
+            // don't carry the same-looking baby.
+            const std::uint32_t bundleRecordIds[] = {
+                0x004c95,   // Cyber_babybundled_Asian
+                0x004c93,   // Cyber_babybundled_Asian_Wastelander
+                0x001734,   // Cyber_babybundled_Black
+                0x004c89,   // Cyber_babybundled_Black2
+                0x004c87,   // Cyber_babybundled_Black2_Wastelander
+                0x0035a1,   // Cyber_babybundled_Black_Wastelander
+                0x004c8d,   // Cyber_babybundled_Caucasian
+                0x004c8b,   // Cyber_babybundled_Caucasian_Wastelander
+                0x004c91,   // Cyber_babybundled_Hispanic
+                0x004c8f,   // Cyber_babybundled_Hispanic_Wastelander
+            };
+
+            const auto& pick = bundleRecordIds[
+                static_cast<std::size_t>(m_Rng.Next())
+                % (sizeof(bundleRecordIds)
+                   / sizeof(bundleRecordIds[0]))];
+            bundleForm = BabyForm(pick);
+        }
+        else
+        {
+            // The vanilla fallback (no baby mod): Shaun's own bundle
+            // from Fallout4.esm — the item you carry in the intro. The
+            // mod's bundles are copies of this exact armor, so the
+            // equip path is identical; every household's bundle just
+            // looks the same (they all carry a Shaun).
+            bundleForm = 0x000f468e;   // babybundled
+        }
+
+        if (bundleForm == 0)
+        {
+            return;   // the mod vanished mid-session — sim-only child
+        }
+
+        // Equip the bundle: the game's own equip path. The item first
+        // enters the mother's inventory (AddObjectToContainer), then
+        // ActorEquipManager equips it in the body slot. Force equip so
+        // the carry wins even if she holds something.
+        auto* bundle = RE::TESForm::GetFormByID<RE::TESBoundObject>(
+            bundleForm);
+
+        if (bundle == nullptr)
+        {
+            return;
+        }
+
+        motherActor->AddObjectToContainer(
+            bundle, nullptr, 1, nullptr,
+            RE::ITEM_REMOVE_REASON::kNone);
+
+        RE::BGSObjectInstance object{ bundle, nullptr };
+
+        RE::ActorEquipManager::GetSingleton()->EquipObject(
+            motherActor, object, 0, 1, nullptr,
+            false, true, true, true, false);
+
+        // The holding flavor (0.8.9 field find): the bundle's armor
+        // mesh is empty — the visible baby is the AnimObject the
+        // AnimFlavorHoldingBaby flavor attaches. The baby mod's
+        // bundles do this via their own OnEquipped script; the vanilla
+        // fallback has none, so the flavor is applied here for every
+        // carry — idempotent next to the mod's own call.
+        ApplyHoldingFlavor(motherActor, true);
+
+        // The hold rides the co-save (v10): mother form id, bundle
+        // form id, born day — so a mid-carry survives save/load, and
+        // the advance can shed the bundle and spawn the child later.
+        m_BabyHolds[motherForm] = TLC::CoSave::BabyHold{
+            motherForm, bundleForm, CurrentDay() };
+
+        REX::INFO(
+            "birth: {} carries her newborn {} — the bundle is visible.",
+            MindLabel(a_mother), MindLabel(a_child));
+    }
+
+    void Adapter::AdvanceBabyHolds()
+    {
+        // The 0.8.9 birth journey, day two: once a hold has aged past
+        // sim.baby.holdDays, the bundle comes off — the holding flavor
+        // clears with it (no invisible cradling) — and the sim child
+        // goes on growing inside the household. The child stays
+        // sim-only: the visible child is the baby mod's own (the mod
+        // grows its placed babies; it never spawns children from
+        // scratch, and the game's low-level actor spawn cannot run the
+        // full actor init — see the shed body's field findings). The
+        // sim's journey is untouched by the baby mod's own growth
+        // scripts; this is the mod working as the author intended (the
+        // baby ages at its crib), just with the sim's child as its
+        // memory.
+        std::vector<std::uint32_t> due;
+
+        for (const auto& [motherForm, hold] : m_BabyHolds)
+        {
+            // The clock never runs backwards — but a restored save
+            // could carry a born day ahead of the current day (a
+            // reverted save, a mod rolled back); the underflow guard
+            // keeps such a hold young rather than instantly due.
+            if (hold.BornDay > CurrentDay())
+            {
+                continue;
+            }
+
+            const auto age = CurrentDay() - hold.BornDay;
+
+            if (age >= static_cast<std::uint64_t>(
+                    m_Settings.BabyHoldDays))
+            {
+                due.push_back(motherForm);
+            }
+        }
+
+        for (const auto& motherForm : due)
+        {
+            const auto it = m_BabyHolds.find(motherForm);
+
+            if (it == m_BabyHolds.end())
+            {
+                continue;
+            }
+
+            const auto hold = it->second;
+            m_BabyHolds.erase(it);
+
+            auto* motherActor =
+                RE::TESForm::GetFormByID<RE::Actor>(motherForm);
+
+            if (motherActor != nullptr)
+            {
+                // The bundle comes off — the game's own unequip path.
+                auto* bundle = RE::TESForm::GetFormByID<RE::TESBoundObject>(
+                    hold.BundleFormId);
+
+                if (bundle != nullptr)
+                {
+                    RE::BGSObjectInstance object{ bundle, nullptr };
+
+                    RE::ActorEquipManager::GetSingleton()->UnequipObject(
+                        motherActor, &object, 1, nullptr, 0,
+                        false, true, true, true, nullptr);
+
+                    RE::TESObjectREFR::RemoveItemData data{
+                        bundle, 1 };
+                    motherActor->RemoveItem(data);
+
+                    // The hold ends — the holding flavor comes off
+                    // with the bundle, so the mother doesn't keep
+                    // cradling an invisible baby beside the child.
+                    ApplyHoldingFlavor(motherActor, false);
+                }
+            }
+
+            // Find the sim-only child of THIS mother born on this day.
+            // The 0.8.9 field find: matching on the birth day alone
+            // grabbed the FIRST child born that day, so two mothers
+            // whose births landed on the same day both paired with the
+            // same child mind — Samuel King's newborn and Ivy
+            // Rodriguez's newborn both became "Aria Parker", one child
+            // mis-named and the other left without its mind. The child
+            // stores both parents in its Relationships component
+            // (Birth::Create), so the match must require the mother's
+            // relationship, not just the day.
+            const auto motherEntity = m_Translator.EntityFor(motherForm);
+
+            LCE::Simulation::EntityId simChild;
+
+            m_Registry.ForEachWithComponent<BirthDay>(
+                [&](LCE::Simulation::EntityId a_entity,
+                    BirthDay& a_birth)
+                {
+                    if (simChild.IsValid() || a_birth.Day != hold.BornDay)
+                    {
+                        return;
+                    }
+
+                    const auto species =
+                        m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                    if (species == nullptr
+                        || species->Value != Species::Child)
+                    {
+                        return;
+                    }
+
+                    // The mother's own child: the child's Relationships
+                    // name both parents (0.6.0 Stone 3 pair machinery),
+                    // so a birth-day match that is not this mother's
+                    // child is skipped.
+                    const auto rels = m_Registry
+                        .GetComponent<LCE::Simulation::Relationships>(
+                            a_entity);
+
+                    if (rels == nullptr
+                        || !rels->ByEntity.contains(motherEntity))
+                    {
+                        return;
+                    }
+
+                    simChild = a_entity;
+                });
+
+            if (!simChild.IsValid())
+            {
+                continue;
+            }
+
+            // The child's journey (0.8.9, the deferred-spawn find): the
+            // visible child is a real child actor spawned at the
+            // mother's feet — DELIBERATELY left un-initialized. A ref
+            // created this way is invisible while its cell holds it;
+            // the game's own save/load routine completes the actor
+            // (facegen, AI process, animation) the next time the world
+            // reloads, and the child steps out fully real — the
+            // 2026-08-16 field find: exactly this happened, the
+            // invisible child "became real" on load, with only the
+            // clothes missing. Forcing the init immediately (the
+            // clearStillLoadingFlag/Load3D route) instead produces the
+            // half-born headless, T-posing, immobile child that even
+            // survives saves; the game's own PlaceAtMe dispatch is the
+            // documented PackVariables CTD. So: deferred, real after a
+            // load. The per-tick pass dresses the child the moment it
+            // reads fully initialized. The sim child keeps its name,
+            // mind, and household — the actor is its body only; it
+            // never joins the settler faction, so the census never
+            // seeds a duplicate mind for it.
+            REX::INFO(
+                "birth: {} carries her child no longer — {} is born. "
+                "She will appear in the world after the next load "
+                "(the deferred spawn; the sim child grows meanwhile).",
+                MindLabelForm(motherForm), MindLabel(simChild));
+
+            PushNews(
+                MindLabelForm(motherForm)
+                + "\u2019s child is growing up.",
+                Tuning::AdapterSettings::NewsCategory::Birth);
+
+            // The visible child (0.8.9, deferred): gated on
+            // sim.baby.visualChild; skipped when the mother is not
+            // loaded (her position is where the child must appear).
+            if (m_Settings.VisualChild
+                && !m_VisualChildren.contains(motherForm))
+            {
+                auto* mother = RE::TESForm::GetFormByID<RE::Actor>(
+                    motherForm);
+
+                if (mother != nullptr)
+                {
+                    // Gender-matched base: the sim child's own
+                    // deterministic gender (Names::GenderOf — the same
+                    // draw that named it) picks the pool, so a son gets
+                    // a male base and a daughter a female one.
+                    const bool male =
+                        TLC::Names::GenderOf(simChild)
+                        == TLC::Names::Gender::Male;
+
+                    const auto& pool = male
+                        ? kMaleChildBases : kFemaleChildBases;
+                    const auto basePick = pool[
+                        static_cast<std::size_t>(m_Rng.Next())
+                        % (sizeof(pool) / sizeof(pool[0]))];
+
+                    auto* childBase = RE::TESForm::GetFormByID<RE::TESNPC>(
+                        basePick);
+
+                    if (childBase != nullptr)
+                    {
+                        // Dress the child at the base — the game's own
+                        // child-clothing path. The deferred spawn reads
+                        // the base NPC's default outfit (WNAM /
+                        // defOutfit) when the child materializes, so
+                        // setting it here means the game itself applies
+                        // the clothes at init: no runtime-equip
+                        // reversion risk, and it survives every reload.
+                        // (The bundles are the orphaned ChildOutfit*
+                        // OTFTs — see the pool comment above.)
+                        const auto& outfitPool = male
+                            ? kChildOutfitMale : kChildOutfitFemale;
+
+                        auto* outfit = RE::TESForm::GetFormByID<RE::BGSOutfit>(
+                            outfitPool[
+                                static_cast<std::size_t>(m_Rng.Next())
+                                % (sizeof(outfitPool) / sizeof(outfitPool[0]))]);
+
+                        if (outfit != nullptr)
+                        {
+                            childBase->defOutfit = outfit;
+                        }
+
+                        auto* cell = mother->GetParentCell();
+
+                        // The child appears a step ahead of the mother,
+                        // facing the same way.
+                        RE::NEW_REFR_DATA spawn;
+                        spawn.location = mother->GetPosition();
+                        spawn.direction = mother->data.angle;
+                        spawn.object = childBase;
+                        spawn.interior = cell;
+
+                        // The cell's own world — the game's full spawn
+                        // data (an exterior cell carries its worldspace;
+                        // an interior's is null). Without it the child
+                        // can land in the wrong worldspace.
+                        spawn.world = cell != nullptr
+                            ? cell->worldSpace : nullptr;
+                        spawn.forcePersist = true;
+
+                        // THE deferred bit: clearStillLoadingFlag stays
+                        // FALSE. A freshly-created ref flagged as still
+                        // loading defers its full initialization; the
+                        // game's own load routine completes it — the
+                        // invisible-child find. Forcing it (true) is the
+                        // headless/T-pose path.
+                        spawn.clearStillLoadingFlag = false;
+
+                        const auto handle =
+                            RE::TESDataHandler::GetSingleton()
+                                ->CreateReferenceAtLocation(spawn);
+
+                        if (const auto child = handle.get().get();
+                            child != nullptr)
+                        {
+                            // The name rides the extra data — it needs
+                            // no 3D or AI, so the sim child's name is
+                            // on the actor from the first moment (the
+                            // earlier field test: names were right on
+                            // the materialized children).
+                            const auto name =
+                                m_Registry.GetComponent<Name>(simChild);
+
+                            if (name != nullptr && !name->Full.empty())
+                            {
+                                ApplyActorName(
+                                    child->GetFormID(), name->Full);
+                            }
+
+                            TLC::CoSave::VisualChild entry;
+                            entry.MotherFormId = motherForm;
+                            entry.FigureFormId = child->GetFormID();
+                            entry.BornDay = hold.BornDay;
+                            m_VisualChildren[motherForm] = entry;
+
+                            REX::INFO(
+                                "birth: {} is born at {}'s feet — the "
+                                "visible child (deferred; appears after "
+                                "a load).",
+                                MindLabel(simChild),
+                                MindLabelForm(motherForm));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void Adapter::AdvanceVisualChildren()
+    {
+        // The materialize pass (0.8.9, deferred-spawn find): each
+        // spawned child is invisible until the game's own load routine
+        // completes it. This pass waits for that moment — 3D loaded AND
+        // an AI process (the exact things the half-born child lacked) —
+        // and dresses the child from the game's child-outfit pool. The
+        // equip only sticks on a fully-initialized actor, which is why
+        // the earlier attempts left children in their pants: they
+        // dressed half-born actors. Once dressed, the record retires.
+        // A child whose actor is gone (a cell reset, a mod) is dropped
+        // and its record retired; a child that never materializes stays
+        // invisible but keeps its sim life.
+        if (m_VisualChildren.empty())
+        {
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now - m_LastVisualChildFollow < std::chrono::milliseconds(
+                static_cast<std::int64_t>(kVisualChildCheckSeconds * 1000.0)))
+        {
+            return;
+        }
+
+        m_LastVisualChildFollow = now;
+
+        for (auto it = m_VisualChildren.begin(); it != m_VisualChildren.end();)
+        {
+            auto* child = RE::TESForm::GetFormByID<RE::Actor>(
+                it->second.FigureFormId);
+
+            if (child == nullptr)
+            {
+                ++it;   // not loaded yet — keep waiting
+                continue;
+            }
+
+            // Fully initialized: 3D loaded AND an AI process. The
+            // half-born child had neither (no head, no movement); a
+            // real, loaded NPC has both. Until then the child is still
+            // invisible — wait.
+            if (child->Get3D() == nullptr
+                || child->currentProcess == nullptr)
+            {
+                ++it;
+                continue;
+            }
+
+            // Dress the child. The base's defOutfit (set at spawn) is
+            // the game's own path — the materialized child is usually
+            // already dressed by it, and this pass only confirms. The
+            // fallback (a child whose base predates the fix, or a base
+            // reloaded from the ESM after a restart) equips the real
+            // ARMOs inside the bundle here — the equip lands on a
+            // fully-initialized actor. The bundle is carried onto the
+            // base so later inits (cell reloads) stay dressed too.
+            auto* childBase = child->GetNPC();
+
+            RE::BGSOutfit* outfit = nullptr;
+
+            if (childBase != nullptr && childBase->defOutfit != nullptr)
+            {
+                outfit = childBase->defOutfit;
+            }
+            else
+            {
+                const bool male = childBase != nullptr
+                    && childBase->GetSex() == RE::SEX::kMale;
+
+                const auto& pool = male
+                    ? kChildOutfitMale : kChildOutfitFemale;
+
+                outfit = RE::TESForm::GetFormByID<RE::BGSOutfit>(
+                    pool[static_cast<std::size_t>(m_Rng.Next())
+                         % (sizeof(pool) / sizeof(pool[0]))]);
+
+                if (outfit != nullptr && childBase != nullptr)
+                {
+                    childBase->defOutfit = outfit;
+                }
+            }
+
+            if (outfit != nullptr)
+            {
+                for (auto* item : outfit->outfitItems)
+                {
+                    auto* armor = item != nullptr
+                        ? item->As<RE::TESObjectARMO>() : nullptr;
+
+                    if (armor == nullptr)
+                    {
+                        continue;   // not a wearable — skip it
+                    }
+
+                    RE::BGSObjectInstance object{ armor, nullptr };
+
+                    RE::ActorEquipManager::GetSingleton()->EquipObject(
+                        child, object, 0, 1, nullptr,
+                        false, true, true, true, false);
+                }
+            }
+
+            REX::INFO(
+                "birth: the child appears in the world — dressed and "
+                "fully real (the deferred spawn completed).");
+
+            PushNews(
+                "A child appears in the world.",
+                Tuning::AdapterSettings::NewsCategory::Birth);
+
+            it = m_VisualChildren.erase(it);
+        }
+    }
+
+    void Adapter::RestoreVisualChildren(
+        const std::vector<TLC::CoSave::VisualChild>& a_visualChildren)
+    {
+        // The visual children (v11): restore by form ids — the per-tick
+        // follow re-engages each figure as its mother streams in.
+        m_VisualChildren.clear();
+
+        for (const auto& entry : a_visualChildren)
+        {
+            if (entry.MotherFormId == 0 || entry.FigureFormId == 0)
+            {
+                continue;
+            }
+
+            m_VisualChildren[entry.MotherFormId] = entry;
+        }
+
+        if (!m_VisualChildren.empty())
+        {
+            REX::INFO(
+                "birth: {} visual child figure{} restored — each follows "
+                "its mother again.",
+                m_VisualChildren.size(),
+                m_VisualChildren.size() == 1 ? "" : "s");
+        }
+    }
+
+    std::vector<TLC::CoSave::VisualChild>
+    Adapter::VisualChildrenForSave() const
+    {
+        std::vector<TLC::CoSave::VisualChild> result;
+        result.reserve(m_VisualChildren.size());
+
+        for (const auto& [motherForm, entry] : m_VisualChildren)
+        {
+            result.push_back(entry);
+        }
+
+        return result;
+    }
+
     void Adapter::RunMediation()
     {
         AttemptMediation();
@@ -1762,7 +2549,8 @@ namespace TLC
                 PushNews(
                     MindLabelForm(mediator) + " cooled the feud between "
                     + MindLabelForm(enemyA) + " and "
-                    + MindLabelForm(enemyB) + ".");
+                    + MindLabelForm(enemyB) + ".",
+                    Tuning::AdapterSettings::NewsCategory::Bonds);
             }
             else
             {
@@ -1829,7 +2617,16 @@ namespace TLC
 
             PushNews(
                 "a child was born to " + MindLabel(mother) + " and "
-                + MindLabel(father) + " — " + childName + ".");
+                + MindLabel(father) + " — " + childName + ".",
+                Tuning::AdapterSettings::NewsCategory::Birth);
+
+            // The visible journey (0.8.9 birth journey): when the
+            // flag is on, the mother visibly carries her newborn — the
+            // mod's swaddled bundle when loaded, the game's own Shaun
+            // bundle otherwise (everyone gets a carry). The hold
+            // advances two days later: the bundle comes off and a
+            // child from the game's own pool takes its place.
+            EquipBabyBundle(mother, child);
         }
 
         // Phase 2: roll for new conceptions among eligible couples.
@@ -1897,7 +2694,8 @@ namespace TLC
 
                 PushNews(
                     MindLabel(parentA) + " and "
-                    + MindLabel(parentB) + " are expecting a child.");
+                    + MindLabel(parentB) + " are expecting a child.",
+                    Tuning::AdapterSettings::NewsCategory::Birth);
             }
         }
     }
@@ -1957,117 +2755,6 @@ namespace TLC
         return {};
     }
 
-    //-------------------------------------------------------------------------
-    // PairVisibleChildren (0.7.8): scan ProcessLists for child-race
-    // actors not yet translated, and pair them with sim-only children
-    // that have no FormRef. Each pair gives the child a game actor —
-    // it walks, trades, and bonds like any mind.
-    //-------------------------------------------------------------------------
-    void Adapter::PairVisibleChildren()
-    {
-        const auto* processLists = RE::ProcessLists::GetSingleton();
-
-        if (processLists == nullptr)
-        {
-            return;
-        }
-
-        // Child race FormIDs from Fallout4.esm (verified in xEdit).
-        constexpr std::uint32_t kHumanChildRace = 0x0011D83F;
-        constexpr std::uint32_t kGhoulChildRace = 0x0011EB96;
-
-        // Collect unpaired child-race actors.
-        std::vector<std::uint32_t> freeActors;
-
-        for (const auto* list : processLists->allProcesss)
-        {
-            if (!list)
-            {
-                continue;
-            }
-
-            for (const auto& handle : *list)
-            {
-                const auto* actor = handle.get().get();
-
-                if (actor == nullptr || actor->IsDead(true))
-                {
-                    continue;
-                }
-
-                if (actor->race == nullptr)
-                {
-                    continue;
-                }
-
-                const auto raceId = actor->race->GetFormID();
-
-                if (raceId != kHumanChildRace
-                    && raceId != kGhoulChildRace)
-                {
-                    continue;
-                }
-
-                const auto formId = actor->GetFormID();
-
-                // Skip actors already paired.
-                if (m_Translator.EntityFor(formId).IsValid())
-                {
-                    continue;
-                }
-
-                freeActors.push_back(formId);
-            }
-        }
-
-        if (freeActors.empty())
-        {
-            return;
-        }
-
-        // Collect sim-only children (no FormRef, Species::Child).
-        std::vector<LCE::Simulation::EntityId> simChildren;
-
-        m_Registry.ForEachWithComponent<SpeciesTag>(
-            [&](LCE::Simulation::EntityId a_entity,
-                SpeciesTag& a_tag)
-            {
-                if (a_tag.Value != Species::Child)
-                {
-                    return;
-                }
-
-                if (m_Registry.GetComponent<FormRef>(a_entity) != nullptr)
-                {
-                    return;  // already paired
-                }
-
-                simChildren.push_back(a_entity);
-            });
-
-        // Pair them up: one actor per child, greedily.
-        const auto count = std::min(freeActors.size(), simChildren.size());
-
-        for (std::size_t i = 0; i < count; ++i)
-        {
-            const auto formId = freeActors[i];
-            const auto child = simChildren[i];
-
-            m_Registry.AddComponent<FormRef>(child, FormRef{ formId });
-            m_Translator.Add(formId, child);
-
-            REX::INFO(
-                "birth: sim child {} paired with game actor {:#010x}.",
-                MindLabel(child), formId);
-        }
-
-        if (count > 0)
-        {
-            REX::INFO(
-                "birth: {} children paired with visible actors.", count);
-        }
-    }
-
     void Adapter::OnBondChange(
         LCE::Simulation::EntityId a_entityA,
         LCE::Simulation::EntityId a_entityB,
@@ -2105,7 +2792,9 @@ namespace TLC
                     "bonds: {} and {} made peace.",
                     nameA, nameB);
 
-                PushNews(nameA + " and " + nameB + " made peace.");
+                PushNews(
+                    nameA + " and " + nameB + " made peace.",
+                    Tuning::AdapterSettings::NewsCategory::Bonds);
             }
             else
             {
@@ -2206,19 +2895,27 @@ namespace TLC
 
             if (a_new == Bonds::BondKind::Rival)
             {
-                PushNews(nameA + " and " + nameB + " became rivals.");
+                PushNews(
+                    nameA + " and " + nameB + " became rivals.",
+                    Tuning::AdapterSettings::NewsCategory::Bonds);
             }
             else if (a_new == Bonds::BondKind::Friend)
             {
-                PushNews(nameA + " and " + nameB + " became friends.");
+                PushNews(
+                    nameA + " and " + nameB + " became friends.",
+                    Tuning::AdapterSettings::NewsCategory::Bonds);
             }
             else if (a_new == Bonds::BondKind::Sweetheart)
             {
-                PushNews(nameA + " and " + nameB + " are sweethearts.");
+                PushNews(
+                    nameA + " and " + nameB + " are sweethearts.",
+                    Tuning::AdapterSettings::NewsCategory::Bonds);
             }
             else if (a_new == Bonds::BondKind::Spouse)
             {
-                PushNews(nameA + " and " + nameB + " are married.");
+                PushNews(
+                    nameA + " and " + nameB + " are married.",
+                    Tuning::AdapterSettings::NewsCategory::Bonds);
             }
         }
 
@@ -2229,7 +2926,9 @@ namespace TLC
         if (a_new == Bonds::BondKind::Enemy
             && a_old != Bonds::BondKind::Enemy)
         {
-            PushNews(nameA + " is feuding with " + nameB + ".");
+            PushNews(
+                nameA + " is feuding with " + nameB + ".",
+                Tuning::AdapterSettings::NewsCategory::Bonds);
 
             // The settlement hears the feud (Gossip.h's intent: gossip
             // covers "a feud starts") — the formation gossip from the
@@ -2520,6 +3219,18 @@ namespace TLC
         // save stays sold out after the load — the next market day
         // (PushWorldFacts' open transition) refills it.
         RestoreMedicineStock(m_PendingMedicineStock);
+
+        // The newborn holds (v10, 0.8.9 birth journey): a mother
+        // mid-carry keeps her bundle after reload — the hold is form
+        // ids only, so it restores even before her actor streams in;
+        // the daily advance ages it from the restored born day.
+        RestoreBabyHolds(m_PendingBabyHolds);
+
+        // The visible children (v11, 0.8.9 deferred-spawn find): the
+        // pending child actors restore by form ids — the per-tick
+        // materialize pass dresses each the moment it reads fully
+        // initialized.
+        RestoreVisualChildren(m_PendingVisualChildren);
 
         // The household stone (v3? no — derived, ADR-0013): a restored
         // marriage re-establishes its shared pouch silently. The loud
@@ -3126,7 +3837,9 @@ namespace TLC
                 mourning, mourning == 1 ? "mind" : "minds",
                 MindLabelForm(a_formId));
 
-            PushNews(MindLabelForm(a_formId) + " died.");
+            PushNews(
+                MindLabelForm(a_formId) + " died.",
+                Tuning::AdapterSettings::NewsCategory::Death);
         }
 
         // The label before the remove: the translator forgets the form
@@ -3682,16 +4395,32 @@ namespace TLC
             });
     }
 
-    void Adapter::PushNews(const std::string& a_line)
+    void Adapter::PushNews(
+        const std::string& a_line,
+        Tuning::AdapterSettings::NewsCategory a_category)
     {
+        // The category gate (0.8.7 presentation rethink): each
+        // announcement category is its own toggle — a disabled
+        // category never even enters the feed, so it cannot reach the
+        // settlement radio either. The log keeps the full record
+        // regardless (the verify channel).
+        const auto& cfg = m_Settings.News[
+            static_cast<std::size_t>(a_category)];
+
+        if (!cfg.Enabled)
+        {
+            return;
+        }
+
         m_News.Add(a_line);
 
         // The on-screen window (0.7.0 Stone 3), throttled: a world of
         // news is still a flood if every line pops at once, so events
         // queue into the feed and the screen shows at most one per
-        // sim.news.cooldown seconds. The feed is the radio's story; the
-        // log's own line stays the verify channel.
-        if (!m_Settings.NewsEnabled)
+        // sim.news.cooldown seconds. A category whose subs are off
+        // feeds the radio without popping; the master sim.news.enabled
+        // kills the whole on-screen window.
+        if (!m_Settings.NewsEnabled || !cfg.Subs)
         {
             return;
         }
@@ -3709,7 +4438,8 @@ namespace TLC
             // message-path hang.
             REX::DEBUG("hud: pop '{}'", a_line);
             RE::SendHUDMessage::ShowHUDMessage(
-                a_line.c_str(), "", false, false);
+                a_line.c_str(), cfg.Audio ? "UIMenuOK" : "", false,
+                false);
         }
     }
 
@@ -3883,10 +4613,10 @@ namespace TLC
                 // reads "Jun Long: \"...\"", never the hex.
                 const auto speakerName = MindNameOnly(speakerForm);
 
-                ShowSubtitle(
-                    speaker,
-                    (speakerName.empty() ? line
-                                         : speakerName + ": \"" + line + "\""));
+                ShowChatter(
+                    speakerName.empty()
+                        ? line
+                        : speakerName + ": \"" + line + "\"");
             }
         }
     }
@@ -4005,6 +4735,54 @@ namespace TLC
                 continue;   // alone — nothing to say
             }
 
+            // The per-pair cooldown (0.8.8): the same two minds don't
+            // re-exchange within sim.interact.pairCooldown seconds —
+            // Gabriel and Lucas shouldn't greet each other twice a
+            // minute (0.8.7b field note). Keyed by the unordered pair;
+            // no claim, so a cadence-expired mind simply waits out the
+            // pair's window and tries again (it always picks the same
+            // nearest partner, so the wait is real, not a spin).
+            const auto pairA = a.Id.Value();
+            const auto pairB = partner.Value();
+            const auto pairKey = std::make_pair(
+                pairA < pairB ? pairA : pairB,
+                pairA < pairB ? pairB : pairA);
+            const auto pairIt = m_InteractPairCooldown.find(pairKey);
+
+            if (pairIt != m_InteractPairCooldown.end()
+                && now < pairIt->second)
+            {
+                continue;
+            }
+
+            // The daily-cap gate (0.8.8): a mind opens at most
+            // sim.interact.dailyCap interactions per sim day (0 = off,
+            // today's behaviour). Rolled to the current day on read; a
+            // capped mind claims its cadence and waits it out, so the
+            // check doesn't spin every frame.
+            if (m_Settings.InteractDailyCap > 0)
+            {
+                auto& opened = m_InteractOpenedToday[a.Id];
+                const auto day = CurrentDay();
+
+                if (opened.first != day)
+                {
+                    opened = { day, 0 };
+                }
+
+                if (opened.second >= m_Settings.InteractDailyCap)
+                {
+                    m_InteractCooldown[a.Id] =
+                        now
+                        + std::chrono::duration_cast<
+                            std::chrono::steady_clock::duration>(
+                            std::chrono::duration<float>(
+                                m_Settings.InteractCadence
+                                * (0.5f + m_Rng.NextFloat())));
+                    continue;
+                }
+            }
+
             // Claim the slot before the roll: a cooldown-expired mind
             // in company waits a full jittered cadence whether or not
             // it speaks — otherwise a failed chance roll retries next
@@ -4024,28 +4802,105 @@ namespace TLC
                 continue;
             }
 
-            // The pool follows the bond: family for a strong bond, a
-            // quiet row for an enemy, greet/gossip for everyone else.
+            // The pool follows the bond, weighted by sim.interact.weight.*
+            // (0.8.8): a bonded pair's family weight is boosted hard (a
+            // spouse household talks family most, and the weights shape
+            // the rest); a feud pair is a hard row — their story is the
+            // row and the physical escalation, and a warm hello between
+            // feuders would read wrong (0.8.7b). Everyone else rolls
+            // the four pools by weight: greet and gossip dominate the
+            // crowd, family and row stay rare between strangers.
             Dialogue::Pool pool = Dialogue::Pool::Greet;
+            const auto kind = Bonds::CurrentKind(m_Bonds, a.Id, partner);
+            float wGreet = m_Settings.InteractWeightGreet;
+            float wGossip = m_Settings.InteractWeightGossip;
+            float wFamily = m_Settings.InteractWeightFamily;
+            float wRow = m_Settings.InteractWeightRow;
 
-            switch (Bonds::CurrentKind(m_Bonds, a.Id, partner))
+            switch (kind)
             {
             case Bonds::BondKind::Spouse:
             case Bonds::BondKind::Sweetheart:
             case Bonds::BondKind::Friend:
-                pool = Dialogue::Pool::Family;
+                wFamily *= 10.0f;
                 break;
             case Bonds::BondKind::Enemy:
             case Bonds::BondKind::Rival:
                 pool = Dialogue::Pool::Row;
                 break;
             case Bonds::BondKind::None:
-                // Small talk beats a hello in the crowd: gossip reads
-                // as life, a bare greet reads as an NPC line.
-                pool = m_Rng.NextFloat() < 0.3f
-                    ? Dialogue::Pool::Gossip
-                    : Dialogue::Pool::Greet;
                 break;
+            }
+
+            if (kind != Bonds::BondKind::Enemy
+                && kind != Bonds::BondKind::Rival)
+            {
+                const float total = wGreet + wGossip + wFamily + wRow;
+
+                if (total > 0.0f)
+                {
+                    const float roll = m_Rng.NextFloat() * total;
+
+                    if (roll < wGreet)
+                    {
+                        pool = Dialogue::Pool::Greet;
+                    }
+                    else if (roll < wGreet + wGossip)
+                    {
+                        pool = Dialogue::Pool::Gossip;
+                    }
+                    else if (roll < wGreet + wGossip + wFamily)
+                    {
+                        pool = Dialogue::Pool::Family;
+                    }
+                    else
+                    {
+                        pool = Dialogue::Pool::Row;
+                    }
+                }
+            }
+
+            // The in-world stone (0.8.7b): a non-row crossing becomes
+            // a voiced exchange — A greets B, B answers a beat later,
+            // the game's own words and subtitles (the log keeps the
+            // record; nothing pops on-screen). A rolled row (even
+            // between friends) stays a quiet caption line — rows are
+            // words, not voices. Both paths stamp the pair cooldown
+            // and the day ledger here, once, so an interaction is an
+            // interaction whichever way it lands.
+            m_InteractPairCooldown[pairKey] =
+                now
+                + std::chrono::duration_cast<
+                    std::chrono::steady_clock::duration>(
+                    std::chrono::duration<float>(
+                        m_Settings.InteractPairCooldown
+                        * (0.75f + 0.5f * m_Rng.NextFloat())));
+
+            if (m_Settings.InteractDailyCap > 0)
+            {
+                ++m_InteractOpenedToday[a.Id].second;
+            }
+
+            if (m_Settings.InteractVoice && pool != Dialogue::Pool::Row)
+            {
+                auto* aActor = RE::TESForm::GetFormByID<RE::Actor>(
+                    m_Translator.FormFor(a.Id));
+                auto* bActor = RE::TESForm::GetFormByID<RE::Actor>(
+                    m_Translator.FormFor(partner));
+
+                if (aActor != nullptr && bActor != nullptr
+                    && !aActor->IsInCombat() && !bActor->IsInCombat())
+                {
+                    // The register stone (0.8.9): the bond names the
+                    // exchange's register before the game picks its
+                    // words — family for a bonded household, flirt
+                    // for a compatible unpaired pair, greet for the
+                    // crowd.
+                    OpenExchange(
+                        aActor, bActor,
+                        RegisterFor(a.Id, partner, kind));
+                    continue;
+                }
             }
 
             // Local, not broadcast: the line logs and subtitles when
@@ -4055,45 +4910,35 @@ namespace TLC
         }
     }
 
-    void Adapter::ShowSubtitle(
-        RE::TESObjectREFR* a_speaker,
-        const std::string& a_line)
+    void Adapter::ShowChatter(const std::string& a_line)
     {
-        if (a_speaker == nullptr)
+        // The world's chatter — the game's native HUD notification
+        // (top-left, the same queue quest updates and the radio
+        // captions use). The first presentation pushed the game's
+        // dialogue-subtitle queue (SubtitleManager): it rendered as a
+        // bottom-of-screen dialogue box with no audio attached, which
+        // read as fake in-conversation dialogue — out of place (0.8.7
+        // field report). The proximity lines moved to the notification
+        // feed: one line at most every sim.chatter.cooldown seconds,
+        // so a settlement's small talk reads as a slow native ticker
+        // instead of a subtitle flood. The log keeps the full record.
+        const auto now = std::chrono::steady_clock::now();
+
+        if (m_LastChatter.time_since_epoch().count() != 0
+            && now - m_LastChatter
+                < std::chrono::duration<float>(m_Settings.ChatterCooldown))
         {
             return;
         }
 
-        // The game's own subtitle display: the HUD renders the best
-        // entry from SubtitleManager's priority array each frame — the
-        // same queue dialogue lines use — so a pushed line reads as a
-        // bottom-of-screen subtitle. All the fields are wrapped; this
-        // drives the real mechanism, no ESP, no custom HUD. The line
-        // carries its own "who" prefix, so the box needs no speaker
-        // name plumbing to read right.
-        auto* mgr = RE::SubtitleManager::GetSingleton();
+        m_LastChatter = now;
 
-        if (mgr == nullptr)
-        {
-            return;
-        }
-
-        const RE::BSAutoWriteLock lock{ RE::SubtitleManager::GetRWLock() };
-
-        RE::SubtitleInfo info{};
-        info.speaker =
-            RE::BSPointerHandleManagerInterface<RE::TESObjectREFR>::GetHandle(
-                a_speaker);
-        info.subtitleText = a_line.c_str();
-        info.topicInfo = nullptr;
-        info.priority = RE::SUBTITLE_PRIORITY::kNormal;
-        info.distFromPlayer = 0.0f;
-        mgr->subtitlePriorityArray.push_back(info);
-        mgr->currentSpeaker = info.speaker;
-
-        // The verify channel: the receipt tells us the subtitle fired
-        // (and whether the player was close enough to see it).
-        REX::INFO("LCE: subtitle ({} u): {}", m_Settings.SubtitleRadius, a_line);
+        // The HUD diagnostic (0.8.1 verification): the on-screen pop is
+        // the one thing the log cannot see — a stall inside
+        // ShowHUDMessage would show as a gap after this line.
+        REX::DEBUG("hud: chatter '{}'", a_line);
+        RE::SendHUDMessage::ShowHUDMessage(
+            a_line.c_str(), "", false, false);
     }
 
     void Adapter::EscalateToFight(
@@ -4333,8 +5178,10 @@ namespace TLC
         // the radio read a test brawl distinctly from the sim's own.
         const auto suffix = a_force ? " (test brawl)" : "";
 
-        PushNews(a + " and " + b
-            + " come to blows — the feud turns physical." + suffix);
+        PushNews(
+            a + " and " + b
+                + " come to blows — the feud turns physical." + suffix,
+            Tuning::AdapterSettings::NewsCategory::Fight);
 
         REX::INFO(
             "LCE: {} and {} come to blows — the feud turns physical.{}.",
@@ -4402,6 +5249,468 @@ namespace TLC
         EscalateToFight(aggressor, victim, day, true);
 
         m_LastForceFight = now;
+    }
+
+    void Adapter::AudioProbeLoop()
+    {
+        // The in-world exchange probe (0.8.7a, sim.diag.audioProbe):
+        // the experiment that asks whether the DLL can make two loaded
+        // settlers ACTUALLY meet — A voices a greeting at B, B answers
+        // a short beat later — the game's own words, voices, and
+        // subtitles, so the sim's social life reads as the world
+        // itself instead of text on screen. The route is
+        // AIProcess::ProcessGreet with the OTHER NPC as the target —
+        // the same proven-stable native seam the ambient probe proved
+        // at the player. Both dead ends are gone: the papyrus-VM Say
+        // route (the only one that voices a SPECIFIC INFO) is the
+        // PROVEN CRASHER (2026-08-15, PackVariables -> Variable::
+        // reset -> null deref), and the nextGreeting seed is proven
+        // ignored (the read-back showed the game re-picks its own line
+        // every time), so the game picks the words — we pick the
+        // moment, the pair, and the direction. One pair exchanges
+        // every AudioProbeEvery seconds; the log tags who opened, who
+        // answered, and the game's chosen INFOs. Off by default.
+        if (!m_Settings.AudioProbe || m_Settings.AudioProbeEvery <= 0.0f)
+        {
+            // Own state only — the shared exchange slot belongs to the
+            // production crossings (ProcessExchange). The probe-off
+            // gate once reset it here, which wiped every scheduled
+            // answer and broke the one-at-a-time lock (0.8.7b field
+            // find: 194 opens, 0 answers).
+            m_LastAudioProbe = {};
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (m_LastAudioProbe.time_since_epoch().count() != 0
+            && now - m_LastAudioProbe
+                < std::chrono::seconds(
+                    static_cast<int>(m_Settings.AudioProbeEvery)))
+        {
+            return;
+        }
+
+        const auto* player = RE::PlayerCharacter::GetSingleton();
+
+        if (player == nullptr)
+        {
+            return;
+        }
+
+        // The loaded humanoid minds, gathered once — the same 3D gate
+        // the interaction pass uses (a streamed-out actor reads a
+        // garbage position). A is the one nearest the player within
+        // earshot; B is the nearest other to A within a market square's
+        // worth — the pair genuinely crossing paths where the player
+        // can watch them meet.
+        struct Loaded
+        {
+            LCE::Simulation::EntityId Id;
+            RE::Actor* Actor;
+            RE::NiPoint3 Pos;
+        };
+
+        std::vector<Loaded> loaded;
+        const auto playerPos = player->GetPosition();
+
+        m_Registry.ForEachWithComponent<FormRef>(
+            [&](LCE::Simulation::EntityId a_entity, FormRef& a_ref)
+            {
+                const auto species =
+                    m_Registry.GetComponent<SpeciesTag>(a_entity);
+
+                if (!species || species->Value != Species::Human)
+                {
+                    return;
+                }
+
+                auto* actor =
+                    RE::TESForm::GetFormByID<RE::Actor>(a_ref.FormId);
+
+                if (actor == nullptr || actor->Get3D() == nullptr)
+                {
+                    return;
+                }
+
+                loaded.push_back(
+                    { a_entity, actor, actor->GetPosition() });
+            });
+
+        static constexpr float kProbePairRadius = 500.0f;
+
+        // A — the nearest to the player within earshot.
+        std::optional<Loaded> a;
+        float aDist = m_Settings.SubtitleRadius;
+
+        for (const auto& c : loaded)
+        {
+            const auto d = playerPos.GetDistance(c.Pos);
+
+            if (d <= aDist)
+            {
+                aDist = d;
+                a = c;
+            }
+        }
+
+        if (!a.has_value())
+        {
+            return;   // no one in earshot — nothing to probe
+        }
+
+        // B — the nearest other loaded humanoid to A, close enough to
+        // be genuinely crossing paths.
+        std::optional<Loaded> b;
+        float bDist = kProbePairRadius;
+
+        for (const auto& c : loaded)
+        {
+            if (c.Id == a->Id)
+            {
+                continue;
+            }
+
+            const auto d = a->Pos.GetDistance(c.Pos);
+
+            if (d <= bDist)
+            {
+                bDist = d;
+                b = c;
+            }
+        }
+
+        if (!b.has_value())
+        {
+            return;   // alone — nothing to exchange
+        }
+
+        // A opens — the same exchange the sim's own crossings use, so
+        // the probe verifies the production path exactly. The probe
+        // always greets (the register stone is production's question).
+        OpenExchange(a->Actor, b->Actor, ExchangeRegister::Greet);
+
+        m_LastAudioProbe = now;
+    }
+
+    Adapter::GreetResult Adapter::VoiceAt(
+        RE::Actor* a_speaker, RE::Actor* a_target,
+        RE::DIALOGUE_SUBTYPE a_subtype)
+    {
+        // The one game call the whole exchange rides: the AI process's
+        // greeting entry with the OTHER NPC as the target — the same
+        // proven-stable native seam the ambient probe proved at the
+        // player. The game picks the words; we pick the moment, the
+        // pair, the direction, and the register (the subtype the game
+        // is asked to voice). Accepted tells whether the game took the
+        // greeting at all; Played is the INFO built into the spoken
+        // dialogue item at read-back time — empty when the greeting is
+        // QUEUED (the actor was busy; the line may still voice a beat
+        // later), which the log tags honestly.
+        if (a_speaker == nullptr || a_target == nullptr
+            || a_speaker->currentProcess == nullptr)
+        {
+            return {};
+        }
+
+        const bool accepted = a_speaker->currentProcess->ProcessGreet(
+            a_speaker, RE::DIALOGUE_TYPE::kMiscellaneous,
+            a_subtype, a_target, nullptr,
+            true, false, true, true);
+
+        std::uint32_t played = 0;
+
+        if (a_speaker->currentProcess->high != nullptr
+            && a_speaker->currentProcess->high->greetTopic != nullptr
+            && a_speaker->currentProcess->high->greetTopic->info
+                != nullptr)
+        {
+            played = a_speaker->currentProcess->high->greetTopic
+                ->info->GetFormID();
+        }
+
+        return { accepted, played };
+    }
+
+    Adapter::ExchangeRegister Adapter::RegisterFor(
+        LCE::Simulation::EntityId a_a,
+        LCE::Simulation::EntityId a_b,
+        Bonds::BondKind a_kind)
+    {
+        // The bond names the register (0.8.9): a bonded household
+        // talks family; a compatible unpaired pair flirts (the moment —
+        // the game voices its own words); everyone else greets.
+        if (a_kind == Bonds::BondKind::Spouse
+            || a_kind == Bonds::BondKind::Sweetheart
+            || a_kind == Bonds::BondKind::Friend)
+        {
+            return ExchangeRegister::Family;
+        }
+
+        if (a_kind == Bonds::BondKind::None && CompatiblePair(a_a, a_b))
+        {
+            return ExchangeRegister::Flirt;
+        }
+
+        return ExchangeRegister::Greet;
+    }
+
+    bool Adapter::CompatiblePair(
+        LCE::Simulation::EntityId a_a,
+        LCE::Simulation::EntityId a_b)
+    {
+        // The never-romance gate, reused (0.7.5 / 0.8.6b field finds):
+        // children, robots, curated kin, and companions never enter the
+        // dating pool — friends and feuds are fine, romance is closed.
+        // Both must be single adults (no spouse bond either way) with
+        // real warmth between them — at or above the friend line, the
+        // same threshold the sweetheart formation reads.
+        const auto tagA = m_Registry.GetComponent<SpeciesTag>(a_a);
+        const auto tagB = m_Registry.GetComponent<SpeciesTag>(a_b);
+
+        if (!tagA || !tagB
+            || tagA->Value != Species::Human
+            || tagB->Value != Species::Human)
+        {
+            return false;
+        }
+
+        if (Households::SpouseOf(m_Bonds, a_a).IsValid()
+            || Households::SpouseOf(m_Bonds, a_b).IsValid())
+        {
+            return false;
+        }
+
+        if (m_Kin.contains(
+                Bonds::PairKey(a_a, a_b))
+            || m_Registry.GetComponent<CompanionTag>(a_a)
+            || m_Registry.GetComponent<CompanionTag>(a_b))
+        {
+            return false;
+        }
+
+        const float shared = std::min(
+            DispositionOf(a_a, a_b), DispositionOf(a_b, a_a));
+
+        return shared >= m_BondThresholds.Friend;
+    }
+
+    Adapter::VoiceOutcome Adapter::VoiceRegister(
+        RE::Actor* a_speaker, RE::Actor* a_target,
+        ExchangeRegister a_register)
+    {
+        // The register -> subtype map (0.8.9): the family register
+        // asks the game for its general greeting first — a warmer or
+        // different line where the voice has one — and falls back to
+        // the proven hello if the game refuses outright (an accepted
+        // but queued greeting is never retried: the line may still
+        // voice late, and a second call would double-book). Greet and
+        // flirt voice the proven hello; the flirt's difference is the
+        // moment — the pair, the compatibility — not a distinct line
+        // the game has no INFO bank for.
+        VoiceOutcome outcome;
+        const char* name = "greet";
+        auto subtype = RE::DIALOGUE_SUBTYPE::kMisc_Hello;
+
+        if (a_register == ExchangeRegister::Family
+            && m_Settings.InteractRegisterFamily)
+        {
+            name = "family";
+            subtype = RE::DIALOGUE_SUBTYPE::kMisc_Greeting;
+        }
+        else if (a_register == ExchangeRegister::Flirt)
+        {
+            name = "flirt";
+        }
+
+        outcome.Result = VoiceAt(a_speaker, a_target, subtype);
+
+        // The hello fallback: the family register's greeting was
+        // refused outright — nothing voiced — so retry once with the
+        // proven hello. A family exchange never goes silent.
+        if (!outcome.Result.Accepted
+            && subtype != RE::DIALOGUE_SUBTYPE::kMisc_Hello)
+        {
+            name = "family(hello)";
+            outcome.Result = VoiceAt(
+                a_speaker, a_target,
+                RE::DIALOGUE_SUBTYPE::kMisc_Hello);
+        }
+
+        outcome.RegisterName = name;
+        return outcome;
+    }
+
+    bool Adapter::IsRoadPerson(
+        LCE::Simulation::EntityId a_entity) const
+    {
+        // The road roles (0.8.9 road-feed stone): a non-settler mind
+        // whose base form is a road role — Provisioner, Caravan Guard,
+        // Caravan Worker — travels with the caravans and the supply
+        // lines. A settler-faction actor is home at its settlement,
+        // whatever its label; a road person's body follows the game's
+        // caravan AI.
+        const auto formId = m_Translator.FormFor(a_entity);
+
+        if (formId == 0)
+        {
+            return false;
+        }
+
+        auto* actor = RE::TESForm::GetFormByID<RE::Actor>(formId);
+
+        if (actor == nullptr)
+        {
+            return false;
+        }
+
+        const auto* faction = SettlerFaction();
+
+        if (faction != nullptr && actor->IsInFaction(faction))
+        {
+            return false;   // a settler — home is the settlement
+        }
+
+        const auto* base = actor->GetObjectReference();
+
+        return base != nullptr
+            && TLC::Names::IsRoadRole(
+                RE::TESFullName::GetFullName(*base));
+    }
+
+    void Adapter::FeedRoadPeople()
+    {
+        // The road feed (0.8.9 road-feed stone): a road person eats
+        // from the caravan's own supplies on the road — the market
+        // seed excludes them, so the core never walks them to a
+        // settlement bench, and this pass restores their hunger when
+        // it falls to the threshold, the same meal the market arrival
+        // gives a settler. The log names the meal so the travel reads
+        // real. 0 disables the feed (a road person then never eats).
+        if (m_Settings.RoadFeedThreshold <= 0.0f)
+        {
+            return;
+        }
+
+        m_Registry.ForEachWithComponent<LCE::Simulation::Needs>(
+            [&](LCE::Simulation::EntityId a_entity,
+                LCE::Simulation::Needs& a_needs)
+            {
+                if (!IsRoadPerson(a_entity))
+                {
+                    return;
+                }
+
+                for (auto& need : a_needs.List)
+                {
+                    if (need.Type == LCE::Simulation::NeedType::Hunger
+                        && need.Value <= m_Settings.RoadFeedThreshold)
+                    {
+                        static_cast<void>(RestoreHunger(a_needs));
+
+                        REX::INFO(
+                            "road: {} ate on the road.",
+                            MindLabel(a_entity));
+                        return;
+                    }
+                }
+            });
+    }
+
+    void Adapter::OpenExchange(
+        RE::Actor* a_speaker, RE::Actor* a_target,
+        ExchangeRegister a_register)
+    {
+        // The lock: one exchange in the world at a time — a crowd
+        // never all talks at once. The caller has already gated the
+        // pair (loaded, resting, in earshot); this books the opener
+        // and schedules B's answer.
+        if (m_Exchange.has_value() || a_speaker == nullptr
+            || a_target == nullptr
+            || a_speaker->currentProcess == nullptr
+            || a_target->currentProcess == nullptr)
+        {
+            return;
+        }
+
+        const auto outcome = VoiceRegister(a_speaker, a_target, a_register);
+
+        REX::INFO(
+            "exchange: {} greeted {} — {} register, {}, played {:#08x}.",
+            MindLabelForm(a_speaker->GetFormID()),
+            MindLabelForm(a_target->GetFormID()),
+            outcome.RegisterName,
+            outcome.Result.Played != 0
+                ? "fired"
+                : (outcome.Result.Accepted ? "queued" : "refused"),
+            outcome.Result.Played);
+
+        // B's answer, a short beat later — the opener's line gets time
+        // to finish, and the answer re-checks the pair is still
+        // together before it speaks. The register rides along so the
+        // answer asks the game for the same register the opener did.
+        static constexpr float kExchangeAnswerDelay = 2.5f;
+
+        const auto now = std::chrono::steady_clock::now();
+
+        m_Exchange = Exchange{
+            a_target->GetFormID(),
+            a_speaker->GetFormID(),
+            a_register,
+            now
+                + std::chrono::duration_cast<
+                    std::chrono::steady_clock::duration>(
+                    std::chrono::duration<float>(kExchangeAnswerDelay)),
+        };
+    }
+
+    void Adapter::ProcessExchange()
+    {
+        // The answer beat (0.8.7b): B answers A a short beat after the
+        // opener. The refs are re-resolved by form id, never held
+        // across ticks; a partner who parted drops the reply (no ghost
+        // exchanges). Runs every tick, independent of the probe flag —
+        // the production crossings share the same slot.
+        if (!m_Exchange.has_value())
+        {
+            return;
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+
+        if (now < m_Exchange->Due)
+        {
+            return;
+        }
+
+        const auto answererForm = m_Exchange->AnswererForm;
+        const auto addresseeForm = m_Exchange->AddresseeForm;
+        const auto reg = m_Exchange->Register;
+
+        m_Exchange.reset();
+
+        auto* b = RE::TESForm::GetFormByID<RE::Actor>(answererForm);
+        auto* a = RE::TESForm::GetFormByID<RE::Actor>(addresseeForm);
+
+        if (b == nullptr || a == nullptr || b->Get3D() == nullptr
+            || a->Get3D() == nullptr || b->currentProcess == nullptr)
+        {
+            REX::INFO(
+                "exchange: {}'s answer dropped — the pair parted.",
+                MindLabelForm(answererForm));
+            return;
+        }
+
+        const auto outcome = VoiceRegister(b, a, reg);
+
+        REX::INFO(
+            "exchange: {} answered {} — {} register, {}, played {:#08x}.",
+            MindLabelForm(answererForm), MindLabelForm(addresseeForm),
+            outcome.RegisterName,
+            outcome.Result.Played != 0
+                ? "fired"
+                : (outcome.Result.Accepted ? "queued" : "refused"),
+            outcome.Result.Played);
     }
 
     void Adapter::ProcessPendingShoves()
@@ -4749,6 +6058,8 @@ namespace TLC
         m_ArrivedAt.clear();
         m_WalkRefusedUntil.clear();
         m_InteractCooldown.clear();
+        m_InteractPairCooldown.clear();
+        m_InteractOpenedToday.clear();
         m_MarketAttendance.clear();
         m_LastWander.clear();
         m_LastCough.clear();
@@ -5541,7 +6852,8 @@ namespace TLC
                                 price);
 
                             PushNews(
-                                MindLabelForm(formId) + " bought medicine.");
+                                MindLabelForm(formId) + " bought medicine.",
+                                Tuning::AdapterSettings::NewsCategory::Illness);
                         }
                         else
                         {
@@ -5551,7 +6863,8 @@ namespace TLC
 
                             PushNews(
                                 MindLabelForm(formId) + " bought medicine for "
-                                + a_patientLabel + ".");
+                                + a_patientLabel + ".",
+                                Tuning::AdapterSettings::NewsCategory::Illness);
                         }
 
                         return true;
@@ -5832,6 +7145,59 @@ namespace TLC
         }
     }
 
+    void Adapter::ScrubRoadMarketMemories()
+    {
+        // The 0.8.9 field find: provisioners still clustered at the
+        // workbench even with the road-feed stone in place. The cause is
+        // the co-save's memory — the seed is idempotent (it skips minds
+        // that already remember), so a Trade memory seeded by an older
+        // build survives every later seed, and the engine's hunger
+        // branch follows Trade memories wherever they point. Road people
+        // were excluded from *new* seeds but never scrubbed of *old*
+        // ones. Each bench arrival then re-warmed the stale fact,
+        // closing a self-sustaining loop.
+        m_Registry.ForEachWithComponent<LCE::Simulation::Memory>(
+            [this](LCE::Simulation::EntityId a_entity,
+                   LCE::Simulation::Memory& a_memory)
+            {
+                if (!IsRoadPerson(a_entity))
+                {
+                    return;
+                }
+
+                const auto before = a_memory.Events.size();
+
+                a_memory.Events.erase(
+                    std::remove_if(
+                        a_memory.Events.begin(), a_memory.Events.end(),
+                        [this](const LCE::Simulation::MemoryEvent& a_event)
+                        {
+                            // A market entity is a workshop — FormRef
+                            // only, no SpeciesTag (the same test the
+                            // arrival handler uses for "at the bench").
+                            // A Trade memory to a person is real (the
+                            // road people trade with each other); only
+                            // the bench pull is scrubbed.
+                            return a_event.Kind
+                                    == LCE::Simulation::InteractionKind::Trade
+                                && m_Registry
+                                       .GetComponent<SpeciesTag>(
+                                           a_event.Other)
+                                       == nullptr;
+                        }),
+                    a_memory.Events.end());
+
+                if (a_memory.Events.size() != before)
+                {
+                    REX::DEBUG(
+                        "road: scrubbed {} stale market memory{} from {}.",
+                        before - a_memory.Events.size(),
+                        before - a_memory.Events.size() == 1 ? "" : "ies",
+                        MindLabel(a_entity));
+                }
+            });
+    }
+
     void Adapter::SeedMarket(bool a_announce)
     {
         // The census: one scan over the REFR form array. Static per load
@@ -5913,6 +7279,15 @@ namespace TLC
                     SeedMarketMemory(
                         m_Registry, market,
                         [this, market](LCE::Simulation::EntityId a_entity) {
+                            // The road people (0.8.9): a provisioner or
+                            // caravan hand feeds on the road — never
+                            // seeded with a settlement market, so the
+                            // core never walks it to a bench.
+                            if (IsRoadPerson(a_entity))
+                            {
+                                return LCE::Simulation::EntityId{};
+                            }
+
                             // Settlers trade at the market. A child or an
                             // animal is fed — by its owner when the game
                             // assigns one and the owner is a sim entity,
@@ -6015,6 +7390,16 @@ namespace TLC
                     return LCE::Simulation::EntityId{};
                 }
 
+                // The road people (0.8.9 road-feed stone): a provisioner
+                // or caravan hand feeds on the road — no market memory,
+                // no walk to a settlement bench (the 0.8.9 field find:
+                // every road person's hunger pulled it to the nearest
+                // market, clustering caravans in settlements).
+                if (IsRoadPerson(a_entity))
+                {
+                    return LCE::Simulation::EntityId{};
+                }
+
                 // Settlers trade at their settlement's market. A child or
                 // an animal is fed — by its owner when the game assigns
                 // one and the owner is a sim entity, else by the
@@ -6032,6 +7417,13 @@ namespace TLC
 
                 return owner.IsValid() ? owner : market;
             });
+
+        // The 0.8.9 field fix: road people carry no bench memories. The
+        // seed above only adds — a stale Trade memory restored from an
+        // older co-save survives it, and the engine's hunger branch
+        // follows it to the workbench. Scrub after every seed so the
+        // stale pull is removed and re-warmed arrivals stay scrubbed.
+        ScrubRoadMarketMemories();
 
         if (a_announce)
         {
@@ -6246,7 +7638,9 @@ namespace TLC
                     "world fact: the market is closed ({}) — trade unavailable until {:02.0f}:00.",
                     FormatGameHour(hour), m_Settings.MarketOpenHour);
 
-                PushNews("the market closed for the night.");
+                PushNews(
+                    "the market closed for the night.",
+                    Tuning::AdapterSettings::NewsCategory::Market);
             }
             else
             {
@@ -6254,7 +7648,9 @@ namespace TLC
                     "world fact: the market is open ({}) — trade available.",
                     FormatGameHour(hour));
 
-                PushNews("the market opened — the Commonwealth trades.");
+                PushNews(
+                    "the market opened — the Commonwealth trades.",
+                    Tuning::AdapterSettings::NewsCategory::Market);
 
                 // The market day turns (0.8.3): every shelf refills at
                 // open, so a stall that sold out yesterday is fresh
@@ -6536,7 +7932,9 @@ namespace TLC
                 "illness: {} died of sickness — the wastes claim another.",
                 MindLabelForm(formId));
 
-            PushNews(MindLabelForm(formId) + " died of sickness.");
+            PushNews(
+                MindLabelForm(formId) + " died of sickness.",
+                Tuning::AdapterSettings::NewsCategory::Death);
 
             // The body (0.8.1 field pass): sickness must actually take
             // the body — the game actor dies (the corpse appears; the
@@ -6732,7 +8130,9 @@ namespace TLC
                             m_Settings.Illness.NewsMax))
                 {
                     ++m_IllnessNewsCount;
-                    PushNews(MindLabel(a_entity) + " is ill.");
+                    PushNews(
+                        MindLabel(a_entity) + " is ill.",
+                        Tuning::AdapterSettings::NewsCategory::Illness);
                 }
             });
     }
@@ -6841,6 +8241,17 @@ namespace TLC
             // on its own timer — spectating and verifying the fight
             // machinery on demand, the once-per-day gate bypassed.
             ForceFightLoop();
+
+            // The audio trigger probe (0.8.7): when sim.diag.audioProbe
+            // is on, a nearby pair voices an exchange on its own timer —
+            // the in-game ear's verdict on the seam. The production
+            // crossings (InteractPass) share the same machinery.
+            AudioProbeLoop();
+
+            // The in-world exchange's answer beat (0.8.7b): a due
+            // second half fires every tick, probe or not — the
+            // production crossings book through the same slot.
+            ProcessExchange();
 
             // The scuffle's second beat (0.7.5): due counter-shoves
             // fire, then the one who threw first walks off — the
@@ -6965,6 +8376,13 @@ namespace TLC
             {
                 lastGrowthDay = today;
 
+                // The birth journey (0.8.9): a newborn hold past
+                // sim.baby.holdDays sheds its bundle and becomes a
+                // child from the game's own pool — once per day, on
+                // the day boundary, so a mid-carry survives the save
+                // and the child arrives at the right age.
+                AdvanceBabyHolds();
+
                 const auto grew = Birth::GrowChildren(
                     m_Registry, m_Settings.BirthChildhood, today);
 
@@ -6975,15 +8393,13 @@ namespace TLC
 
                     PushNews(
                         std::to_string(grew)
-                        + " children grew up in the Commonwealth.");
+                            + " children grew up in the Commonwealth.",
+                        Tuning::AdapterSettings::NewsCategory::Birth);
 
-                    // 0.7.8 visible children: pair newly-grown
-                    // children with real game actors if the baby
-                    // mod is loaded and the flag is on.
-                    if (m_Settings.BirthVisible)
-                    {
-                        PairVisibleChildren();
-                    }
+                    // The birth journey (0.8.9) already paired each
+                    // child with its body at the two-day mark; a
+                    // grown child keeps that actor and walks the
+                    // world like any mind. Nothing to pair here.
                 }
             }
         }
@@ -7041,6 +8457,20 @@ namespace TLC
         // so this tick's decisions see the sick mind's drained Fatigue.
         ApplyIllness(static_cast<float>(a_deltaSeconds));
 
+        // The road feed (0.8.9 road-feed stone): a provisioner or
+        // caravan hand eats from the caravan's supplies when its
+        // hunger falls to the threshold — the market seed excludes
+        // road people, so this is their only meal. Runs before Update
+        // so this tick's decisions see the restored belly.
+        FeedRoadPeople();
+
+        // The visible child (0.8.9 deferred-spawn find): each pending
+        // child is dressed the moment the game's load routine completes
+        // it — throttled inside (a couple of checks a second). Runs
+        // after the daily shed so a child that just spawned is dressed
+        // the same tick once it is real.
+        AdvanceVisualChildren();
+
         // The core's stateless tick: needs decay, memory fade, goal
         // urgency, then one Intent per mind. All of it on the game thread,
         // with the modder's tuning (the config file) when present. The
@@ -7093,7 +8523,15 @@ namespace TLC
 
         // The random-interaction trial (0.8.4): after the plan runs,
         // so walking minds are known — a mind mid-walk never speaks.
-        InteractPass();
+        // Bisect gate #2 (0.8.7): sim.diag.noInteract skips the pass
+        // entirely — the 17:14 crash (walks gated, probe silent, no
+        // subtitles) landed 1s after the [voice]: lines this pass
+        // produced, so the interact path is the next suspect after the
+        // walk was cleared.
+        if (!m_Settings.NoInteract)
+        {
+            InteractPass();
+        }
 
         // One-time proof the whole first pass completed. If the intent
         // lines printed but this is missing, the pass is stuck in

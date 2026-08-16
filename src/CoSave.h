@@ -62,8 +62,14 @@ namespace TLC::CoSave
     // v9 (the sick household stone) added the per-world medicine-stock
     // section after the burials - each market's doses left today, so
     // a stall that sold out stays sold out across save/load until the
-    // next market day refills it.
-    inline constexpr std::uint32_t kRecordVersion = 9;
+    // next market day refills it. v10 (the 0.8.9 birth journey)
+    // added the per-world baby-hold section after the medicine stock
+    // - each held newborn, so a mother mid-carry keeps her visible
+    // bundle across save/load. v11 (the 0.8.9 visible-child stone)
+    // added the per-world visible-child section after the baby holds -
+    // each (mother, pending child actor) pair, so a child waiting to
+    // materialize survives the very load that completes it.
+    inline constexpr std::uint32_t kRecordVersion = 11;
 
     // A market's stall-keeper, in the durable form: the market's
     // workbench FormID and the keeper's actor FormID — form ids, not
@@ -125,6 +131,39 @@ namespace TLC::CoSave
         std::uint32_t Stock = 0;
     };
 
+    // A held newborn, in the durable form (v10, 0.8.9 birth journey):
+    // the mother's FormID, the baby-bundle ARMO she is visibly holding,
+    // and the world day the child was born. Form ids are stable across
+    // sessions (entity ids are session-local). The adapter translates at
+    // the edges (BabyHoldsForSave / RestoreBabyHolds); each day the
+    // hold advances — when the day passes sim.baby.holdDays, the
+    // bundle comes off and a child from the game's own pool takes its
+    // place. A hold left mid-carry survives save/load.
+    struct BabyHold
+    {
+        std::uint32_t MotherFormId = 0;
+        std::uint32_t BundleFormId = 0;
+        std::uint64_t BornDay = 0;
+    };
+
+    // A visible child, in the durable form (v11, 0.8.9 deferred-spawn
+    // find): the mother's FormID and the child actor spawned at her
+    // feet once the bundle comes off. The child is deliberately left
+    // un-initialized — invisible until the game's own load routine
+    // completes it (facegen, AI process, animation) and it steps out
+    // fully real; its base's default outfit (defOutfit, a ChildOutfit*
+    // OTFT bundle) is set at spawn so the game dresses it, and the
+    // per-tick pass confirms/re-equips once it reads initialized. Form
+    // ids are stable across sessions (entity ids are session-local).
+    // The adapter translates at the edges
+    // (VisualChildrenForSave / RestoreVisualChildren).
+    struct VisualChild
+    {
+        std::uint32_t MotherFormId = 0;
+        std::uint32_t FigureFormId = 0;
+        std::uint64_t BornDay = 0;
+    };
+
     // Encodes a registry snapshot as the durable record bytes: stable
     // component names (never std::type_index), the core's snapshot version
     // layered underneath, the record's own version, and the Rng state (v2)
@@ -137,7 +176,9 @@ namespace TLC::CoSave
         const std::vector<BondPair>& a_bonds,
         const std::vector<ConflictGatePair>& a_gates,
         const std::vector<BurialEntry>& a_burials,
-        const std::vector<MedicineStockPair>& a_medicineStock);
+        const std::vector<MedicineStockPair>& a_medicineStock,
+        const std::vector<BabyHold>& a_babyHolds = {},
+        const std::vector<VisualChild>& a_visualChildren = {});
 
     // Decodes record bytes back into a snapshot. Returns false — the load
     // is refused, never half-applied — when the record version is newer
@@ -161,5 +202,7 @@ namespace TLC::CoSave
         std::vector<BondPair>& a_bonds,
         std::vector<ConflictGatePair>& a_gates,
         std::vector<BurialEntry>& a_burials,
-        std::vector<MedicineStockPair>& a_medicineStock);
+        std::vector<MedicineStockPair>& a_medicineStock,
+        std::vector<BabyHold>* a_babyHolds = nullptr,
+        std::vector<VisualChild>* a_visualChildren = nullptr);
 }

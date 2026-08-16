@@ -82,13 +82,13 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.8.6a | The Audit | ✅ done — cut list re-tested; MCM KEPT, earn-caps + log hygiene to 0.8.6b |
 | 0.8.6b | Redefine & Loose Ends | ✅ done — robots, the stipend, MCM Economy page; who-pays benched then unbenched |
 | 0.8.6c | Scale in the Field | ✅ PASSED (2026-08-14) — TickReport, ~620 live minds, half a frame; ownership read unbenched (28/28 owned) |
-| 0.8.7 | Dialog growth | ✅ first half verified in-game (2026-08-15) — curated catalog + Realistic Conversations compat + the voice-aware picker (ground truth from the Voices BA2, ghoul bank); the audio trigger probe is the remaining piece |
-| 0.8.8 | Timings & Weights | 🔲 planned — the sim.interact.* cadence and probability |
-| 0.8.9 | Babies, implemented | 🔲 planned — the birth journey made visible/real |
+| 0.8.7 | Dialog growth | ✅ verified in-game (2026-08-15) — curated catalog + the voice-aware picker; the in-world exchange (A-greets-B, both beats, one-at-a-time lock, per-pair cooldown, and the bond-named registers — family/flirt/greet, 0.8.9-register) replaced the text tail |
+| 0.8.8 | Timings & Weights | ✅ built (2026-08-15) — sim.interact.pairCooldown / dailyCap / weight.greet·gossip·family·row in the INI + MCM Interactions page; field tuning pending |
+| 0.8.9-road | Road feed | ✅ verified in-game (2026-08-15) — road people keep no settlement-market memory and eat from the caravan's supplies at sim.road.feedThreshold (`road: … ate on the road` ×6 on test); guards/traders keep their markets; road people still exchange with each other in passing (15 exchanges on test) — their bonds and memories travel with them |
+| 0.8.9 | Babies, implemented | ✅ verified in-game (2026-08-16) — the birth journey v2: the mother carries a swaddled bundle (sim.baby.holdDays, default 2), then it comes off and a child spawns at her feet — deferred spawn (invisible, then real after a save/load: the only route that produces a fully-initialized child; forced init = headless/T-pose, PlaceAtMe = CTD), gender-matched from the farm-children bases, dressed via the base's default outfit (defOutfit, a ChildOutfit* OTFT bundle — the game's own child-clothing path; the earlier no-clothes bug was an OTFT-vs-ARMO cast miss, fixed 0.8.9-child), never in the settler faction (no duplicate mind), paired with the sim-only child; co-save v11 (BabyHold + VisualChild sections); the crib walk + market baby-goods shelf were cut (the mod stays as its author designed); 27/27 green |
 | 0.8.10 | Animations + fight-feel | 🔲 planned — the ESP/idle pattern extends; the both-fall/ghost-push fix lands here |
 | 0.8.11 | Log hygiene + loose ends | 🔲 planned — the audit's second gap plus the parked questions |
 | 0.8.12 | Final Touches + beta | 🔲 planned — the clean run, README, package, Nexus beta |
-| 1.0.0 | Freeze and ship | 🔲 planned |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 
 **Build:** `xmake` (one command). Two targets:

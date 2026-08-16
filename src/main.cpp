@@ -77,15 +77,17 @@ namespace
         const auto gates = g_Adapter.ConflictGatesForSave();
         const auto burials = g_Adapter.BurialsForSave();
         const auto medicineStock = g_Adapter.MedicineStockForSave();
+        const auto babyHolds = g_Adapter.BabyHoldsForSave();
+        const auto visualChildren = g_Adapter.VisualChildrenForSave();
         const auto record = TLC::CoSave::Encode(
             snapshot, g_Adapter.RngState(), stalls, bonds, gates, burials,
-            medicineStock);
+            medicineStock, babyHolds, visualChildren);
 
         REX::INFO(
-            "co-save: writing {} entities, {} stall-keepers, {} bonds, {} gates, {} burials, {} medicine shelves ({} bytes).",
+            "co-save: writing {} entities, {} stall-keepers, {} bonds, {} gates, {} burials, {} medicine shelves, {} newborn holds, {} visual children ({} bytes).",
             snapshot.Entities.size(), stalls.size(), bonds.size(),
             gates.size(), burials.size(), medicineStock.size(),
-            record.size());
+            babyHolds.size(), visualChildren.size(), record.size());
 
         if (!a_intfc->WriteRecord(
                 TLC::CoSave::kRecordType, TLC::CoSave::kRecordVersion,
@@ -128,23 +130,27 @@ namespace
             std::vector<TLC::CoSave::ConflictGatePair> gates;
             std::vector<TLC::CoSave::BurialEntry> burials;
             std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
+            std::vector<TLC::CoSave::BabyHold> babyHolds;
+            std::vector<TLC::CoSave::VisualChild> visualChildren;
 
             if (!TLC::CoSave::Decode(
                     record, snapshot, rngState, stalls, bonds, gates, burials,
-                    medicineStock))
+                    medicineStock, &babyHolds, &visualChildren))
             {
                 REX::ERROR("co-save: record decode failed (version {}).", version);
                 continue;
             }
 
             REX::INFO(
-                "co-save: read {} entities, {} stall-keepers, {} bonds, {} gates, {} burials, {} medicine shelves — the world will be restored on load.",
+                "co-save: read {} entities, {} stall-keepers, {} bonds, {} gates, {} burials, {} medicine shelves, {} newborn holds, {} visual children — the world will be restored on load.",
                 snapshot.Entities.size(), stalls.size(), bonds.size(),
-                gates.size(), burials.size(), medicineStock.size());
+                gates.size(), burials.size(), medicineStock.size(),
+                babyHolds.size(), visualChildren.size());
             g_Adapter.QueueRestore(
                 std::move(snapshot), rngState,
                 std::move(stalls), std::move(bonds), std::move(gates),
-                std::move(burials), std::move(medicineStock));
+                std::move(burials), std::move(medicineStock),
+                std::move(babyHolds), std::move(visualChildren));
         }
     }
 

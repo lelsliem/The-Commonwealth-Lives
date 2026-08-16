@@ -2008,3 +2008,117 @@ voice type against the formid — FemaleGhoul literally has the .fuz
 for 0x076AAD ("Looking to buy?"), so playing it as a ghoul is not
 wrong-voice audio. The voice-aware rule holds: a line only speaks if
 the speaker's voice bank recorded it. The ghoul bank did.
+
+## 0064 — The audio trigger probe: Say-via-VM and ProcessGreet, config-gated (0.8.7, 2026-08-15)
+
+**Question:** can the DLL make the game actually *play* a curated
+line's .fuz on an actor — not just caption it? The vendored
+commonlibf4 has no direct Say wrapper (the FO4 Address Library
+database has no Actor::Say entry — confirmed against the installed
+`version-1-11-221-0.bin` and the generated ID namespace), so the
+probe alternates the two game-owned routes, both REL-ID-exposed:
+
+- **[probe say]** the papyrus VM's own `Say` via
+  `GameVM → IVirtualMachine::DispatchMethodCall(handle,
+  "ObjectReference", "Say", topic, forceSubtitle, greetAnyway)` —
+  the exact call every Papyrus dialogue mod makes. The game's own
+  INFO selection is filtered by the speaker's voice (voice-aware by
+  construction), and a forced subtitle gives the probe eyes: if the
+  game subtitles a line, it played one.
+- **[probe greet]** `AIProcess::ProcessGreet(actor, kMiscellaneous,
+  kMisc_Hello, player, …)` — the ambient greeting entry, the same
+  family as the kick's PlayIdle seam.
+
+**Why the catalog table grew a formid column:** Say takes a Topic,
+not an INFO, so the probe resolves the picked line INFO → parent
+topic. The coverage table is now `{ normalized text, INFO formid,
+voice bits }` (ground truth from the LineCatalog's FormID column;
+the ghoul/guard/child bits preserved from the live table), with
+`FormIdFor()` beside `CoverageFor()`. This is the same table the
+real audio layer will ship with.
+
+**Honest scope note:** Say(topic) plays a voice-filtered line *from
+the topic*, not necessarily the exact curated INFO. If the probe
+proves audio plays, exact-line fidelity becomes a 0.8.10 design
+decision (dedicated one-INFO topics in a small patch ESP — the
+ESP-building capability the author asked about). The probe's
+pass/fail is strictly: does the .fuz audibly play?
+
+**Gating:** `sim.diag.audioProbe = 1` + `sim.diag.audioProbe.every`
+in the INI; off by default, never ships in a release INI. The probe
+picks the nearest genuinely-loaded humanoid mind to the player
+within the subtitle radius, uses the production voice-aware pick
+(PickForVoice, greet pool) and logs which route fired.
+
+## 0065 — The birth journey: the carry, the deferred spawn, and the dress find (0.8.9, 2026-08-16)
+
+**Question:** can a newborn be *seen*? The sim child was born as a
+mind, fed, grown, remembered — but invisible. The 0.8.9 re-scope
+decided the mod stays as its author designed (no crib walks, no
+market baby-goods shelf) and the sim only adds two moments: birth and
+the child.
+
+**The carry works first try.** On birth (`sim.birth.visible` on) the
+mother visibly holds a swaddled bundle — the baby mod's ethnicity
+variant when loaded, the game's own Shaun bundle (`babybundled`) when
+not, so everyone gets a carry, mod or not. Equipped through the
+game's own equip path (`AddObjectToContainer` + `ActorEquipManager`);
+the mod's scripts are never touched. The hold (mother, bundle, born
+day) rides the co-save v10 (`BabyHold`), so a mid-carry survives
+save/load. Verified in-game.
+
+**The child took three attempts to get right — and only one route
+works.** After `sim.baby.holdDays` (default 2) the bundle comes off
+and a child should take its place:
+
+1. **The game's own `PlaceAtMe` via the papyrus VM** — the "proper"
+   spawn. Instant CTD the moment the shed fired: the documented
+   PackVariables crasher. Dead end.
+2. **Low-level spawn, forced to initialize immediately**
+   (`clearStillLoadingFlag`/`Load3D`/`Enable`) — the *frightening*
+   one: headless, T-posing, immobile, in its pants, and the half-born
+   state even survived saves. The forced init ran the actor through a
+   half-path that produced a broken body the game's own loader then
+   respected. Dead end.
+3. **Low-level spawn, deliberately deferred** (`clearStillLoadingFlag
+   = false`) — the child is **invisible** while its cell holds it…
+   and the game's own save/load routine completes the actor (facegen,
+   AI process, animation) the next time the world reloads, and the
+   child steps out **fully real** — head, movement, correct name and
+   gender (the name rides the extra data, no 3D or AI needed). That
+   was the accidental win from the earlier pairing test that we
+   misread and "fixed" into attempt 2. Rebuilt deliberately, it is
+   the path that shipped.
+
+**The dress find — the bug was the cast, not the timing.** The field
+test came back nearly perfect except one miss: not one child wore
+clothes, and the log still claimed "dressed and fully real". The
+"ChildOutfit*" pool entries are **OTFT outfit bundles (`BGSOutfit`),
+not ARMOs** — the materialize pass resolved them as
+`TESBoundObject`, which fails for an outfit bundle, every lookup
+returned `nullptr`, and the equip block silently no-op'd. Two-layer
+fix:
+
+- **At spawn**, the child's base NPC gets its default outfit
+  (`defOutfit`/WNAM) set to a gender-matched ChildOutfit* bundle —
+  the game's own child-clothing path. The bundles are orphans no NPC
+  record references, which is exactly how the game dresses its
+  runtime children (no base carries a WNAM; the OTFTs are applied at
+  actor init). The deferred init that materializes the child also
+  applies its clothes — no runtime-equip reversion risk, survives
+  every reload.
+- **In the materialize pass**, once the child reads fully initialized
+  (3D **and** an AI process — the exact things the half-born child
+  lacked), the pass confirms the dress and falls back to equipping
+  the real ARMOs inside the bundle on the now-real actor. The outfit
+  pool is gender-aware (the dress is female-only; Nat's unique dress
+  excluded). Verified: children appear dressed and stay dressed
+  across reloads.
+
+**No duplicate minds.** The child never joins the settler faction, so
+the census never seeds a second mind for it. The sim child keeps its
+name, mind, and household; the actor is its body only. The pair
+(mother, child actor) rides the co-save v11 (`VisualChild`), so a
+child waiting to materialize survives the very load that completes
+it. Gated on `sim.baby.visualChild` (default on). 27/27 harness
+suites green; deployed and verified in-game 2026-08-16.

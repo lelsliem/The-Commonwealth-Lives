@@ -2516,6 +2516,90 @@ namespace TLC::Tests
             }
         }
 
+        //-------------------------------------------------------------------------
+        // 8. The visible children (v11, 0.8.9 deferred-spawn find):
+        //    the pending child actors round-trip exactly — mother form
+        //    id, child actor form id, born day — and a v10 record
+        //    (pre-visible-child) decodes with an empty section (no
+        //    child is pending for a save made before the stone).
+        //-------------------------------------------------------------------------
+        {
+            EntityRegistry source;
+            RegisterAllSerializers(source);
+
+            const auto snapshot = source.Capture();
+
+            const std::vector<TLC::CoSave::VisualChild> savedFigures{
+                { 0x00011111u, 0x00022222u, 42 },
+            };
+
+            const auto record = TLC::CoSave::Encode(
+                snapshot, 0, {}, {}, {}, {}, {}, {}, savedFigures);
+
+            RegistrySnapshot decoded;
+            std::uint64_t rngState = 0;
+            std::vector<TLC::CoSave::StallKeeperPair> stalls;
+            std::vector<TLC::CoSave::BondPair> bonds;
+            std::vector<TLC::CoSave::ConflictGatePair> gates;
+            std::vector<TLC::CoSave::BurialEntry> burials;
+            std::vector<TLC::CoSave::MedicineStockPair> medicineStock;
+            std::vector<TLC::CoSave::BabyHold> babyHolds;
+            std::vector<TLC::CoSave::VisualChild> figures;
+
+            if (!TLC::CoSave::Decode(
+                    record, decoded, rngState, stalls, bonds, gates, burials,
+                    medicineStock, &babyHolds, &figures)
+                || figures.size() != 1
+                || figures[0].MotherFormId != 0x00011111u
+                || figures[0].FigureFormId != 0x00022222u
+                || figures[0].BornDay != 42)
+            {
+                return false;
+            }
+
+            // A malformed figure — a zero form id — is skipped, not fatal.
+            const auto badRecord = TLC::CoSave::Encode(
+                snapshot, 0, {}, {}, {}, {}, {}, {},
+                { { 0x00011111u, 0u, 1 } });
+
+            std::vector<TLC::CoSave::VisualChild> badFigures;
+
+            if (!TLC::CoSave::Decode(
+                    badRecord, decoded, rngState, stalls, bonds, gates,
+                    burials, medicineStock, &babyHolds, &badFigures)
+                || !badFigures.empty())
+            {
+                return false;
+            }
+
+            // A v10 record (the baby-hold stone, pre-visual-child):
+            // header + Rng + entities(0) + stalls(0) + bonds(0) +
+            // legacy(0) + gates(0) + burials(0) + medicine(0) + baby
+            // holds(0) — decodes with no figures.
+            TLC::Codec::Writer v10;
+            v10.U32(10);
+            v10.U32(0);
+            v10.U32(0);
+            v10.U64(0);
+            v10.U32(0);   // stalls
+            v10.U32(0);   // bonds
+            v10.U8(0);    // legacy (v6) — none
+            v10.U32(0);   // gates
+            v10.U32(0);   // burials
+            v10.U32(0);   // medicine
+            v10.U32(0);   // baby holds
+
+            std::vector<TLC::CoSave::VisualChild> migratedFigures;
+
+            if (!TLC::CoSave::Decode(
+                    v10.Bytes, decoded, rngState, stalls, bonds, gates,
+                    burials, medicineStock, &babyHolds, &migratedFigures)
+                || !migratedFigures.empty())
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -3429,9 +3513,13 @@ namespace TLC::Tests
         }
 
         //-------------------------------------------------------------------------
-        // 3. FeedChildren — a sim-only child is fed by the household;
-        //    a child with a game form is a real, walkable mind and is
-        //    left to the market.
+        // 3. FeedChildren — every not-yet-grown child is fed by the
+        //    household, paired or not (0.8.9: a child paired with a
+        //    visible baby actor still cannot walk to a bench — the
+        //    household feed is the child's meal until GrowChildren
+        //    makes it a grown mind that walks like anyone). The hungry
+        //    child recovers toward full; the full child is held at
+        //    full, capped.
         //-------------------------------------------------------------------------
         {
             EntityRegistry registry;
@@ -3452,9 +3540,9 @@ namespace TLC::Tests
 
             const auto fed = FeedChildren(registry, 1.0f);
 
-            if (fed != 1)
+            if (fed != 2)
             {
-                return false;   // only the sim-only child ate
+                return false;   // both children ate — paired or not
             }
 
             const auto hungerOf = [](const Needs& a_needs)
@@ -3470,9 +3558,9 @@ namespace TLC::Tests
                 return -1.0f;
             };
 
-            // Fed toward full at 0.2/s: 0.5 + 0.2 = 0.7. The walker (a
-            // real mind with a form) is left to the market, untouched
-            // at 1.0.
+            // Fed toward full at 0.2/s: 0.5 + 0.2 = 0.7. The walker
+            // was born full and the feed caps at 1.0 — held, not
+            // drained.
             if (hungerOf(*registry.GetComponent<Needs>(child))
                     != 0.5f + 0.2f * 1.0f
                 || hungerOf(*registry.GetComponent<Needs>(walker))

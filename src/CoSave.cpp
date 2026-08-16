@@ -113,7 +113,9 @@ namespace TLC::CoSave
         const std::vector<BondPair>& a_bonds,
         const std::vector<ConflictGatePair>& a_gates,
         const std::vector<BurialEntry>& a_burials,
-        const std::vector<MedicineStockPair>& a_medicineStock)
+        const std::vector<MedicineStockPair>& a_medicineStock,
+        const std::vector<BabyHold>& a_babyHolds,
+        const std::vector<VisualChild>& a_visualChildren)
     {
         Codec::Writer writer;
 
@@ -248,6 +250,36 @@ namespace TLC::CoSave
             writer.U32(entry.Stock);
         }
 
+        // v10 (the 0.8.9 birth journey): the per-world baby-hold
+        // section — each held newborn, (mother form id, bundle form id,
+        // born day). Present only in v10+ records; older records end
+        // after the medicine stock, and every newborn is simply a
+        // sim-only child — honest for a save made before a mother
+        // could carry a visible bundle.
+        writer.U32(static_cast<std::uint32_t>(a_babyHolds.size()));
+
+        for (const auto& entry : a_babyHolds)
+        {
+            writer.U32(entry.MotherFormId);
+            writer.U32(entry.BundleFormId);
+            writer.U64(entry.BornDay);
+        }
+
+        // v11 (the 0.8.9 visible-child stone): the per-world
+        // visible-child section — each (mother form id, child actor
+        // form id, born day). Present only in v11+ records; older
+        // records end after the baby holds, and no child is pending —
+        // honest for a save made before a child could have a visible
+        // body.
+        writer.U32(static_cast<std::uint32_t>(a_visualChildren.size()));
+
+        for (const auto& entry : a_visualChildren)
+        {
+            writer.U32(entry.MotherFormId);
+            writer.U32(entry.FigureFormId);
+            writer.U64(entry.BornDay);
+        }
+
         return writer.Bytes;
     }
 
@@ -259,7 +291,9 @@ namespace TLC::CoSave
         std::vector<BondPair>& a_bonds,
         std::vector<ConflictGatePair>& a_gates,
         std::vector<BurialEntry>& a_burials,
-        std::vector<MedicineStockPair>& a_medicineStock)
+        std::vector<MedicineStockPair>& a_medicineStock,
+        std::vector<BabyHold>* a_babyHolds,
+        std::vector<VisualChild>* a_visualChildren)
     {
         Codec::Reader reader{ a_record };
 
@@ -623,6 +657,124 @@ namespace TLC::CoSave
                 }
 
                 a_medicineStock.push_back(entry);
+            }
+        }
+
+        // v10 (the 0.8.9 birth journey): the baby-hold section follows
+        // the medicine stock. Older records have no section — the
+        // caller's list stands empty, and every newborn is simply a
+        // sim-only child. A malformed entry is skipped, not fatal;
+        // truncation is still a refusal. The section is always consumed
+        // (framing stays honest — a truncated v10 record must refuse
+        // even when the caller did not ask for the holds, the legacy
+        // test path); a null caller simply does not keep the entries.
+        if (recordVersion >= 10)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto holdCount = reader.U32();
+
+            if (a_babyHolds != nullptr)
+            {
+                a_babyHolds->clear();
+                a_babyHolds->reserve(holdCount);
+
+                for (std::uint32_t i = 0; i < holdCount; ++i)
+                {
+                    if (reader.Remaining() < 16)   // 4 + 4 + 8
+                    {
+                        return false;
+                    }
+
+                    BabyHold entry;
+                    entry.MotherFormId = reader.U32();
+                    entry.BundleFormId = reader.U32();
+                    entry.BornDay = reader.U64();
+
+                    if (entry.MotherFormId == 0)
+                    {
+                        continue;   // malformed — skipped, never half-applied
+                    }
+
+                    a_babyHolds->push_back(entry);
+                }
+            }
+            else
+            {
+                // Not interested — consume the entries, keep framing.
+                for (std::uint32_t i = 0; i < holdCount; ++i)
+                {
+                    if (reader.Remaining() < 16)   // 4 + 4 + 8
+                    {
+                        return false;
+                    }
+
+                    reader.U32();
+                    reader.U32();
+                    reader.U64();
+                }
+            }
+        }
+
+        // v11 (the 0.8.9 visual-child stone): the visual-child section
+        // follows the baby holds. Older records have no section — the
+        // caller's list stands empty, and no figure is spawned. A
+        // malformed entry is skipped, not fatal; truncation is still a
+        // refusal. The section is always consumed (framing stays
+        // honest — a truncated v11 record must refuse even when the
+        // caller did not ask for the figures, the legacy test path); a
+        // null caller simply does not keep the entries.
+        if (recordVersion >= 11)
+        {
+            if (reader.Remaining() < 4)
+            {
+                return false;
+            }
+
+            const auto figureCount = reader.U32();
+
+            if (a_visualChildren != nullptr)
+            {
+                a_visualChildren->clear();
+                a_visualChildren->reserve(figureCount);
+
+                for (std::uint32_t i = 0; i < figureCount; ++i)
+                {
+                    if (reader.Remaining() < 16)   // 4 + 4 + 8
+                    {
+                        return false;
+                    }
+
+                    VisualChild entry;
+                    entry.MotherFormId = reader.U32();
+                    entry.FigureFormId = reader.U32();
+                    entry.BornDay = reader.U64();
+
+                    if (entry.MotherFormId == 0 || entry.FigureFormId == 0)
+                    {
+                        continue;   // malformed — skipped, never half-applied
+                    }
+
+                    a_visualChildren->push_back(entry);
+                }
+            }
+            else
+            {
+                // Not interested — consume the entries, keep framing.
+                for (std::uint32_t i = 0; i < figureCount; ++i)
+                {
+                    if (reader.Remaining() < 16)   // 4 + 4 + 8
+                    {
+                        return false;
+                    }
+
+                    reader.U32();
+                    reader.U32();
+                    reader.U64();
+                }
             }
         }
 

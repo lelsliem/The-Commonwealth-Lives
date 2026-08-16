@@ -289,10 +289,13 @@ namespace TLC
         //---------------------------------------------------------------------
 
         //---------------------------------------------------------------------
-        // FeedChildren — one tick of the child's life: every sim-only
-        // child (no FormRef — there is no game actor to walk or eat) is
-        // fed by the household: Hunger recovers toward full at the
-        // settlement's pace. Returns how many children were fed.
+        // FeedChildren — one tick of the child's life: every not-yet-
+        // grown child is fed by the household — Hunger recovers toward
+        // full at the settlement's pace. Paired or not (0.8.9: a
+        // newborn paired with a visible baby actor still cannot walk
+        // to a bench; the household feed is the child's meal until
+        // GrowChildren makes it a grown mind that walks like anyone).
+        // Returns how many children were fed.
         //---------------------------------------------------------------------
         inline std::size_t FeedChildren(
             EntityRegistry& a_registry, float a_delta)
@@ -302,14 +305,6 @@ namespace TLC
             a_registry.ForEachWithComponent<Needs>(
                 [&](EntityId a_entity, Needs& a_needs)
                 {
-                    // Sim-only: a child with a game form is a real,
-                    // walkable mind — it eats at the market like an
-                    // animal, never here.
-                    if (a_registry.GetComponent<FormRef>(a_entity) != nullptr)
-                    {
-                        return;
-                    }
-
                     const auto species =
                         a_registry.GetComponent<SpeciesTag>(a_entity);
 

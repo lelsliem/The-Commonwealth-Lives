@@ -9,6 +9,171 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.9 — the birth journey made visible (2026-08-15)
+
+The birth journey gets a body: a newborn is carried, then becomes a
+child of the Commonwealth — not just a log line.
+
+- **The carry.** On birth (`sim.birth.visible` on), the mother
+  visibly holds a swaddled bundle — the baby mod's ethnicity variant
+  when the mod is loaded, and the game's own Shaun bundle
+  (`babybundled`, Fallout4.esm — the item the mod's bundles are
+  literal copies of: same body slot, same `isPlayerChild` keyword)
+  when it isn't, so everyone gets a carry, mod or not. Equipped
+  through the game's own equip path (`AddObjectToContainer` +
+  `ActorEquipManager`); the mod's scripts are never touched. The hold
+  (mother form id, bundle form id, born day) rides the co-save v10
+  (`BabyHold` section), so a mid-carry survives save/load.
+- **The child.** After `sim.baby.holdDays` (default 2) the bundle
+  comes off (unequip + remove) and a child from the game's own
+  vanilla pool spawns at the mother's feet — farm children, gender
+  matched to the sim child's own deterministic gender (the same draw
+  that named it), picked at random, spawned via
+  `TESDataHandler::CreateReferenceAtLocation` (persistent) and
+  **deliberately left un-initialized** (the deferred spawn). A ref
+  created this way is invisible while its cell holds it; the game's
+  own save/load routine completes the actor — facegen, AI process,
+  animation — and the child steps out fully real. That is the one
+  spawn route that works: forcing the init immediately produces the
+  half-born headless, T-posing, immobile child that even survives
+  saves, and the game's own `PlaceAtMe` dispatch is the documented
+  PackVariables CTD. The child never joins the settler faction, so
+  the census never seeds a duplicate mind for it; the sim child
+  keeps its name, mind, and household — the actor is its body only.
+- **The clothes (the dress find).** Children kept spawning in their
+  pants because the "ChildOutfit*" records are **OTFT outfit
+  bundles (`BGSOutfit`), not ARMOs** — a cast to `TESBoundObject`
+  failed on every one, so the equip block silently no-op'd while the
+  log still claimed success. The fix sets the child base's default
+  outfit (`defOutfit`/WNAM) to a gender-matched ChildOutfit* bundle
+  **at spawn** — the game's own child-clothing path (the bundles are
+  orphans no NPC record references, which is how the game dresses
+  its runtime kids), so the init that materializes the child also
+  applies its clothes: no runtime-equip reversion, survives every
+  reload. A per-tick materialize pass waits for the child to read
+  fully initialized (3D **and** an AI process — the exact things the
+  half-born child lacked) and confirms the dress, falling back to
+  equipping the real ARMOs inside the bundle (`ClothesKids01–04` +
+  hat, gender-aware — no dresses on boys) for children whose base
+  predates the fix. The pair (mother, child actor) rides the co-save
+  v11 (`VisualChild` section), so a child waiting to materialize
+  survives the very load that completes it. Gated on
+  `sim.baby.visualChild` (default on).
+- **What was cut.** The 0.8.9 overreach — the crib walk on birth and
+  the market baby-goods shelf (`sim.baby.goods/price/stock`, the
+  buy-at-arrival, the `BabyGoodsPair` co-save section) — is gone:
+  the baby mod runs exactly as its author designed, and the sim only
+  adds the moment of birth and the moment of the child. `FeedChildren`
+  still home-feeds every not-yet-grown child, paired or not; the
+  harness stayed 27/27 green through the re-scope (the v10 decode's
+  always-consume framing hardening from the first pass remains).
+
+## 0.8.9-child — the dress find: children finally wear clothes
+(2026-08-16)
+
+The visible-child field test came back nearly perfect — the child
+spawned invisible, then materialized fully real on save/load (head,
+movement, correct name and gender) — with one miss: **no child ever
+wore clothes**, and the log still claimed "dressed and fully real".
+
+- **The bug was the cast, not the timing.** The "ChildOutfit*" pool
+  entries are OTFT records — `BGSOutfit` outfit bundles — but the
+  materialize pass resolved them as `TESBoundObject`, which fails
+  for an outfit bundle. Every lookup returned `nullptr`, the equip
+  block silently skipped, and the success line printed anyway. Not
+  one child was ever given clothes; the earlier underwear sightings
+  were the game's own base state.
+- **The fix is the game's own path.** The child's base NPC now gets
+  its default outfit (`defOutfit`/WNAM) set to a gender-matched
+  ChildOutfit* bundle at spawn — the bundles are orphans no NPC
+  record references, which is exactly how the game dresses its
+  runtime children — so the deferred init that materializes the
+  child also applies its clothes. The materialize pass (3D loaded
+  **and** an AI process) confirms the dress and falls back to
+  equipping the real ARMOs inside the bundle on fully-initialized
+  actors. Outfit pool is gender-aware (the dress is female-only;
+  Nat's unique dress excluded). 27/27 harness suites green,
+  verified in-game: children appear dressed and stay dressed across
+  reloads.
+
+## 0.8.9-road — the road feed: caravans eat on the road (2026-08-15)
+
+The road people — Provisioners, Caravan Guards, Caravan Workers —
+are minds (named, remembered, bonded), but their bodies follow the
+game's caravan AI. The field find: every road person's hunger pulled
+it to the nearest settlement market, so caravans clustered at
+workbenches instead of traveling. Now:
+
+- **No market memory for road roles.** The market seed excludes
+  non-settler minds whose base form is a road role (`Names::IsRoadRole`
+  — Provisioner, Caravan Guard, Caravan Worker; guards and traders
+  keep their markets, they're city people), so the core never walks
+  them to a settlement bench.
+- **They feed on the road.** `FeedRoadPeople` runs before the sim
+  update: when a road person's hunger falls to `sim.road.feedThreshold`
+  (0.25), the caravan's own supplies restore it to 1.0 — the same meal
+  a market arrival gives a settler, without the walk. The log names
+  it: `road: Provisioner Cole ate on the road.`
+- `sim.road.feedThreshold = 0` disables the feed (a road person then
+  never eats). Harness 27/27 green; **verified in-game (2026-08-15):**
+  six road meals on test (`road: Caravan Worker Tyler ate on the
+  road`), zero market-clustering, and road people still exchange in
+  passing — their bonds and memories travel with them (15 road-person
+  exchanges on test).
+
+## 0.8.9-register — the bond names the register (2026-08-15)
+
+The voiced exchange asks the game for a register, not just a hello —
+the bond names it before the game picks its words:
+
+- **family** — a bonded household (spouse / sweetheart / friend)
+  first asks the game for its general greeting (`kMisc_Greeting`, a
+  different line where the voice has one) and falls back to the
+  proven hello if the game refuses outright — a family exchange never
+  goes silent (`family(hello)` in the log).
+- **flirt** — a compatible unpaired pair (two single human adults,
+  neither kin nor companion — the never-romance gate — warm to each
+  other at/above the friend line). The moment is the flirt; the game
+  voices its own words.
+- **greet** — the crowd, the proven `kMisc_Hello`.
+
+The register rides both exchange beats (the answer asks the same
+register), and the log receipts name it (`X greeted Y — flirt
+register, fired, played 0x…`). `sim.interact.register.family = 1`
+gates the family subtype attempt (0 = every exchange voices the
+proven hello).
+
+**Flirty Commonwealth evaluated, not integrated:** its flirt
+greetings sit on the greeting topic (the exact subtype our seam
+voices), so it would integrate for free — but every line addresses a
+female player ("gal"/"lady"/"sister"), the banks are male-only, and
+the content is explicit. Optional player-side choice at most, never a
+dependency. The durable finding: the greeting topic is a proven slot
+for custom flirt lines. Harness 27/27 green; field test pending.
+
+## 0.8.8 — Timings & Weights: the show stays a show (2026-08-15)
+
+The exchange's pacing is now fully tunable from the INI and the MCM
+Interactions page:
+
+- `sim.interact.pairCooldown` (60 s) — a SPECIFIC pair can't
+  re-exchange within the window, so the same two settlers never greet
+  twice a minute (the 0.8.7b field note: Gabriel and Lucas exchanging
+  back to back).
+- `sim.interact.dailyCap` (0 = off) — how many interactions a mind may
+  open per sim day before it goes quiet.
+- `sim.interact.weight.greet / .gossip / .family / .row` — the pool
+  pick is now a weighted roll: greet and gossip dominate the crowd,
+  family is boosted ×10 for bonded pairs, a row stays the rare quiet
+  line between friends — and a feud pair is a hard row whatever the
+  weights say (their story is the physical escalation, not a warm
+  hello).
+
+The gates live in `InteractPass` (the pair and daily caps sit before
+the cadence claim; the stamps land once per interaction whichever way
+it lands), are cleared with the world, and never touch the co-save.
+0.8.8 harness 27/27 green; field tuning pending.
+
 ## 0.8.6b — the earn-caps economy, who-pays benched (2026-08-14)
 
 Both who-pays knobs shipped and harness-pinned, then failed in the

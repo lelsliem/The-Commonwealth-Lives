@@ -154,6 +154,11 @@ target("TheLivingCommonwealth", function()
 
     add_files("src/**.cpp")
 
+    -- TEMP (0.8.7 crash hunt): emit a linker map so the minidump's
+    -- stack RVAs resolve to source functions. Remove after the hunt.
+    add_ldflags("/MAP:build\\map_dll.txt", { force = true })
+    add_ldflags("/MAPINFO:EXPORTS", { force = true })
+
     -- The banner's build stamp: the git short hash, so the log's first
     -- lines always say which DLL ran. The version alone stops changing
     -- once a milestone ships (it read 0.2.0 for every build from the

@@ -108,8 +108,26 @@ namespace
 
 namespace TLC::Movement
 {
+    namespace
+    {
+        // The bisect gate: false refuses every command without touching
+        // the game (sim.diag.noWalks). Default true — the sim walks
+        // normally unless the hunt enables the gate.
+        bool g_commandsEnabled = true;
+    }
+
+    void SetCommandsEnabled(const bool a_enabled) noexcept
+    {
+        g_commandsEnabled = a_enabled;
+    }
+
     bool WalkTo(RE::Actor* a_actor, RE::TESObjectREFR* a_target)
     {
+        if (!g_commandsEnabled)
+        {
+            return false;   // bisect gate — walk refused, sim re-decides
+        }
+
         if (a_actor == nullptr || a_actor->currentProcess == nullptr)
         {
             REX::DEBUG("LCE: WalkTo refused — no actor or no AI process.");
@@ -145,6 +163,11 @@ namespace TLC::Movement
 
     bool HoldPlace(RE::Actor* a_actor)
     {
+        if (!g_commandsEnabled)
+        {
+            return false;   // bisect gate
+        }
+
         if (a_actor == nullptr || a_actor->currentProcess == nullptr)
         {
             return false;
@@ -155,6 +178,11 @@ namespace TLC::Movement
 
     bool WanderNear(RE::Actor* a_actor, float a_radius)
     {
+        if (!g_commandsEnabled)
+        {
+            return false;   // bisect gate
+        }
+
         if (a_actor == nullptr || a_actor->currentProcess == nullptr)
         {
             return false;
@@ -237,6 +265,11 @@ namespace TLC::Movement
         RE::Actor* a_actor, const RE::NiPoint3& a_threat,
         float a_minDistance)
     {
+        if (!g_commandsEnabled)
+        {
+            return false;   // bisect gate
+        }
+
         if (a_actor == nullptr || a_actor->currentProcess == nullptr)
         {
             return false;

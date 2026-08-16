@@ -184,6 +184,78 @@
      }
     },
     {
+     "id": "isim.interact.pairCooldown:Main",
+     "type": "slider",
+     "text": "Pair cooldown",
+     "help": "Seconds a specific pair must wait before talking again — stops the same two settlers greeting twice a minute.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 10,
+      "max": 600,
+      "step": 10
+     }
+    },
+    {
+     "id": "isim.interact.dailyCap:Main",
+     "type": "slider",
+     "text": "Daily talk cap",
+     "help": "How many interactions a mind may open per day before going quiet. 0 = no cap.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 50,
+      "step": 1
+     }
+    },
+    {
+     "id": "fsim.interact.weight.greet:Main",
+     "type": "slider",
+     "text": "Weight: greeting",
+     "help": "How often a crossing becomes a casual hello (relative weight).",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+     }
+    },
+    {
+     "id": "fsim.interact.weight.gossip:Main",
+     "type": "slider",
+     "text": "Weight: gossip",
+     "help": "How often a crossing becomes small talk (relative weight).",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+     }
+    },
+    {
+     "id": "fsim.interact.weight.family:Main",
+     "type": "slider",
+     "text": "Weight: family talk",
+     "help": "How often bonded pairs talk family — boosted hard for spouses and friends.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+     }
+    },
+    {
+     "id": "fsim.interact.weight.row:Main",
+     "type": "slider",
+     "text": "Weight: quiet row",
+     "help": "How often a crossing becomes a quiet row — even between friends. Feuders always row.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 5.0,
+      "step": 0.1
+     }
+    },
+    {
      "id": "isim.subtitle.radius:Main",
      "type": "slider",
      "text": "Subtitle radius",
@@ -440,6 +512,22 @@
     },
     {
      "type": "section",
+     "text": "The Road"
+    },
+    {
+     "id": "fsim.road.feedThreshold:Main",
+     "type": "slider",
+     "text": "Road feed",
+     "help": "Hunger at which the road people — Provisioners, Caravan Guards, Caravan Workers — eat from the caravan's supplies instead of walking to a settlement market. 0 = they never eat on the road.",
+     "valueOptions": {
+      "sourceType": "ModSettingFloat",
+      "min": 0.0,
+      "max": 0.8,
+      "step": 0.05
+     }
+    },
+    {
+     "type": "section",
      "text": "Medicine"
     },
     {
@@ -514,6 +602,36 @@
      "type": "switcher",
      "text": "Births enabled",
      "help": "Married couples can have children. The baby mod's children are used when the flag below is on.",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
+    },
+    {
+     "id": "bsim.birth.visible:Main",
+     "type": "switcher",
+     "text": "Visible birth journey",
+     "help": "When on, a new mother visibly carries her newborn's bundle for sim.baby.holdDays (the baby mod's swaddled bundles when installed, the game's own Shaun bundle otherwise), then a child from the game's pool takes its place. When off, children stay sim-only.",
+     "valueOptions": {
+      "sourceType": "ModSettingBool"
+     }
+    },
+    {
+     "id": "isim.baby.holdDays:Main",
+     "type": "slider",
+     "text": "Baby hold days",
+     "help": "How many days a mother visibly carries her newborn's bundle before it comes off and a child from the game's own pool takes its place. Requires the visible birth journey to be on. 0 sheds the bundle and spawns the child the same day.",
+     "valueOptions": {
+      "sourceType": "ModSettingInt",
+      "min": 0,
+      "max": 10,
+      "step": 1
+     }
+    },
+    {
+     "id": "bsim.baby.visualChild:Main",
+     "type": "switcher",
+     "text": "Visible children",
+     "help": "When the bundle comes off, a real child is born at the mother's feet. It is invisible until the next save/load (the only spawn path that avoids the headless/T-pose half-born child and the crash), then steps out fully real, named and dressed. Off keeps children sim-only.",
      "valueOptions": {
       "sourceType": "ModSettingBool"
      }

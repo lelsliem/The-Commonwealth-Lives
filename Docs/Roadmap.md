@@ -23,22 +23,19 @@ Current Version : 0.8.7 — dialog growth. The 0.8 run (0.8.0 →
                    compatibility (the 33-GMST overrides re-delivered
                    as a tuning file, no ESP).
 
-Current Stage   : 0.8.7 begun — the dialog stone's first half is
-                   DONE and verified in-game: subtitles now speak the
-                   game's real lines with names attached, and the
-                   voice-aware picker (a line only speaks if the
-                   speaker's voice bank recorded it; no match → mute)
-                   is built on ground truth from the game's own
-                   Voices BA2 — 27/27 harness suites green. The audio
-                   *trigger* (playing a line's .fuz) is the remaining
-                   in-game probe. See the 0.8.7 section.
+Current Stage   : 0.8.9 DONE — the birth journey is verified
+                   in-game (2026-08-16): the carry, the deferred
+                   child spawn that materializes real on save/load,
+                   and the dress find (children wear clothes now).
+                   The 0.8.7 dialog exchange, 0.8.8 timings & weights,
+                   and 0.8.9-road all landed in the same pass — 27/27
+                   harness suites green. See the 0.8.7 / 0.8.8 / 0.8.9
+                   sections.
 
-Next Milestone  : the 0.8.7 audio trigger probe (can the DLL
-                   reliably play a line's recording on an actor?) →
-                   0.8.8 timings & weights → 0.8.9 babies
-                   implemented → 0.8.10 animations + fight-feel →
-                   0.8.11 log hygiene + loose ends → 0.8.12 final
-                   touches + beta on Nexus
+Next Milestone  : 0.8.10 animations + fight-feel (the ESP/idle
+                   pattern extends; the both-fall/ghost-push fight
+                   bugs land here) → 0.8.11 log hygiene + loose ends
+                   → 0.8.12 final touches + beta on Nexus
 
 ═══════════════════════════════════════════════
 
@@ -559,8 +556,9 @@ that chugs at 600 minds is dead on arrival.
 STATUS: DONE (first half) — the curated catalog, the voice-aware
          picker, the ghoul bank, and the Realistic Conversations
          compatibility all shipped and verified in-game 2026-08-15;
-         27/27 harness suites green. The audio trigger (playing a
-         line's .fuz) is the remaining in-game probe.
+         27/27 harness suites green. The audio trigger probe (can
+         the DLL make the game play a line's .fuz?) is built and
+         deployed, awaiting the in-game verdict.
 
 **The curated catalog replaces the drafted lines.** Every pool was
 re-curated from the game's own recordings. The voice-bank survey
@@ -609,6 +607,24 @@ nothing can be done if the game simply doesn't provide it.
   the same table. Named voices (Sturges, Marcy, companions) have no
   recording of the generic lines — the mute rule stands for them.
 
+**The audio trigger probe (sim.diag.audioProbe).** The remaining
+question — can the DLL make the game actually *play* a curated
+line's .fuz on an actor, not just caption it? — is now a built,
+deployed experiment. The vendored commonlibf4 has no direct Say
+wrapper (the FO4 Address Library has no Actor::Say entry), so the
+probe alternates the two game-owned routes every
+`sim.diag.audioProbe.every` seconds on the nearest loaded settler:
+`[probe say]` dispatches the papyrus VM's own `Say` on the picked
+line's parent topic (the exact call Papyrus dialogue mods make —
+the game's own INFO selection is voice-filtered, .fuz + lip +
+subtitle), and `[probe greet]` fires `AIProcess::ProcessGreet` (the
+ambient greeting entry, the same family as the kick's PlayIdle
+seam). To route the probe through the production path, the catalog
+table gained its INFO form ids (a text → formid column, ground
+truth from the LineCatalog) and `FormIdFor()`. Off by default;
+the log tags each attempt so the in-game ear knows which route
+fired. Verdict pending in-game.
+
 **The Realistic Conversations compatibility.** The 2018 ESP's 33
 GMST overrides re-delivered as a tuning file
 (`Realistic Conversations.ini` next to the DLL): the adapter applies
@@ -629,22 +645,98 @@ purely game-facing, which the adapter already owns.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: DONE — built 2026-08-15, field tuning pending
 
-The new interactions' cadence and probability, tuned in INI
-(`sim.interact.*`): when a crossing becomes a greeting, a chat, a
-row, or a trade; the per-day and per-mind rate limits.
+**Registers (in-world, 0.8.9-register, built 2026-08-15):** the
+bond names the register the exchange asks the game to voice —
+family for a bonded household (`kMisc_Greeting` + hello fallback),
+flirt for a compatible unpaired pair (the moment, the game's own
+words), greet for the crowd. The register threads both exchange
+beats; `sim.interact.register.family` gates the subtype attempt.
+Field verdict (2026-08-15): the game refuses `kMisc_Greeting` for
+settler voices, so the attempt defaults off. Flirty Commonwealth
+evaluated and not integrated (player-targeted male-only explicit
+lines); the greeting topic is a proven slot for custom flirt lines
+if ever wanted.
+
+**Road feed (0.8.9-road, verified in-game 2026-08-15):** the road
+people — Provisioners, Caravan Guards, Caravan Workers — keep no
+settlement-market memory and eat from the caravan's supplies at
+`sim.road.feedThreshold` (default 0.25; `road: … ate on the road`
+×6 on test). Their bonds and memories travel with them — road
+people exchange with each other and with settlers in passing (15
+road-person exchanges on test). Guards and traders keep their
+markets.
+
+The new interactions' pacing, tuned in INI and the MCM Interactions
+page (`sim.interact.*`):
+
+- `pairCooldown` (60 s) — a specific pair can't re-exchange within
+  the window (the same two settlers never greet twice a minute).
+- `dailyCap` (0 = off) — how many interactions a mind may open per
+  sim day before it goes quiet.
+- `weight.greet / .gossip / .family / .row` — the pool pick is now a
+  weighted roll: greet and gossip dominate the crowd, family is
+  boosted ×10 for bonded pairs, row is the rare quiet line between
+  friends, and a feud pair is a hard row whatever the weights say.
 
 0.8.9 — Babies, implemented
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: VERIFIED IN-GAME (2026-08-16)
 
-The birth journey made visible/real: the baby-mod integration as a
-soft/optional dependency (permission requested), bottles/cribs as
-walk targets, the market selling baby goods, the whole journey
-co-save-safe.
+The birth journey made visible/real, in three pieces:
+
+- **The carry (visible journey):** on birth (sim.birth.visible), the
+  mother visibly holds a swaddled bundle — the mod's ethnicity
+  variant when loaded, the game's own Shaun bundle (babybundled,
+  which the mod's bundles are literal copies of) when not, so
+  everyone gets a carry. Equipped through the game's own equip path;
+  the mod's scripts are never touched; the hold (mother, bundle,
+  born day) rides the co-save v10 (BabyHold section) so a mid-carry
+  survives save/load.
+- **The child (the Commonwealth's own):** after sim.baby.holdDays
+  (default 2) the bundle comes off and a child from the game's own
+  vanilla pool — the farm children, gender-matched to the sim
+  child's own deterministic gender — spawns at the mother's feet
+  (persistent) via the **deferred spawn**: the ref is deliberately
+  left un-initialized, invisible until the game's own save/load
+  routine completes the actor (facegen, AI process, animation) and
+  it steps out fully real. That is the only spawn route that works —
+  forcing the init immediately yields the half-born headless,
+  T-posing, immobile child that even survives saves, and the game's
+  own PlaceAtMe dispatch is the documented PackVariables CTD. The
+  child never joins the settler faction (no duplicate mind); it is
+  paired with the sim-only child mind (name rides the extra data
+  from the first moment). The pair (mother, child actor) rides the
+  co-save v11 (VisualChild section) so a child waiting to
+  materialize survives the very load that completes it. Gated on
+  sim.baby.visualChild (default on).
+- **The clothes (the dress find, 0.8.9-child):** children kept
+  spawning in their pants because the ChildOutfit* records are OTFT
+  outfit bundles (BGSOutfit), not ARMOs — a cast to TESBoundObject
+  failed on every one, so the equip silently no-op'd while the log
+  claimed "dressed and fully real". The child base now gets its
+  default outfit (defOutfit/WNAM) set to a gender-matched bundle at
+  spawn — the game's own child-clothing path (the bundles are
+  orphans no NPC record references) — so the init that materializes
+  the child also applies its clothes; a per-tick pass confirms the
+  dress once the child reads fully initialized (3D AND an AI
+  process) and falls back to equipping the real ARMOs inside the
+  bundle. Gender-aware (the dress is female-only). Verified: children
+  appear dressed and stay dressed across reloads.
+- **The feed (never a starving baby):** FeedChildren now home-feeds
+  every not-yet-grown child, paired or not — a newborn paired with a
+  visible baby actor still cannot walk to a bench; the household feed
+  is its meal until GrowChildren makes it a grown mind that walks
+  like anyone.
+
+The crib walk and the market baby-goods shelf were CUT: the mod runs
+as its author designed, and the sim only adds the moment of birth and
+the moment of the child. The baby-mod integration stays a soft
+dependency (permission requested, author engaged). 27/27 harness
+green, deployed.
 
 0.8.10 — Animations + fight-feel
 

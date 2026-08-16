@@ -244,6 +244,71 @@ namespace TLC::Tuning
         float InteractRadius = 400.0f;
         float InteractChance = 0.4f;
 
+        // The pacing knobs (0.8.8): pairCooldown is how long a
+        // SPECIFIC pair must wait before talking again — the gate that
+        // stops the same two settlers greeting twice a minute (the
+        // 0.8.7b field note) — and dailyCap is how many interactions a
+        // mind may OPEN per sim day before it goes quiet (0 = no cap).
+        // The weights shape WHAT a crossing becomes: greet and gossip
+        // dominate the crowd, family is boosted hard for bonded pairs
+        // (a spouse household talks family), row is the rare quiet
+        // line between friends — and a feud pair is a hard row
+        // whatever the weights say (their story is the physical
+        // escalation, not a warm hello).
+        float InteractPairCooldown = 60.0f;
+        std::uint32_t InteractDailyCap = 0;
+        float InteractWeightGreet = 1.0f;
+        float InteractWeightGossip = 0.5f;
+        float InteractWeightFamily = 0.3f;
+        float InteractWeightRow = 0.2f;
+
+        // The family register (0.8.9): a bonded household's exchange
+        // first asks the game for its general greeting (kMisc_Greeting
+        // — a different line where the voice has one) and falls back
+        // to the proven hello if the game refuses outright. The field
+        // test (2026-08-15) showed the game refuses kMisc_Greeting
+        // for settler voices on the NPC->NPC path — every attempt
+        // fell back to hello — so the attempt is off by default.
+        bool InteractRegisterFamily = false;
+
+        // The in-world exchange (0.8.7b): a friendly crossing voices a
+        // game exchange — A greets B, B answers a beat later, the
+        // game's own words and subtitles — instead of a caption line.
+        // On by default; off restores the caption-only crossings.
+        bool InteractVoice = true;
+
+        // The birth journey (0.8.9): how many days a mother carries
+        // her newborn's bundle (sim.baby.holdDays) before it comes off
+        // and a child from the game's own pool takes its place. 2 days
+        // keeps the visible carry short; 0 sheds the bundle and spawns
+        // the child the same day. The hold rides the co-save (v10) so
+        // a mid-carry survives save/load. With the baby mod loaded the
+        // bundle is one of its ethnicity variants; without it, the
+        // game's own Shaun bundle (babybundled) fills in.
+        std::uint64_t BabyHoldDays = 2;
+
+        // The visible child (0.8.9, deferred-spawn find): when the
+        // bundle comes off, a real child actor is spawned at the
+        // mother's feet — deliberately left un-initialized, so it is
+        // invisible until the game's own save/load routine completes it
+        // and the child steps out fully real (dressed by its base's
+        // default outfit — a ChildOutfit* OTFT bundle set at spawn —
+        // and confirmed by the per-tick pass). The sim child keeps its
+        // name and mind; the actor is its body only. Off disables the
+        // spawn (children stay sim-only, invisible). The record rides
+        // the co-save (v11) so the pending child survives the load
+        // that materializes it.
+        bool VisualChild = true;
+
+        // The road feed (0.8.9 road-feed stone): the hunger value at
+        // which a road person — a Provisioner, Caravan Guard, or
+        // Caravan Worker — eats from the caravan's supplies on the
+        // road. They are never seeded with a settlement market, so
+        // this is their only meal; the market arrival's restore is the
+        // same 1.0, so the cadence matches a settler's. 0 disables the
+        // feed (a road person then never eats).
+        float RoadFeedThreshold = 0.25f;
+
         // The grief arc (0.6.0 Stone 5): how much faster a grieving
         // mind's Social need empties, per second — they seek company.
         // 0.01/s is a quiet ache; higher makes the bereaved visibly
@@ -379,6 +444,52 @@ namespace TLC::Tuning
         std::uint32_t ForceFightB = 0;
         float ForceFightInterval = 15.0f;
 
+        // The audio trigger probe (0.8.7): sim.diag.audioProbe — when
+        // on, the probe makes a nearby settler actually SPEAK a curated
+        // line's .fuz every AudioProbeEvery seconds, alternating the
+        // game's own dialogue-audio routes (Say-via-VM on the line's
+        // parent topic, then ProcessGreet), so the in-game ear can
+        // verify the DLL can make the game play voice audio at all. Off
+        // by default — normal play stays caption-only until the probe
+        // proves a trigger.
+        //
+        // !!! CONFIRMED CRASHER (2026-08-15) — DO NOT ENABLE. The
+        // Say-via-VM route is the 0.8.7 crash: the minidump stack in
+        // every CTD session reads AudioProbeLoop -> PackVariables
+        // <TESTopic, Actor, bool, TESObjectREFR> -> BSScript::Variable::
+        // reset -> Fallout4.exe+0x21173A0 (null deref). It fires only
+        // when a settler is within SubtitleRadius of the player — the
+        // "crash whenever I go near an NPC" signature. Audio stays
+        // caption-only until a safe trigger exists.
+        bool AudioProbe = false;
+        float AudioProbeEvery = 20.0f;
+
+        // The crash-hunt bisect gate (0.8.7): sim.diag.noWalks — when
+        // on, every Movement command (WalkTo / WanderNear / HoldPlace /
+        // WalkAwayFrom) refuses without touching the game, so the sim
+        // never issues a command-mode travel package. The pinned
+        // InitiateCommandModeTravelPackage is the documented-risk game
+        // call (the 0xC0000409 heap-corruption suspect whose earlier
+        // exoneration was a corrupt save — clean saves crash now, so the
+        // suspicion is reopened). One test round answers whether the
+        // walk is the crasher: stable with the gate on = the walk, then
+        // we fix it; still crashing = the next system gets gated.
+        bool NoWalks = false;
+
+        // The crash-hunt bisect gate #2 (0.8.7): sim.diag.noInteract —
+        // when on, the random-interaction pass (InteractPass: the
+        // proximity-triggered voice/subtitle system — who says what to
+        // whom when two minds cross paths) is skipped entirely. Walks
+        // were already cleared by sim.diag.noWalks (the 17:14 session
+        // gated every command-mode travel package AND the probe AND
+        // subtitles, yet still crashed 1s after the [voice]: lines fired
+        // — so the interact path itself is the remaining proximity-
+        // gated game-toucher). One test round: stable with this on =
+        // the interact path is the crasher (its game reads: GetFormByID,
+        // GetNPC, voiceType, GetPosition/GetDistance); still crashing =
+        // the census is next on the list.
+        bool NoInteract = false;
+
         // The player window (0.7.0 Stone 3): the news feed. Events go
         // on-screen as HUD notifications, throttled by NewsCooldown
         // seconds — a flood of lines is noise, not news. The feed is the
@@ -389,11 +500,53 @@ namespace TLC::Tuning
         float RadioCaptionEvery = 45.0f;
         float RadioRadius = 3000.0f;
 
-        // The loud line's hearing range (0.7.5 Fights): a spoken fight
-        // line shows as a bottom-of-screen subtitle only when the
-        // player is within this many game units of the speaker — a
-        // nearby brawl is loud, a cross-settlement squabble is not.
+        // The announcement categories (0.8.7 presentation rethink):
+        // the radio feed stays the world's bulletin board — births,
+        // deaths, illness, the bonds (friends, rivals, sweethearts,
+        // married, feuds, peace), fights, and the market — but each
+        // category is its own toggle: enabled (whether it enters the
+        // feed at all, so it can also reach the settlement radio),
+        // subs (whether it also pops on-screen as a top-left
+        // notification), and audio (whether that pop plays a chime).
+        enum class NewsCategory : std::uint8_t
+        {
+            Death,
+            Illness,
+            Birth,
+            Bonds,
+            Fight,
+            Market,
+            kCount
+        };
+
+        struct NewsCategoryConfig
+        {
+            bool Enabled = true;
+            bool Subs = true;
+            bool Audio = false;
+        };
+
+        NewsCategoryConfig News[
+            static_cast<std::size_t>(NewsCategory::kCount)];
+
+        static constexpr const char* kNewsCategoryNames[] = {
+            "death", "illness", "birth", "bonds", "fight", "market",
+        };
+
+        // The loud line's hearing range (0.7.5 Fights): a spoken line
+        // pops as a top-left HUD notification only when the player is
+        // within this many game units of the speaker — a nearby brawl
+        // is loud, a cross-settlement squabble is not. (The first
+        // presentation used the game's dialogue-subtitle box; it read
+        // as fake in-conversation dialogue with no audio — 0.8.7 — so
+        // the proximity lines moved to the native notification feed.)
         float SubtitleRadius = 500.0f;
+
+        // The chatter feed's cadence (0.8.7): the on-screen proximity
+        // lines throttle to one notification every this many seconds —
+        // a settlement's small talk reads as a slow native ticker, not
+        // a subtitle flood. The log always keeps the full record.
+        float ChatterCooldown = 5.0f;
 
         // The settlement radio's base form. The default is the workshop
         // "Radio" — a hardcoded FormID, so it is flagged for xEdit
@@ -509,9 +662,35 @@ namespace TLC::Tuning
             read("sim.interact.radius", settings.InteractRadius);
         settings.InteractChance =
             read("sim.interact.chance", settings.InteractChance);
+        settings.InteractPairCooldown =
+            read("sim.interact.pairCooldown",
+                 settings.InteractPairCooldown);
+        settings.InteractDailyCap = static_cast<std::uint32_t>(
+            read("sim.interact.dailyCap",
+                 static_cast<double>(settings.InteractDailyCap)));
+        settings.InteractWeightGreet =
+            read("sim.interact.weight.greet",
+                 settings.InteractWeightGreet);
+        settings.InteractWeightGossip =
+            read("sim.interact.weight.gossip",
+                 settings.InteractWeightGossip);
+        settings.InteractWeightFamily =
+            read("sim.interact.weight.family",
+                 settings.InteractWeightFamily);
+        settings.InteractWeightRow =
+            read("sim.interact.weight.row",
+                 settings.InteractWeightRow);
 
         settings.GriefDecay =
             read("sim.arc.grief.decay", settings.GriefDecay);
+        settings.RoadFeedThreshold =
+            read("sim.road.feedThreshold",
+                 settings.RoadFeedThreshold);
+        settings.BabyHoldDays = static_cast<std::uint64_t>(
+            read("sim.baby.holdDays",
+                 static_cast<double>(settings.BabyHoldDays)));
+        settings.VisualChild =
+            read("sim.baby.visualChild", settings.VisualChild);
 
         settings.BurialDays = static_cast<std::uint64_t>(
             read("sim.death.burialDays",
@@ -550,6 +729,15 @@ namespace TLC::Tuning
         settings.ForceFightInterval = read(
             "sim.test.forceFight.interval", settings.ForceFightInterval);
 
+        settings.AudioProbe =
+            read("sim.diag.audioProbe", 0.0f) != 0.0f;
+        settings.AudioProbeEvery = read(
+            "sim.diag.audioProbe.every", settings.AudioProbeEvery);
+        settings.NoWalks =
+            read("sim.diag.noWalks", 0.0f) != 0.0f;
+        settings.NoInteract =
+            read("sim.diag.noInteract", 0.0f) != 0.0f;
+
         settings.NewsCooldown =
             read("sim.news.cooldown", settings.NewsCooldown);
         settings.RadioCaptionEvery =
@@ -558,6 +746,8 @@ namespace TLC::Tuning
             read("sim.radio.radius", settings.RadioRadius);
         settings.SubtitleRadius =
             read("sim.subtitle.radius", settings.SubtitleRadius);
+        settings.ChatterCooldown =
+            read("sim.chatter.cooldown", settings.ChatterCooldown);
 
         settings.LogDecisionEvery =
             read("sim.log.decisions.every", settings.LogDecisionEvery);
@@ -577,6 +767,25 @@ namespace TLC::Tuning
             return raw == "1" || raw == "true"
                 || raw == "yes" || raw == "on";
         };
+
+        // The announcement categories (0.8.7): per-category toggles —
+        // enabled (enters the feed), subs (pops on-screen), audio (the
+        // pop plays a chime). readBool lives just above, so this loop
+        // must stay after it.
+        for (std::size_t i = 0;
+             i < static_cast<std::size_t>(
+                 AdapterSettings::NewsCategory::kCount);
+             ++i)
+        {
+            const std::string prefix = std::string("sim.news.")
+                + AdapterSettings::kNewsCategoryNames[i];
+            auto& cfg = settings.News[i];
+
+            cfg.Enabled = readBool(
+                (prefix + ".enabled").c_str(), cfg.Enabled);
+            cfg.Subs = readBool((prefix + ".subs").c_str(), cfg.Subs);
+            cfg.Audio = readBool((prefix + ".audio").c_str(), cfg.Audio);
+        }
 
         settings.MediationEnabled =
             readBool("sim.arc.mediation", settings.MediationEnabled);
@@ -640,6 +849,11 @@ namespace TLC::Tuning
 
         settings.NewsEnabled =
             readBool("sim.news.enabled", settings.NewsEnabled);
+        settings.InteractVoice =
+            readBool("sim.interact.voice", settings.InteractVoice);
+        settings.InteractRegisterFamily = readBool(
+            "sim.interact.register.family",
+            settings.InteractRegisterFamily);
 
         // The radio's base form is a hex form id, not a rate — parse it
         // separately ("0x1A17D" or "1A17D" or decimal; a broken line

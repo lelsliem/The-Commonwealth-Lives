@@ -28,6 +28,14 @@ namespace TLC
     //-------------------------------------------------------------------------
     namespace Movement
     {
+        // The bisect gate (0.8.7 crash hunt): sim.diag.noWalks makes
+        // every Movement command refuse without touching the game —
+        // the pinned InitiateCommandModeTravelPackage is the
+        // documented-risk game call (a past heap-corruption suspect),
+        // and gating it cleanly answers "is the walk the crasher" in
+        // one test round. The sim re-decides intents as refusals.
+        void SetCommandsEnabled(bool a_enabled) noexcept;
+
         // Walks the actor to the target using the game's own machinery:
         // issues the command-mode travel package (byte-verified pin).
         // Refuses — with a logged reason — only when the actor, its AI
