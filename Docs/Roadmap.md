@@ -29,13 +29,17 @@ Current Stage   : 0.8.9 DONE — the birth journey is verified
                    and the dress find (children wear clothes now).
                    The 0.8.7 dialog exchange, 0.8.8 timings & weights,
                    and 0.8.9-road all landed in the same pass — 27/27
-                   harness suites green. See the 0.8.7 / 0.8.8 / 0.8.9
-                   sections.
+                   harness suites green. 0.8.10 is DEFERRED by
+                   decision (2026-08-17 — animations/fight-feel left
+                   alone for now); 0.8.11 log hygiene + loose ends is
+                   DONE (see its section). See the 0.8.7 / 0.8.8 /
+                   0.8.9 sections.
 
-Next Milestone  : 0.8.10 animations + fight-feel (the ESP/idle
-                   pattern extends; the both-fall/ghost-push fight
-                   bugs land here) → 0.8.11 log hygiene + loose ends
-                   → 0.8.12 final touches + beta on Nexus
+Next Milestone  : 0.8.12 final touches + beta on Nexus. 0.8.10
+                   animations + fight-feel stays PLANNED/DEFERRED —
+                   the kick chain works, the both-fall/ghost-push
+                   presentation bugs are documented in Run080, and
+                   the animation pass is revisited after the release
 
 ═══════════════════════════════════════════════
 
@@ -742,24 +746,47 @@ green, deployed.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: DEFERRED (2026-08-17) — left alone for now by decision; stays
+planned, revisited after 0.8.12 / the beta.
 
 The interactions get bodies: the ESP/idle pattern proven by the kick
 (0.7.6) extends to the new interactions — greeting gestures, chat
 stances, the altercation's shove — with graceful fallback when the
 ESP is absent. The deferred fight presentation bugs (the both-fall
-look, the ghost-push slide) land here with the animation pass.
+look, the ghost-push slide — the 0.7.6 field finds) land here with
+the animation pass when it is taken up again.
 
 0.8.11 — Log hygiene + loose ends
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: DONE (2026-08-17) — both halves closed; 27/27 harness green.
 
 The audit's second gap (the decision-chatter rate limit) plus the
 parked questions — "should an unowned settlement have minds?" and
 the other who-is-the-world loose ends — closed before the release
 materials.
+
+- **Log hygiene.** The decision-chatter rate limit was already in
+  place — LogPlanEntry's key-dedupe (same intent = one line, then
+  silence until it changes) plus the per-mind LogDecisionEvery 5 s
+  cap; the refusal flood died with the 0.8.3 fix. The remaining
+  contributor was the walk probe, the single biggest writer
+  (2.2k lines of a 12k session): sim.log.probes now defaults OFF
+  (0.8.11) — the arrival and session-end lines stay, only the
+  progress heartbeats go. The log is now event-driven and
+  event-capped; re-enable the probes with sim.log.probes = 1 for
+  development (the probe is the verification eyes).
+- **The parked questions, answered.** *Unowned settlements keep
+  minds* — the field already decided it (requireOwned defaults off,
+  source = settlement): the world is alive everywhere and the market
+  is the bench; the world's books are never empty because the player
+  hasn't unlocked a workshop. The who-is-the-world loose ends from
+  the 0.8.6a audit all stand as designed: the species block gates
+  who trades at the market, companions stay friendship-only (never
+  the dating zone), the pre-existing-family pool stays fixed,
+  owned pets name / unowned stay unnamed, and provisioner first-
+  names stay cut. See Run080 §0.8.6a and DecisionLog 0066.
 
 0.8.12 — Final Touches + beta
 

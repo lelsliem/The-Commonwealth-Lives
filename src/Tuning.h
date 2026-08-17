@@ -567,13 +567,15 @@ namespace TLC::Tuning
         // relax. Real intent changes still print instantly.
         float LogDecisionEvery = 5.0f;
 
-        // The walk probe gate (0.8.0 polish): the per-walker "d = ..."
-        // probe is the log's biggest single contributor (2.2k lines of a
-        // 12k session). On while the sim is in development — the probe is
-        // the verification eyes — and off for release (the arrival and
-        // session-end lines stay; only the 2-second progress heartbeats
-        // go).
-        bool LogWalkProbes = true;
+        // The walk probe gate (0.8.0 polish, flipped off 0.8.11): the
+        // per-walker "d = ..." probe is the log's biggest single
+        // contributor (2.2k lines of a 12k session) and the audit's
+        // second log-hygiene gap. Off by default since 0.8.11 — the
+        // release-hygiene pass — the arrival and session-end lines
+        // stay, only the progress heartbeats go. Re-enable with
+        // sim.log.probes = 1 while developing (the probe is the
+        // verification eyes).
+        bool LogWalkProbes = false;
     };
 
     inline AdapterSettings AdapterSettingsFrom(

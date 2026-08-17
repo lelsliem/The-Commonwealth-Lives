@@ -2122,3 +2122,44 @@ name, mind, and household; the actor is its body only. The pair
 child waiting to materialize survives the very load that completes
 it. Gated on `sim.baby.visualChild` (default on). 27/27 harness
 suites green; deployed and verified in-game 2026-08-16.
+
+## 0066 — 0.8.10 deferred; 0.8.11 log hygiene + the unowned-settlement question (2026-08-17)
+
+**Question:** the 0.8 run's last two stones — what gets closed now,
+and what waits?
+
+**0.8.10 animations + fight-feel: DEFERRED, by decision.** The kick
+chain works (kick → fall → get up → pause → answer → fall → walk
+off); the two presentation bugs left are the both-fall look and the
+ghost-push slide, both documented in Run080 §0.7.6. Animations are
+the riskiest surface (ESP/idle seams, graceful fallback) and the show
+is complete without them, so the stone stays planned and is revisited
+after 0.8.12 / the beta — not before the release materials.
+
+**0.8.11 log hygiene — mostly already won, one real change.** The
+audit's "~200KB/min decision chatter" was the refusal flood (dead
+since the 0.8.3 fix) plus ordinary decision lines — which
+`LogPlanEntry` already caps twice: the key-dedupe (a mind whose
+intent is unchanged prints once, then stays quiet) and the per-mind
+`sim.log.decisions.every` (5 s) cadence for flip-flopping intents.
+The one remaining writer was the walk probe — the single biggest
+contributor (2.2k lines of a 12k session) — so `sim.log.probes` now
+defaults OFF (0.8.11). The arrival and session-end lines stay; only
+the progress heartbeats go. The log is event-driven and event-capped;
+`sim.log.probes = 1` brings the verification eyes back for
+development.
+
+**The unowned-settlement question, answered: unowned settlements
+keep minds.** The field already decided it twice — `requireOwned`
+defaults off and the stipend source stays `settlement` — and the
+audit parked the deeper "should the world be alive where the player
+hasn't unlocked anything?" question for this pass. Answer: yes. The
+world is alive everywhere; the market is the bench; an empty book
+because the player hasn't taken a workshop makes the world feel
+paused, not real. `requireOwned` remains the opt-in for players who
+want their settlements to matter economically. The who-is-the-world
+loose ends from Run080 §0.8.6a all stand as designed: the species
+block gates who trades at the market, companions stay
+friendship-only (never the dating zone), the pre-existing-family
+pool stays fixed, owned pets name / unowned stay unnamed, and
+provisioner first-names stay cut.

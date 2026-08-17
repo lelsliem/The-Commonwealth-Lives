@@ -9,6 +9,35 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.11 — log hygiene + loose ends (2026-08-17)
+
+The audit's second gap closed, and the parked questions answered.
+No new machinery — the log was already event-capped; the last big
+writer is now quiet by default.
+
+- **The decision-chatter rate limit was already in place** —
+  `LogPlanEntry` key-dedupes (a mind whose intent is unchanged prints
+  once, then stays quiet) and caps flip-flopping minds at
+  `sim.log.decisions.every` (5 s). The 0.8.3 fix killed the refusal
+  flood; the ordinary decision lines were already capped.
+- **The walk probe now defaults off.** `sim.log.probes = 0` — the
+  per-walker "d = …" progress heartbeats were the log's single
+  biggest contributor (2.2k lines of a 12k session). The arrival and
+  session-end lines stay; only the progress heartbeats go. Set it to
+  1 while developing — the probe is the verification eyes.
+- **Loose ends, decided:** unowned settlements keep minds (the world
+  is alive everywhere; `requireOwned` stays the opt-in), and the
+  who-is-the-world calls from the 0.8.6a audit all stand as designed
+  (species block at the market, companions friendship-only, the
+  fixed pre-existing-family pool, owned pets name / unowned stay
+  unnamed, provisioner first-names cut).
+- **0.8.10 animations + fight-feel deferred by decision** — the kick
+  chain works; the both-fall/ghost-push presentation bugs are
+  documented in Run080 and revisited after the beta. Next: 0.8.12
+  final touches + beta.
+
+---
+
 ## 0.8.9 — the birth journey made visible (2026-08-15)
 
 The birth journey gets a body: a newborn is carried, then becomes a
