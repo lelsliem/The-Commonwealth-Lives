@@ -848,8 +848,12 @@ the post-beta run.
   `sim.log.level` (info default, debug/trace for development) now
   sets the F4SE log level at plugin load, before the banner; the
   packaged INI ships info, a development INI keeps debug.
-- **Remaining:** the release package itself (archive layout, the
-  Anims ESP, requirements doc) and the Nexus beta submission.
+- **The release package is assembled** (`0.8.12` tagged and pushed):
+  F4SE/Plugins (the DLL, the INI, the Realistic Conversations
+  tuning file), MCM/Config + MCM/Settings (the in-game page ships —
+  a late catch: the first zip was missing Data/MCM entirely), the
+  Anims ESP, README, and REQUIREMENTS. **Remaining:** the GitHub
+  release upload (zip + description) and the Nexus beta submission.
 The clean run before the beta: every field note folded in, docs
 reconciled, warnings cleared, harness at full green, the README
 written for players, the release package assembled — then the first

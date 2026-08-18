@@ -34,6 +34,12 @@ requirement, or option (DecisionLog 0067).
 - **Consequence.** The beta has zero external dependencies beyond
   F4SE + Address Library: requirements, install, compatibility, and
   the release materials all say vanilla.
+- **The package ships the MCM page.** A late catch before upload:
+  the first zip was missing `Data/MCM` entirely — without
+  `MCM/Config/TheLivingCommonwealth/config.json` +
+  `MCM/Settings/TheLivingCommonwealth.ini`, the in-game settings
+  page never appears for players who install MCM. Both files now
+  ride the package; REQUIREMENTS.md's file-layout table lists them.
 
 ---
 
