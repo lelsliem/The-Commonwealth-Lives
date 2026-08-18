@@ -30,6 +30,15 @@ namespace TLC::Diag
     // means off.
     [[nodiscard]] bool SelfTestRequested();
 
+    // Applies sim.log.level to the F4SE log (0.8.12). The default
+    // logger shows DEBUG lines in every build config, so the hot DEBUG
+    // writers — the WalkTo issue line, the walk probes — flood an 8 MB
+    // session at 600 minds. "info" (the default, and the release
+    // behavior) drops them; "debug" / "trace" restore them for
+    // development. Runs at plugin load, before the banner, so the very
+    // first line of a session obeys it.
+    void ApplyLogLevel();
+
     // Runs the battery. Pure logic only — no game API touched, so it is
     // safe at plugin load, before any world. Logs one line per check and
     // a summary. Returns true when every check passed.

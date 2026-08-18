@@ -38,6 +38,8 @@
 
 #include <REX/LOG.h>
 
+#include <spdlog/spdlog.h>
+
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -426,6 +428,31 @@ namespace TLC::Diag
         catch (const std::exception&)
         {
             return false;
+        }
+    }
+
+    void ApplyLogLevel()
+    {
+        const auto config = Tuning::ParseConfig(ReadConfigText());
+        const auto raw = config.Get("sim.log.level");
+
+        // The release behavior: info. The hot DEBUG writers (the WalkTo
+        // issue line, the walk probes) are development eyes — "debug" or
+        // "trace" in the INI brings them back for a session.
+        auto level = spdlog::level::info;
+
+        if (raw == "debug")
+        {
+            level = spdlog::level::debug;
+        }
+        else if (raw == "trace")
+        {
+            level = spdlog::level::trace;
+        }
+
+        if (auto* logger = spdlog::default_logger_raw(); logger != nullptr)
+        {
+            logger->set_level(level);
         }
     }
 

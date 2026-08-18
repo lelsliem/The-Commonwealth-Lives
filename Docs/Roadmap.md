@@ -834,6 +834,15 @@ the post-beta run.
   known limits (the honest list), and compatibility. Developer
   sections (the adapter/core split, repository map, building)
   live below the fold.
+- **The log-level gate (field finding).** The beta-readiness session
+  (600+ minds, in-game) was clean — v0.8.12 banner, zero errors,
+  rich event flow — but the log ran ~8 MB in under 5 minutes: the
+  two hot DEBUG writers (the WalkTo issue line, the walk probes)
+  print in every build config because nothing ever gated them (the
+  code comment claimed release drops to info — no mechanism did).
+  `sim.log.level` (info default, debug/trace for development) now
+  sets the F4SE log level at plugin load, before the banner; the
+  packaged INI ships info, a development INI keeps debug.
 - **Remaining:** the release package itself (archive layout, the
   Anims ESP, requirements doc) and the Nexus beta submission.
 The clean run before the beta: every field note folded in, docs

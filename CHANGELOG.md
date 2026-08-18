@@ -9,6 +9,35 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.12 — the clean run + the log-level gate (2026-08-17)
+
+The beta's clean-up pass, plus the field finding the beta-readiness
+session exposed.
+
+- **The beta-readiness session (in-game, 600+ minds).** Clean: the
+  v0.8.12 banner, zero errors, zero warnings, zero crash-adjacent
+  lines, rich event flow (6.2k arrivals, 6.7k trades, 2.5k bonds),
+  decision rate within its cap. One finding: **log volume** — ~8 MB
+  in under 5 minutes, driven by the two hot DEBUG writers (the
+  WalkTo issue line, 20k lines; the walk probes, 7.2k — on because
+  the test INI still says probes = 1).
+- **The log-level gate (sim.log.level).** The DEBUG writers' own
+  comments claimed they "vanish when the release log level drops to
+  info" — but nothing implemented that: the F4SE default logger
+  shows DEBUG lines in every build config. `ApplyLogLevel` now sets
+  the default logger's level at plugin load, before the banner:
+  **info** by default (the release behavior — the hot DEBUG lines
+  drop), `debug` / `trace` in the INI for development sessions. The
+  decision lines stay capped as before; arrivals, trades, bonds, and
+  news are info and never gated.
+- The rest of the clean run: version stamp 0.8.12 (it had read 0.8.6
+  through the whole 0.8.7→0.8.11 run), the 0.8.7-crash-hunt linker
+  map removed, the missing 0.8.7 CHANGELOG section restored, the
+  audio-probe verdict folded into the Roadmap, RELEASE_NOTES brought
+  to 0.8.11, and the player-facing README rewritten.
+
+---
+
 ## 0.8.11 — log hygiene + loose ends (2026-08-17)
 
 The audit's second gap closed, and the parked questions answered.

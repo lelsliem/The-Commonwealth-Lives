@@ -274,6 +274,13 @@ F4SE_PLUGIN_LOAD(const F4SE::LoadInterface* a_intfc)
         .trampolineSize = 128,
     });
 
+    // The log level gate (0.8.12): the default logger shows DEBUG lines
+    // in every build config, so the hot DEBUG writers (the WalkTo issue
+    // line, the walk probes) flood an 8 MB session at 600 minds. Applied
+    // now — before the banner — so the very first line of the session
+    // obeys sim.log.level (info by default; debug/trace for development).
+    TLC::Diag::ApplyLogLevel();
+
     // The load-order hello-world (0.8.x tooling): the sim's pure logic
     // proves itself at plugin load — before the game world, before any
     // save — when the test profile asks (sim.diag.selfTest = 1). A crash
