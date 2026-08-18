@@ -23,6 +23,8 @@
 F4SE/Plugins/TheLivingCommonwealth.dll    the plugin (the sim)
 F4SE/Plugins/TheLivingCommonwealth.ini    tuning (created with defaults on first run)
 F4SE/Plugins/Realistic Conversations.ini  optional compat tuning (delete to disable)
+MCM/Config/TheLivingCommonwealth/config.json   the in-game settings page (MCM optional)
+MCM/Settings/TheLivingCommonwealth.ini         the page's shipped defaults
 TheLivingCommonwealthAnims.esp            the fight kick animation — ENABLE in your load order
 README.md                                 what it does, install, tune, known limits
 ```
