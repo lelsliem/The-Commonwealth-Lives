@@ -30,6 +30,16 @@ session exposed.
   drop), `debug` / `trace` in the INI for development sessions. The
   decision lines stay capped as before; arrivals, trades, bonds, and
   news are info and never gated.
+- **Verified in-game (2026-08-17).** The quiet-log test: with
+  `sim.log.level = info`, the WalkTo-issue lines and walk probes
+  dropped from ~27k to **zero**, the log ran ~10x smaller (~825 KB
+  per 2.5 minutes vs ~8 MB per 5), and the event flow stayed intact
+  (arrivals, decisions, trades, bonds all at info). The gate prints
+  a one-line receipt at load (`diag: log level gate — sim.log.level
+  ='info' (default 1), now 2.`) so a session's log proves the level
+  applied. Two one-time species warnings surfaced (modded Swarmbot /
+  Mishka races not in the device table — known benign
+  classification notices).
 - The rest of the clean run: version stamp 0.8.12 (it had read 0.8.6
   through the whole 0.8.7→0.8.11 run), the 0.8.7-crash-hunt linker
   map removed, the missing 0.8.7 CHANGELOG section restored, the

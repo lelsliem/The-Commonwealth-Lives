@@ -452,7 +452,22 @@ namespace TLC::Diag
 
         if (auto* logger = spdlog::default_logger_raw(); logger != nullptr)
         {
+            const auto before = static_cast<int>(logger->level());
             logger->set_level(level);
+
+            // The gate's receipt (0.8.12): proves the INI was read and
+            // the level actually moved — the field showed DEBUG lines
+            // surviving an "info" setting, so the receipt is the
+            // diagnostic. before/after are spdlog's enum (0 trace, 1
+            // debug, 2 info, 3 warn).
+            REX::INFO(
+                "diag: log level gate — sim.log.level='{}' (default {}), now {}.",
+                raw.empty() ? "(missing)" : std::string(raw), before,
+                static_cast<int>(logger->level()));
+        }
+        else
+        {
+            REX::INFO("diag: log level gate — no default logger at load.");
         }
     }
 
