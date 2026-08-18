@@ -2163,3 +2163,39 @@ block gates who trades at the market, companions stay
 friendship-only (never the dating zone), the pre-existing-family
 pool stays fixed, owned pets name / unowned stay unnamed, and
 provisioner first-names stay cut.
+
+## 0067 — The baby mod is dropped entirely; the journey is all vanilla (0.8.12, 2026-08-17)
+
+**Question:** what happens to the external Baby Sim dependency now that
+the vanilla visible journey works?
+
+**Dropped entirely — no trace as a dependency, requirement, or option.**
+The 0.8.9 visible journey (the carry + the deferred child spawn) was
+built to degrade gracefully without the mod, and the field tests
+proved the vanilla path complete on its own: the mother carries the
+game's own Shaun bundle (`babybundled`, the item you hold in the
+intro — the very item the mod's bundles are copies of), and the child
+spawns from the game's own farm-children pool via the deferred spawn,
+dressed through the base's default-outfit path. The mod's only
+additions were ethnicity variants of the same bundle and its own
+child actors — and its own growth system, which caused the headless/
+T-pose/invisible children before the deferred spawn won. The author
+was engaged and polite throughout, but permission was never granted
+and the vanilla path needs nothing from it.
+
+**What went.** The `BabyModLoaded`/`BabyForm` machinery (the plugin
+lookup + the ethnicity variant table), the `PairVisibleChildren`
+pairing scan, and every doc/config/MCM reference to the mod as an
+option. `sim.birth.visible` survives as the visible-journey master
+switch (carry + child); `sim.baby.visualChild` gates the deferred
+child spawn. The carry is now one form id, one path — always
+`babybundled`.
+
+**What stays honest.** The 0.7.8-era decision entries (which recorded
+the pairing bridge at the time) remain as history with supersession
+notes; this entry is the record of the drop. Historical commit
+records that name the mod are untouched — they are what happened.
+
+**Consequence.** The beta has zero external dependencies beyond F4SE +
+Address Library: requirements, install, compatibility, and the release
+materials all say vanilla.

@@ -1644,67 +1644,6 @@ namespace TLC
         }
     }
 
-    bool Adapter::BabyModLoaded()
-    {
-        if (m_BabyModChecked)
-        {
-            return m_BabyModLoaded;
-        }
-
-        m_BabyModChecked = true;
-
-        // The soft dependency (0.8.9): resolve the baby mod's plugin by
-        // name — the load order never changes mid-session, so the read
-        // is cached. Loaded once, the sim knows the world provides
-        // babies: the pairing, the crib walk, and the visible journey
-        // all gate on it, and everything degrades to sim-only children
-        // without it.
-        auto* handler = RE::TESDataHandler::GetSingleton();
-
-        if (handler == nullptr)
-        {
-            return false;
-        }
-
-        m_BabyModLoaded = handler->GetLoadedModIndex(
-            "Baby Sim - Babies That Grow Up.esp").has_value();
-
-        REX::INFO(
-            "birth: baby mod {} — the visible journey {}.",
-            m_BabyModLoaded ? "found" : "not found",
-            m_BabyModLoaded ? "enabled" : "stays sim-only");
-
-        return m_BabyModLoaded;
-    }
-
-    std::uint32_t Adapter::BabyForm(std::uint32_t a_recordId)
-    {
-        // The plugin's form ids carry its load index in the top byte.
-        // 0 when the mod is absent — callers check BabyModLoaded first.
-        if (!m_BabyModLoaded)
-        {
-            return 0;
-        }
-
-        auto* handler = RE::TESDataHandler::GetSingleton();
-
-        if (handler == nullptr)
-        {
-            return 0;
-        }
-
-        const auto index = handler->GetLoadedModIndex(
-            "Baby Sim - Babies That Grow Up.esp");
-
-        if (!index.has_value())
-        {
-            return 0;
-        }
-
-        return (static_cast<std::uint32_t>(*index) << 24)
-            | (a_recordId & 0xFFFFFFu);
-    }
-
     void Adapter::ReplenishMedicineStock() noexcept
     {
         const auto full = m_Settings.Illness.Stock;
@@ -1947,16 +1886,14 @@ namespace TLC
     {
         // The 0.8.9 birth journey: when a birth fires, the mother
         // visibly carries her newborn — a swaddled-bundle armor in the
-        // body slot. With the baby mod loaded, the bundle is one of
-        // its ethnicity variants (random per household); without it,
-        // the game's own Shaun bundle (babybundled, Fallout4.esm)
-        // fills in — the very item the mod's bundles are copies of
-        // (same body slot, same isPlayerChild keyword, surveyed
-        // 2026-08-15). The sim never touches the mod's scripts; it
+        // body slot: the game's own Shaun bundle (babybundled,
+        // Fallout4.esm, the item you carry in the intro). The sim
         // equips the item like any armor, and the holding flavor plays
-        // on the player while the item itself is the NPC's visible
-        // carry. The gate is BirthVisible alone — everyone gets a
-        // visible bundle, mod or not.
+        // the visible baby. The external baby mod was dropped entirely
+        // (2026-08-17, DecisionLog 0067): the vanilla bundle and the
+        // vanilla deferred child spawn are the whole visible journey.
+        // The gate is BirthVisible alone — everyone gets a visible
+        // bundle.
         const auto motherForm = m_Translator.FormFor(a_mother);
 
         if (motherForm == 0)
@@ -1977,47 +1914,12 @@ namespace TLC
             return;   // not loaded — the bundle can't be seen anyway
         }
 
-        std::uint32_t bundleForm = 0;
-
-        if (BabyModLoaded())
-        {
-            // The bundle variants the baby mod provides (surveyed from
-            // the plugin, 2026-08-15): five ethnicities, clean and
-            // wasteland. One is picked at random so two households
-            // don't carry the same-looking baby.
-            const std::uint32_t bundleRecordIds[] = {
-                0x004c95,   // Cyber_babybundled_Asian
-                0x004c93,   // Cyber_babybundled_Asian_Wastelander
-                0x001734,   // Cyber_babybundled_Black
-                0x004c89,   // Cyber_babybundled_Black2
-                0x004c87,   // Cyber_babybundled_Black2_Wastelander
-                0x0035a1,   // Cyber_babybundled_Black_Wastelander
-                0x004c8d,   // Cyber_babybundled_Caucasian
-                0x004c8b,   // Cyber_babybundled_Caucasian_Wastelander
-                0x004c91,   // Cyber_babybundled_Hispanic
-                0x004c8f,   // Cyber_babybundled_Hispanic_Wastelander
-            };
-
-            const auto& pick = bundleRecordIds[
-                static_cast<std::size_t>(m_Rng.Next())
-                % (sizeof(bundleRecordIds)
-                   / sizeof(bundleRecordIds[0]))];
-            bundleForm = BabyForm(pick);
-        }
-        else
-        {
-            // The vanilla fallback (no baby mod): Shaun's own bundle
-            // from Fallout4.esm — the item you carry in the intro. The
-            // mod's bundles are copies of this exact armor, so the
-            // equip path is identical; every household's bundle just
-            // looks the same (they all carry a Shaun).
-            bundleForm = 0x000f468e;   // babybundled
-        }
-
-        if (bundleForm == 0)
-        {
-            return;   // the mod vanished mid-session — sim-only child
-        }
+        // The bundle: the game's own Shaun bundle from Fallout4.esm —
+        // babybundled (0x000f468e), the item you carry in the intro.
+        // One form id, one path: the baby mod's variant table is gone
+        // (dropped 2026-08-17), so every household carries the same
+        // swaddled bundle and the equip is always the vanilla item.
+        const std::uint32_t bundleForm = 0x000f468e;   // babybundled
 
         // Equip the bundle: the game's own equip path. The item first
         // enters the mother's inventory (AddObjectToContainer), then
@@ -2043,10 +1945,9 @@ namespace TLC
 
         // The holding flavor (0.8.9 field find): the bundle's armor
         // mesh is empty — the visible baby is the AnimObject the
-        // AnimFlavorHoldingBaby flavor attaches. The baby mod's
-        // bundles do this via their own OnEquipped script; the vanilla
-        // fallback has none, so the flavor is applied here for every
-        // carry — idempotent next to the mod's own call.
+        // AnimFlavorHoldingBaby flavor attaches. The vanilla bundle
+        // has no OnEquipped script, so the flavor is applied here for
+        // every carry.
         ApplyHoldingFlavor(motherActor, true);
 
         // The hold rides the co-save (v10): mother form id, bundle

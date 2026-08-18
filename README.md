@@ -26,10 +26,11 @@ The whole world rides inside your save file — save, quit, reload, and everyone
 3. Copy `TheLivingCommonwealthAnims.esp` into `Data/` and **enable it in your load order** — it delivers the fight kick animation. Without it fights fall back to a stagger (nothing crashes, it just looks tamer).
 4. The INI (`Data\F4SE\Plugins\TheLivingCommonwealth.ini`) is created with sane defaults on first run — every number in it is tunable. Your old saves just work: a 0.5/0.6/0.7/0.8-era save migrates forward cleanly.
 
+Everything is vanilla — no external dependency beyond the three requirements. The visible birth journey (the mother's carry, the child that appears after a save/load) uses the game's own bundle and the game's own child pool.
+
 ## Optional
 
 - **MCM (Mod Configuration Menu)** — a full settings page (Life, Interactions, Relationships, Illness, Economy, Birth & Fights, About) to tune the world in-game. Changes hot-apply within a second and survive a restart. No MCM? The INI alone rules — MCM is a soft dependency.
-- **Baby Sim - Babies That Grow Up** (Nexus 100934) — when installed, the mother's carry shows its swaddled-bundle variants; without it, the game's own Shaun bundle. The mod stays a soft dependency and runs exactly as its author designed.
 - **Realistic Conversations** — its 33 GMST overrides are re-delivered as a compatibility tuning file next to the DLL; install the ESP yourself and the file applies its settings at load.
 
 ## Tune it
@@ -69,7 +70,7 @@ A missing or broken line keeps the default — a broken line never breaks the wo
 
 ## Compatibility
 
-Tested and working with: **Address Library** (required), **MCM** (optional), **Baby Sim - Babies That Grow Up** (optional), **Realistic Conversations** (compat tuning file included), **Sim Settlements** and **Sim Settlements 2** (recommended for players, no interaction), and **Settler and Companion Dialogue Overhaul** (no interaction). The voice-aware rule is the one real constraint: a named voice (Sturges, Marcy, companions) has no recording of the generic settler lines, so those minds stay mute rather than say a line their voice can't speak.
+Tested and working with: **Address Library** (required), **MCM** (optional), **Realistic Conversations** (compat tuning file included), **Sim Settlements** and **Sim Settlements 2** (recommended for players, no interaction), and **Settler and Companion Dialogue Overhaul** (no interaction). The voice-aware rule is the one real constraint: a named voice (Sturges, Marcy, companions) has no recording of the generic settler lines, so those minds stay mute rather than say a line their voice can't speak.
 
 Live on GitHub: [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) — releases and the full changelog live there. **This is a beta — save often, and report what you see.**
 

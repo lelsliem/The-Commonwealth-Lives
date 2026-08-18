@@ -28,7 +28,7 @@ co-saved, world-persistent) also outclasses the cosmetic renamers.
 | **Barter – Vendor & Economy Overhaul** (72654) | Reworks what vendors buy/sell and their cap pools — a harder trade economy | **Borrow for 0.8.0.** Our Trade-with-anyone buys from real vendors; Barter changes their stock and caps, so our sim's purchases land in a deeper economy. Game-side state; our cap pouches are co-save state — no conflict. |
 | **NPCs Travel** | 130+ random encounters on the roads — wandering settlers, scavengers, robots | **Ambience for 0.8.0's roads.** Its actors are game NPCs, not sim minds (consistent with our vendor-census rule). Road life our provisioners can share the world with. |
 | **Settler & Companion Dialogue Overhaul** (41785) | 2,300+ new voiced lines for settlers, companions, enemies | **The audio path, later.** Our speech is captions now (post-0.8.6c audio is the plan); if we ever want *spoken* words, voiced settler lines exist to trigger. CK/asset territory — stays deferred. |
-| **Baby Sim** (100934) | Visible babies/children, aging, grown children become settlers | **Permission pending** (message sent 2026-08-11) — the visible-child path (ReleasePlan). |
+| **Baby Sim** (100934) | Visible babies/children, aging, grown children become settlers | **Dropped entirely 2026-08-17 (DecisionLog 0067)** — the visible child is all vanilla now (0.8.9's deferred spawn from the game's own pool); no dependency. |
 | **We Have Names** (74287) | Permanent names for ~300 fixed NPCs | **Complementary.** Names the traders our vendor census will find; our runtime naming stays the tool for random settlers. |
 | **Crime and Punishment** (58429) | Karma/crime/consequences systems overhaul | **Skip** (assessed — a heavyweight gameplay overhaul, not our sim). |
 | **Player Marriage / Make Anyone Romantic** (21932 / 75413) | Player-facing romance/marriage | **Not ours.** Player-focused; our marriages are settler-to-settler. |
@@ -76,11 +76,13 @@ bundled):
 4. **Compatibility notes for the release page:** our runtime naming
    coexists with renamers (their base-record names flow through our
    "game name first" rule); we touch no building/plot records (SS2
-   safe); our cap pouches are co-save state (Barter safe). The one
-   real dependency we're *pursuing* is Baby Sim, permission pending.
+   safe); our cap pouches are co-save state (Barter safe). There are
+   no dependencies we're pursuing — the visible child is all vanilla
+   (Baby Sim was dropped, DecisionLog 0067).
 5. **The empty-space list — future territory nobody holds:** settler↔
    settler dialogue scenes (Talk/Rows are first), settler-to-settler
    romance that *means* something (marriage = shared pouch, bench,
-   bed — already built), life stages (visible children via Baby Sim),
+   bed — already built), life stages (visible children — vanilla,
+   0.8.9's deferred spawn),
    a settlement that remembers its dead (grief, legacy — built), and
    the player's window into it (radio/news — built).

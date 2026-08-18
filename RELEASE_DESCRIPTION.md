@@ -73,9 +73,9 @@ wider net. Save often, and report what you see.
   bank recorded it. Realistic Conversations compatibility ships as a
   tuning file — no xedit, no ESP.
 - **0.8.9 — Babies, implemented.** The birth journey gets a body: a
-  mother visibly carries a swaddled bundle (the Baby Sim variant when
-  installed, the game's own Shaun bundle when not), then a real child
-  of the Commonwealth spawns — dressed, named, and growing up.
+  mother visibly carries a swaddled bundle (the game's own Shaun
+  bundle — the item you hold in the intro), then a real child of the
+  Commonwealth spawns — dressed, named, and growing up.
   Provisioners and caravan guards eat on the road.
 - **0.8.11 — Log hygiene.** The quiet-log pass; the walk probe is off
   by default. Loose ends answered (unowned settlements keep their
@@ -104,11 +104,11 @@ wider net. Save often, and report what you see.
 ## Optional
 
 - **MCM** — the in-game settings page. Without it the INI alone rules.
-- **Baby Sim - Babies That Grow Up** (Nexus 100934) — the carry shows
-  its bundle variants; the mod stays untouched and runs as its author
-  designed.
 - **Realistic Conversations** — its 33 GMST overrides ship as a tuning
   file next to the DLL; delete the file to disable.
+
+Everything is vanilla — no external dependency beyond the three
+requirements (F4SE, Address Library, the game itself).
 
 ## Known limits (honest)
 

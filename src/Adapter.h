@@ -1340,20 +1340,6 @@ const std::vector<TLC::CoSave::BondPair>& a_bonds);
         std::unordered_map<std::uint32_t, TLC::CoSave::VisualChild>
             m_VisualChildren;
 
-        // The baby-mod soft dependency (0.8.9 birth journey): whether
-        // the "Baby Sim - Babies That Grow Up" plugin is loaded,
-        // cached after the first read (the load order never changes
-        // mid-session). BabyForm shifts a record id into the plugin's
-        // index (0 when the mod is absent). The bundle equip and the
-        // visible journey gate on it; without the mod a newborn stays
-        // sim-only (the sim's own child mind, fed by the household).
-        [[nodiscard]] bool BabyModLoaded();
-        [[nodiscard]] std::uint32_t BabyForm(
-            std::uint32_t a_recordId);
-        mutable bool m_BabyModChecked = false;
-        mutable bool m_BabyModLoaded = false;
-
-
         // The 0.8.2 burial sweep: for every ledger entry whose mourning
         // window has passed, disable the corpse ref (the game corpse
         // stays in the settlement cell forever otherwise — no cell reset

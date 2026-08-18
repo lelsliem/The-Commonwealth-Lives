@@ -350,11 +350,13 @@ namespace TLC::Tuning
         // gestation — a childhood is a life, not a window.
         float BirthChildhood = 10.0f;
 
-        // The visible-children flag (0.7.8): when on and the external
-        // baby mod ("Baby Sim - Babies That Grow Up") is loaded, a
-        // grown child pairs with a real game actor — it walks, trades,
-        // and bonds like any mind. When off (the default) or the mod
-        // is absent, children stay sim-only (0.7.7 behavior).
+        // The visible-journey flag (0.8.9): when on, a birth is
+        // visible — the mother carries the game's own Shaun bundle
+        // (sim.baby.holdDays), then a child from the game's own pool
+        // takes its place (sim.baby.visualChild). When off, children
+        // stay sim-only (the sim's own child mind, fed by the
+        // household). The external baby mod was dropped entirely
+        // (2026-08-17, DecisionLog 0067) — the journey is all vanilla.
         bool BirthVisible = false;
 
         // The illness stone (0.8.0 — Illness & Medicine): the whole

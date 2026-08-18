@@ -15,7 +15,6 @@
 | Mod | Why | Notes |
 |---|---|---|
 | **MCM (Mod Configuration Menu)** | The in-game settings page (5 pages / 53 controls) | Soft dependency — without it the INI alone rules |
-| **Baby Sim - Babies That Grow Up** (Nexus 100934) | The mother's carry shows its swaddled-bundle variants | Soft dependency — without it the game's own Shaun bundle is used; the mod stays untouched |
 | **Realistic Conversations** (Nexus 26531) | NPC-to-NPC voiced chatter and natural greeting pacing | Its 33 GMST overrides ship as `Realistic Conversations.ini` next to the DLL; the file applies the settings at load. Delete the file to disable |
 
 ## Files in this package

@@ -34,9 +34,11 @@ namespace TLC
     // birth fires on the due day, and the child grows into an adult mind
     // after sim.birth.childhood days.
     //
-    // 0.7.8 adds visible children: when the external baby mod is loaded
-    // and sim.birth.visible is on, a grown child pairs with a real game
-    // actor — it walks, trades, and bonds like any mind.
+    // 0.8.9 makes the journey visible — all vanilla: the mother carries
+    // the game's own Shaun bundle (sim.birth.visible, sim.baby.holdDays)
+    // and the child spawns from the game's own pool via the deferred
+    // spawn (sim.baby.visualChild). The external baby mod was dropped
+    // entirely (2026-08-17, DecisionLog 0067).
     //-------------------------------------------------------------------------
     namespace Birth
     {
@@ -267,26 +269,6 @@ namespace TLC
 
             return count;
         }
-
-        //---------------------------------------------------------------------
-        // PairVisibleChild — (0.7.8) when the external baby mod is
-        // loaded and sim.birth.visible is on, search for an unassigned
-        // child actor in the settlement and pair it with the sim-only
-        // child. The child gets a FormRef and walks the world like any
-        // mind. Returns true if pairing succeeded.
-        //
-        // The baby mod ("Baby Sim - Babies That Grow Up") provides
-        // child actors via a leveled list (Cyber_KidsThatGrewUp). At
-        // runtime, we scan ProcessLists for actors with the HumanChildRace
-        // or GhoulChildRace that are NOT already in the translator, and
-        // pair the first one we find with the sim-only child.
-        //---------------------------------------------------------------------
-        //---------------------------------------------------------------------
-        // PairVisibleChild — (0.7.8) implemented in Adapter.cpp because
-        // it needs game types (RE::ProcessLists, RE::Actor). The adapter
-        // calls this after GrowChildren when sim.birth.visible is on and
-        // the baby mod is loaded. Returns true if pairing succeeded.
-        //---------------------------------------------------------------------
 
         //---------------------------------------------------------------------
         // FeedChildren — one tick of the child's life: every not-yet-

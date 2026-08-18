@@ -47,7 +47,7 @@ serves the show.
 | **0.7.5 — Fights** | Physical escalation via real combat (the game's own punch/shove anims); feedback into bonds and news | The feud's payoff — the escalation line lands and they go at it |
 | **0.7.6 — Fight-feel bug pass** | The known presentation bugs from the 0.7.5 field tests: the ghost-push slide (the fall's knock impulse dragging the victim after the kick), the both-fall look when the retaliation lands | The brawl reads as a real scuffle, not two collapses |
 | **0.7.7 — Babies** | The sim's birth lifecycle made whole: a child born to a bonded pair, counted at wake, named, growing — the sim-only half (visible actors wait on 0.7.8) | Birth becomes a journey, not a log line |
-| **0.7.8 — Baby & kid items** | Bottles, cribs, visible child actors via the external baby mod as a requirement — usable now, editable once permission lands | Children are *seen*, not just counted |
+| **0.7.8 — Baby & kid items** | Bottles, cribs, visible child actors via the external baby mod as a requirement — usable now, editable once permission lands (*dropped entirely 2026-08-17, DecisionLog 0067: the visible child is all vanilla — the 0.8.9 deferred spawn*) | Children are *seen*, not just counted |
 | **0.7.9 — Bugs & polish** | Every stone's field feedback folded in, docs reconciled, perf sanity at scale | The clean run into Illness |
 | **0.8.0 — Illness & Medicine** | A `Health` component (adapter-owned, hold-then-recover — the engine's locked shape); radstorm/food/wound/contagion vectors; the sick rest and buy medicine; untreated sickness can die | The wasteland has a price beyond hunger — settlements feel seasons, the radio reports the ill, and medicine makes the economy real |
 
@@ -122,17 +122,19 @@ gets spawned — the whole life/death cycle?*
    path.** Born children are sim-only by design: no FormRef, no actor.
    Making a child visible means a Creation Kit child template (race,
    markers, no-combat) — an author-asset stone, genuinely post-1.0.
-   **The asset side already exists: Baby Sim - Babies That Grow Up
-   (Nexus 100934)** — 10 babies, 20+ child variants, cribs, aging
-   baby → child → young adult, grown children become settlers. It is
-   player-driven (babies are crafted at a chemslab, placed, grown by
-   the player), so our side is a *bridge*: the sim's birth event
-   summons a Baby Sim child, names it, and ages it on our schedule.
-   Two gates: the author's permission (assets require it; the author
-   welcomes notification) and a hard mod dependency. Until then the
-   visible story is the household: parents walk, eat, trade, grieve;
-   the child is fed, bonded, named, and counted in the co-save. The
-   sim-only child is the design, not a missing feature — noted so the
+   **The asset side was once Baby Sim - Babies That Grow Up (Nexus
+   100934)** — 10 babies, 20+ child variants, cribs, aging baby →
+   child → young adult, grown children become settlers. It was
+   player-driven, so our side would have been a *bridge*: the sim's
+   birth event summons a Baby Sim child, names it, and ages it on our
+   schedule. **Dropped entirely 2026-08-17 (DecisionLog 0067): the
+   author's permission never landed, and the vanilla path won — the
+   0.8.9 deferred spawn produces a fully-initialized child from the
+   game's own pool, dressed through the base's default-outfit path.**
+   The visible story is now the vanilla household: the mother
+   carries the game's own Shaun bundle, the child is fed, bonded,
+   named, and counted in the co-save. The sim-only child is the
+   design, not a missing feature — noted so the
    cut is a decision, not an accident.
 
 ## The staged path to 1.0.0

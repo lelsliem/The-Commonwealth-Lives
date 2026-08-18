@@ -601,7 +601,7 @@
      "id": "bsim.birth.enabled:Main",
      "type": "switcher",
      "text": "Births enabled",
-     "help": "Married couples can have children. The baby mod's children are used when the flag below is on.",
+     "help": "Married couples can have children."
      "valueOptions": {
       "sourceType": "ModSettingBool"
      }
@@ -610,7 +610,7 @@
      "id": "bsim.birth.visible:Main",
      "type": "switcher",
      "text": "Visible birth journey",
-     "help": "When on, a new mother visibly carries her newborn's bundle for sim.baby.holdDays (the baby mod's swaddled bundles when installed, the game's own Shaun bundle otherwise), then a child from the game's pool takes its place. When off, children stay sim-only.",
+     "help": "When on, a new mother visibly carries her newborn's bundle (the game's own Shaun bundle) for sim.baby.holdDays, then a child from the game's pool takes its place. When off, children stay sim-only."
      "valueOptions": {
       "sourceType": "ModSettingBool"
      }

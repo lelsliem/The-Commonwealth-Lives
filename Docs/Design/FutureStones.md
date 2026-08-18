@@ -13,9 +13,10 @@ boundary contract this run lives inside).
 
 Each stone is verified in-game before the next — the standing rule.
 Nothing here needs the engine, and nothing here blocks on the engine
-(it is already at 0.8.1-alpha, ahead of us); the only external
-dependency is the baby mod's permission, which gates *editing* in
-0.7.8, never building or using it.
+(it is already at 0.8.1-alpha, ahead of us); there is no external
+dependency — the visible birth journey is all vanilla (0.8.9's
+carry + deferred child spawn; the baby mod was dropped entirely,
+DecisionLog 0067).
 
 ```
 0.7.6  Fight-feel bug pass     — the brawl reads as a scuffle   (no deps)
@@ -158,10 +159,10 @@ mid-journey: the pregnancy, the child, and the growth day restore.
 **Goal:** children are *seen*, not just counted — and the things they
 need exist in the world.
 
-The external baby mod (Nexus 100934 et al.) is the requirement. It is
-**usable now** (the sim can reference what it provides); *editing* it
-or shipping it as a hard requirement waits on the author's permission
-(already requested). Scope:
+*Superseded 2026-08-17 (DecisionLog 0067): the external baby mod was
+dropped entirely — the visible child is all vanilla (the deferred
+spawn from the game's own pool). The section below is the historical
+plan.* Scope:
 
 1. **Visible children.** When the sim's child grows (0.7.7), the
    adapter pairs the sim-only child with a real game child actor the

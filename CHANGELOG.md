@@ -9,6 +9,34 @@ in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ---
 
+## 0.8.12 — the baby mod dropped: the journey is all vanilla (2026-08-17)
+
+The external Baby Sim dependency is gone — no trace as a dependency,
+requirement, or option (DecisionLog 0067).
+
+- **Why.** The 0.8.9 vanilla visible journey was already complete on
+  its own: the mother carries the game's own Shaun bundle
+  (`babybundled` — the item the mod's bundles are copies of), and the
+  child spawns from the game's own farm-children pool via the
+  deferred spawn, dressed through the base's default-outfit path. The
+  mod's only additions were ethnicity bundle variants and its own
+  growth system — which produced the headless/T-pose children before
+  the deferred spawn won. Permission was never granted; the vanilla
+  path needs nothing from it.
+- **What went.** The `BabyModLoaded`/`BabyForm` machinery (the plugin
+  lookup + the ethnicity variant table) and the `PairVisibleChildren`
+  pairing scan, plus every doc/config/MCM reference to the mod as an
+  option. `sim.birth.visible` survives as the visible-journey master
+  switch; the carry is now one form id, one path — always
+  `babybundled`.
+- **What stayed honest.** The 0.7.8-era entries remain as history
+  with supersession notes; historical commit records are untouched.
+- **Consequence.** The beta has zero external dependencies beyond
+  F4SE + Address Library: requirements, install, compatibility, and
+  the release materials all say vanilla.
+
+---
+
 ## 0.8.12 — the clean run + the log-level gate (2026-08-17)
 
 The beta's clean-up pass, plus the field finding the beta-readiness
@@ -83,15 +111,15 @@ The birth journey gets a body: a newborn is carried, then becomes a
 child of the Commonwealth — not just a log line.
 
 - **The carry.** On birth (`sim.birth.visible` on), the mother
-  visibly holds a swaddled bundle — the baby mod's ethnicity variant
-  when the mod is loaded, and the game's own Shaun bundle
-  (`babybundled`, Fallout4.esm — the item the mod's bundles are
-  literal copies of: same body slot, same `isPlayerChild` keyword)
-  when it isn't, so everyone gets a carry, mod or not. Equipped
-  through the game's own equip path (`AddObjectToContainer` +
-  `ActorEquipManager`); the mod's scripts are never touched. The hold
-  (mother form id, bundle form id, born day) rides the co-save v10
-  (`BabyHold` section), so a mid-carry survives save/load.
+  visibly holds a swaddled bundle — the game's own Shaun bundle
+  (`babybundled`, Fallout4.esm, the item you hold in the intro).
+  Equipped through the game's own equip path
+  (`AddObjectToContainer` + `ActorEquipManager`); the holding flavor
+  plays the visible baby. The hold (mother form id, bundle form id,
+  born day) rides the co-save v10 (`BabyHold` section), so a
+  mid-carry survives save/load. (The external baby mod was dropped
+  entirely 2026-08-17 — DecisionLog 0067 — so the bundle is always
+  the vanilla item; see the 0.8.12 entry.)
 - **The child.** After `sim.baby.holdDays` (default 2) the bundle
   comes off (unequip + remove) and a child from the game's own
   vanilla pool spawns at the mother's feet — farm children, gender
@@ -130,11 +158,11 @@ child of the Commonwealth — not just a log line.
 - **What was cut.** The 0.8.9 overreach — the crib walk on birth and
   the market baby-goods shelf (`sim.baby.goods/price/stock`, the
   buy-at-arrival, the `BabyGoodsPair` co-save section) — is gone:
-  the baby mod runs exactly as its author designed, and the sim only
-  adds the moment of birth and the moment of the child. `FeedChildren`
-  still home-feeds every not-yet-grown child, paired or not; the
-  harness stayed 27/27 green through the re-scope (the v10 decode's
-  always-consume framing hardening from the first pass remains).
+  the sim only adds the moment of birth and the moment of the child.
+  `FeedChildren` still home-feeds every not-yet-grown child, paired
+  or not; the harness stayed 27/27 green through the re-scope (the
+  v10 decode's always-consume framing hardening from the first pass
+  remains).
 
 ## 0.8.9-child — the dress find: children finally wear clothes
 (2026-08-16)
@@ -714,18 +742,16 @@ README, AdapterProject, DecisionLog). 23/23 harness suites green.
 
 ## 0.7.8 — visible children: runtime pairing (2026-08-13)
 
-The adapter now pairs grown sim-only children with real game child
+The adapter pairs grown sim-only children with real game child
 actors — no patch ESP needed. `PairVisibleChildren` scans the game's
 process lists for `HumanChildRace`/`GhoulChildRace` actors, filters out
 actors already translated into minds, collects the sim-only children
 (`Species::Child`, no FormRef), and pairs them greedily — one actor per
 child. Each paired child gets a FormRef + translator entry → walks,
-trades, bonds like any mind. The external Baby Sim mod (Nexus 100934)
-is **usable now** — its children are found by race, not FormID — while
-*editing* it or shipping it as a hard requirement waits on the author's
-permission (already requested). Without the mod the scan finds nothing
-and does nothing: graceful degradation via `sim.birth.visible`
-(default off). Children stay sim-only — the 0.7.7 behavior — until the
+trades, bonds like any mind. *Superseded 0.8.9 / dropped entirely
+2026-08-17 (DecisionLog 0067): the visible child now spawns from the
+game's own vanilla pool via the deferred spawn — the pairing scan and
+the external mod are gone.* Children stay sim-only — the 0.7.7 behavior — until the
 mod is installed.
 
 ## 0.7.7 — babies: the birth lifecycle made whole (2026-08-13)

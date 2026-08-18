@@ -37,10 +37,9 @@ The birth journey gets a body — a newborn is carried, then becomes a
 child of the Commonwealth.
 
 - **The carry.** On birth, the mother visibly holds a swaddled
-  bundle — the Baby Sim mod's variant when it is installed, the
-  game's own Shaun bundle when not — so everyone gets a carry, mod
-  or not. The hold rides the save (co-save v10) so a mid-carry
-  survives save/load.
+  bundle — the game's own Shaun bundle, the item you hold in the
+  intro — so everyone gets a carry. The hold rides the save (co-save
+  v10) so a mid-carry survives save/load.
 - **The child.** After `sim.baby.holdDays` (default 2) the bundle
   comes off and a child spawns at the mother's feet — gender-matched
   from the game's own farm-children pool. The child is deliberately
@@ -60,10 +59,11 @@ child of the Commonwealth.
   `sim.road.feedThreshold` — no market clustering — and their bonds
   and memories travel with them, so a provisioner greets a settler
   they befriended when passing through.
-- The crib walk and market baby-goods shelf were cut: the Baby Sim
-  mod runs as its author designed; the sim only adds the moment of
-  birth and the moment of the child. The baby-mod integration stays a
-  soft dependency (author engaged).
+- The crib walk and market baby-goods shelf were cut: the sim only
+  adds the moment of birth and the moment of the child. The external
+  baby mod was dropped entirely (2026-08-17, DecisionLog 0067) — the
+  visible journey is all vanilla (the Shaun bundle, the game's own
+  child pool), so there is no optional dependency at all.
 
 ## 0.8.8 — Timings & Weights (2026-08-15)
 
@@ -260,8 +260,11 @@ actors — from the Baby Sim mod or any source — and pairs the child to
 a real actor: it walks, trades, and bonds like any mind. The pairing is
 entirely in code — no patch ESP, no load-order fragility. Without the
 mod nothing changes (`sim.birth.visible`, default off): children stay
-sim-only, as before. The Baby Sim mod itself is *usable now*; shipping
-it as a requirement waits on the author's permission.
+sim-only, as before. *Superseded 0.8.9 / dropped entirely 2026-08-17
+(DecisionLog 0067): the visible child is all vanilla now — the
+mother's carry is the game's own Shaun bundle and the child spawns
+from the game's own pool via the deferred spawn. There is no external
+dependency.*
 
 ## 0.7.7 — Babies: The Birth Lifecycle (2026-08-13)
 

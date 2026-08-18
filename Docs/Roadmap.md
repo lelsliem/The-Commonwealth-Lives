@@ -22,16 +22,15 @@ Current Version : 0.8.12 — final touches + beta. The 0.8 run is
                    warnings cleared, and the player-facing README
                    written (2026-08-17).
 
-Current Stage   : 0.8.12 in progress — the clean-run pass: version
-                   bumped to 0.8.12, the 0.8.7-crash-hunt linker-map
-                   leftover removed (warning-free build), the
-                   audio-probe verdict folded into 0.8.7 (no audible
-                   .fuz playback; speech is in-world), the missing
-                   0.8.7 CHANGELOG section restored, RELEASE_NOTES
-                   brought up to 0.8.11, and the player-facing README
-                   rewritten (what it does, requirements, install,
-                   tune, known limits, compatibility). Remaining:
-                   the release package + the Nexus beta itself.
+Current Stage   : 0.8.12 in progress — the clean-run pass is done
+                   (version 0.8.12, warning-free build, docs
+                   reconciled, the player-facing README, the
+                   log-level gate verified in-game) and the external
+                   Baby Sim dependency is dropped entirely
+                   (DecisionLog 0067) — the visible birth journey is
+                   all vanilla, zero external dependencies beyond
+                   F4SE + Address Library. Remaining: the release
+                   package + the Nexus beta itself.
 
 Next Milestone  : the 0.8.12 beta release — the release package
                    (README, changelog, requirements, the Anims ESP)
@@ -267,17 +266,20 @@ STATUS: COMPLETE ✅ (verified in-game 2026-08-13)
 
 ═══════════════════════════════════════════════
 
-STATUS: COMPLETE ✅ (verified in-game 2026-08-13)
+STATUS: COMPLETE ✅ (verified in-game 2026-08-13) — SUPERSEDED 0.8.9,
+DROPPED 2026-08-17 (DecisionLog 0067): the visible child now spawns
+from the game's own vanilla pool via the deferred spawn; the pairing
+scan and the external mod are gone.
 
 [✓] Graceful degradation — sim.birth.visible INI flag (default off);
-    without the baby mod, children stay sim-only
+    without a child source, children stay sim-only
 [✓] Runtime pairing — PairVisibleChildren scans ProcessLists for
     HumanChildRace/GhoulChildRace actors, filters already-translated,
     collects sim-only children (Species::Child, no FormRef), pairs
     greedily
 [✓] FormRef + translator entry — paired child walks, trades, bonds
 [✓] External mod: Baby Sim - Babies That Grow Up (Nexus 100934)
-    — usable now, editable on permission
+    — usable now, editable on permission (removed entirely 0.8.12)
 
 ═══════════════════════════════════════════════0.7.9 — Bugs & Polish
 ═══════════════════════════════════════════════
@@ -487,8 +489,10 @@ dependency — no MCM, the INI alone rules.
 STATUS: DONE — the audit is written (Run080 §0.8.6a, DecisionLog
 0060). Verdict: the ReleasePlan's cuts stand for hands/pex/audio/
 provisioner names; MCM is **overruled to KEEP** (0.8.5 proved it);
-visible children are redesigned to ship gated on the Baby Sim
-permission; and the field added two 0.8.6b items — **the earn-caps
+visible children were redesigned to ship gated on the Baby Sim
+permission — since superseded: the visible child is all vanilla
+(0.8.9's deferred spawn, 0.8.12 dropped the mod entirely, DecisionLog
+0067); and the field added two 0.8.6b items — **the earn-caps
 **economy (non-keepers are perpetually broke, 0.8.3) and **log
 **hygiene (~200KB/min decision chatter). Fight presentation bugs
 defer to 0.8.10 animations.
@@ -753,10 +757,11 @@ The birth journey made visible/real, in three pieces:
   is its meal until GrowChildren makes it a grown mind that walks
   like anyone.
 
-The crib walk and the market baby-goods shelf were CUT: the mod runs
-as its author designed, and the sim only adds the moment of birth and
-the moment of the child. The baby-mod integration stays a soft
-dependency (permission requested, author engaged). 27/27 harness
+The crib walk and the market baby-goods shelf were CUT: the sim only
+adds the moment of birth and the moment of the child. The external
+baby mod was dropped entirely (2026-08-17, DecisionLog 0067): the
+carry is the vanilla Shaun bundle and the child comes from the game's
+own vanilla pool — no optional dependency at all. 27/27 harness
 green, deployed.
 
 0.8.10 — Animations + fight-feel
