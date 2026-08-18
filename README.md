@@ -1,123 +1,91 @@
-# The Living Commonwealth — Fallout 4 Adapter
+# The Living Commonwealth
 
-**Fallout 4 adapter for the [Living Commonwealth Engine (LCE)](https://github.com/lelsliem/Living-Commonwealth-Engine-LCE-) — an F4SE plugin that makes the Commonwealth *live*.**
+**An F4SE plugin that makes the Commonwealth *live* — settlers get hungry, tired, and sick; they trade, argue, fight, fall in love, feud, and die; children are born and grow up. No scripts — the game just shows the result.**
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0--or--later-emerald.svg)](LICENSE)
-[![C++23](https://img.shields.io/badge/C%2B%2B-23-emerald.svg)](https://en.cppreference.com/w/cpp/23)
-[![Version](https://img.shields.io/badge/Version-0.8.0-emerald.svg)](Docs/Roadmap.md)
-
-The settlers aren't on quest scripts — they're **hungry**, they **remember** where to trade, they walk to **their own settlement's market** when they're hungry, and the exchange is physical: caps change hands, the stall-keeper's purse grows, trust is earned. The market has **hours** — it closes at night and nobody walks to a closed bench — and the day's **weather** is remembered. They have **names**, they **argue**, they **fight**, they **bond**, **children are born**, and the wastes can make them **sick** — they buy medicine when they can afford it, rest when they can't, and a severity-capped illness can end them. The game does nothing but show the result.
+[![Version](https://img.shields.io/badge/Version-0.8.12-emerald.svg)](Docs/Roadmap.md)
 
 > A settler goes to market because they are hungry — no script.
 
-That sentence is the test plan. In-game verified end to end: hungry settlers decide `MoveTo`, walk to the bench, arrive, trade, and the world survives save/load.
+Settlers aren't on quest scripts. They are **hungry**, they **remember** where to trade, and they walk to **their own settlement's market** when they need to. The exchange is physical: caps change hands, the stall-keeper's purse grows, trust is earned. The market has **hours** — it closes at night and nobody walks to a closed bench — and the day's **weather** is remembered.
 
-## Roadmap
+They have **names** on the people themselves (Sturges stays Sturges; everyone else gets a name from the author's curated pools). They **talk** to each other using the game's own voice lines, **argue**, and **fight** — the feud begins on its own from a slight. They **fall in love**, become **households** (one pouch, one bench, one bed), and **children are born**: a mother visibly carries a swaddled bundle, and after a couple of days a real child of the Commonwealth takes its place — dressed, named, and growing up. The wastes can make them **sick** — they buy medicine when they can afford it, rest when they can't, and a severe untreated illness can end them. The dead are **grieved** and **buried** by the settlement that mourned them. The player **hears** the world through radio captions and, close up, the words themselves.
 
-Where this project is and where it's going: `Docs/Roadmap.md`. Every stone through **0.8.6c** is in and verified in-game. The staged run to **1.0.0** is planned (`Docs/Design/Run080.md`): 0.8.7 dialog growth (the curated catalog + the voice-aware audio gate, in progress) → 0.8.8 timings & weights → 0.8.9 babies → 0.8.10 animations + fight-feel → 0.8.11 log hygiene + loose ends → 0.8.12 final touches + the Nexus beta → 1.0.0 freeze and ship. The milestone stones so far:
+The whole world rides inside your save file — save, quit, reload, and everyone remembers who fed them, who they traded with, and who they married.
 
-- **0.1** the heartbeat — the plugin loads and breathes.
-- **0.2** the translation — settler-faction actors become minds.
-- **0.3** the intent executor — the sim ticks every frame and settlers walk.
-- **0.4** the co-save — the world rides inside the save file (record **v4**:
-  entities, the Rng stream, who runs each market's stall, and each
-  memory's world day — the timestamp survives save/load).
-- **0.5** the living world — species split (children and animals don't
-  barter), world facts, market hours, weather memory events,
-  per-settlement markets (a persistent-cell census — FO4 never fills the
-  REFR form array), the trade stone (a stall-keeper per market, the
-  buyer remembers the merchant), the economy stone (cap pouches that
-  round-trip), per-mind decay desync (`VaryNeeds`) plus the engine's
-  per-tick decay jitter (a seeded `Rng`, persisted in the co-save), and
-  hardenings: `DeleteGame` no longer kills a running world, and the walk
-  probe reads the actor's data position instead of a lying 3D transform.
-- **0.6** the Commonwealth remembers — the world keeps its books
-  (arrivals wake mid-session, deaths and departures leave it, every
-  survivor remembers who is gone — record **v5**), and settlers **bond**
-  from how they treat each other: friends, sweethearts, and spouses
-  emerge from shared meals and survive save/load. Couples become
-  **households** (one pouch, one bench, one bed) and the **sleep cycle**
-  closes the loop — a fed mind rests, recovers its Fatigue
-  (`sim.rest.recovery`), and walks again, so the same settlers keep
-  meeting and their bonds deepen. Settlers **mill around** between meals
-  (the wander stone — Rest/Explore command a bounded walk to a real
-  nearby reference, furniture preferred), **gossip** spreads every death
-  to the settlement, **grief** is real (a widowed settler drains its
-  Social seeking company — `arcs: settler X grieves for Y`), and
-  **children** are born: a spouse household's sim-only child, fed and
-  bonded, living in the co-save like any mind (`sim.birth.enabled`).
-- **0.7** the player listens — settlers have **names** (the game's own
-  names win; the author curates the rest in the INI — gender-split
-  pools plus a separate animal pool; owned animals are named, strays
-  stay nameless), relationships can go **bad** (a hungry arrival at a
-  closed market blames the keeper — `ReportOutcome({keeper, Social,
-  Failure})` — the settlement's echo agrees, and rival/enemy bonds
-  form so **feuds begin on their own**), and the player **hears** the
-  world: events become one-line news (throttled HUD notifications) and
-  a settlement radio speaks them as captions. The engine's Legacy
-  stones ride the death and birth paths (a death bequeaths its
-  memories and leaves its name as a legacy; a child inherits the
-  parents' memories of the people). Record **v6**.
-- **0.7.1–0.7.5** the world talks, trades with anyone, and fights —
-  conversation pools (the good greet/gossip/family, the bad
-  trade/row, the ugly grief/fight/feud — a seeded picker, one line
-  per mind per day), **names for everyone** (role titles gain the
-  person: "Provisioner Daisy"; game names win), **trade with anyone
-  who sells** (the vendor census — a hungry walk resolves to a
-  person, not only the bench), and the **physical feud**: temper +
-  chance book a fight (once per day, co-saved), the victim takes the
-  game's own paired-push kick, the exchange runs on beats (kick →
-  fall → get-up → retaliation → slink-off), and the threats ride the
-  game's own subtitle queue as bottom-of-screen subtitles only when
-  the player is close enough to hear (`sim.subtitle.radius`). Record
-  **v7**.
-- **0.7.6** the kick is real — an unconditional IDLE clone
-  (`TheLivingCommonwealthAnims.esp`) delivers paired-push animation on
-  both beats; the fall tips instead of sliding; the IsDown guard waits
-  for actors to be on their feet before the retaliation.
-- **0.7.7** babies — the full birth lifecycle: conception → pregnancy
-  window → birth event → named child → fed by household → growth to
-  Human after `sim.birth.childhood` days. Only Human×Human pairs
-  conceive; the species gate enforces it. Co-save serialized.
-- **0.7.8** visible children — runtime pairing scans for child actors
-  from the external Baby Sim mod and connects them to sim-only children
-  after they grow. Graceful degradation when the mod is absent
-  (`sim.birth.visible`). The adapter owns the pairing; no patch ESP
-  needed.
-- **0.7.9** bugs & polish — a full codebase audit: no bugs, no stale
-  comments, all INI defaults match code, docs consistent.
-- **0.8.0** Illness & Medicine — every mind carries a **Health**
-  component (co-save additive). Radstorms, shared food, wounds, and
-  contagion can make a mind sick: health drops to the hold level while
-  the sickness runs, severity grows untreated (children faster), the
-  sick tire faster and rest more, and a **dose of medicine** (the
-  trade stone's second good) ends the hold early. An untreated,
-  severity-capped illness can drain health to zero — death is rare,
-  earned, and remembered. Tuned via `sim.illness.*`.
+## Requirements
 
-**Live on GitHub:** [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) —
-releases published: `0.5.0-beta`, **`0.6.0`**, and **`0.7.0`**
-(2026-08-11, notes in [RELEASE_NOTES.md](RELEASE_NOTES.md)). The
-0.7.x run shipped as the **0.7.9** release (2026-08-13); 0.8.0 ships
-once it is verified in-game. Nexus comes later.
+- **Fallout 4 1.11.221 (Next-Gen)** — the current Steam/GOG build
+- **F4SE** (Next-Gen)
+- **Address Library for F4SE Plugins**
 
-## What this is
+## Install
 
-The adapter is a **client** of `LCE.Core` — exactly like the engine's test
-harness, but living in its own repository and talking to a game. It does
-**not** reimplement simulation:
+1. Install the three requirements above.
+2. Extract the release archive into your `Fallout 4/Data/` folder (the plugin lands at `Data\F4SE\Plugins\TheLivingCommonwealth.dll`). Using **Mod Organizer 2**, install it as a normal mod and enable it.
+3. Copy `TheLivingCommonwealthAnims.esp` into `Data/` and **enable it in your load order** — it delivers the fight kick animation. Without it fights fall back to a stagger (nothing crashes, it just looks tamer).
+4. The INI (`Data\F4SE\Plugins\TheLivingCommonwealth.ini`) is created with sane defaults on first run — every number in it is tunable. Your old saves just work: a 0.5/0.6/0.7/0.8-era save migrates forward cleanly.
 
-- The adapter **calls**: `CreateEntity`, `DestroyEntity`, `Remember`
-  (experiences and world facts), `Update` — and **reads** intents via
-  `GetComponent<Intent>`.
+## Optional
+
+- **MCM (Mod Configuration Menu)** — a full settings page (Life, Interactions, Relationships, Illness, Economy, Birth & Fights, About) to tune the world in-game. Changes hot-apply within a second and survive a restart. No MCM? The INI alone rules — MCM is a soft dependency.
+- **Baby Sim - Babies That Grow Up** (Nexus 100934) — when installed, the mother's carry shows its swaddled-bundle variants; without it, the game's own Shaun bundle. The mod stays a soft dependency and runs exactly as its author designed.
+- **Realistic Conversations** — its 33 GMST overrides are re-delivered as a compatibility tuning file next to the DLL; install the ESP yourself and the file applies its settings at load.
+
+## Tune it
+
+The MCM page covers the player-facing knobs. Everything else lives in the INI under `Data\F4SE\Plugins\TheLivingCommonwealth.ini`:
+
+- **The rhythm of life** — `sim.hunger.decay`, `sim.fatigue.decay`, `sim.rest.recovery`, market hours (`market.open.hour` / `market.close.hour`)
+- **Relationships** — bond thresholds (`sim.bond.threshold.*`), the feud's temper line, the daily fight gate
+- **Birth** — `sim.birth.enabled`, `sim.birth.chance`, `sim.birth.gestation` (pregnancy length), `sim.birth.childhood`, `sim.baby.holdDays`, `sim.baby.visualChild`
+- **Illness & medicine** — the whole curve (`sim.illness.*`), the medicine price, the cough cadence, per-stall daily stock
+- **Economy** — the daily stipend (`sim.economy.stipend`, default off — opt in via the MCM slider), who pays, owned-only
+- **Names** — `names.first.male`, `names.first.female`, `names.first.animal`, `names.last` — swap in your own pools freely
+- **Dialogue** — `dialogue.greet`, `dialogue.trade`, etc. — the game's own curated lines, editable per pool
+
+A missing or broken line keeps the default — a broken line never breaks the world.
+
+## What it does — the honest list
+
+- **Hunger, fatigue, safety, social, comfort** — real needs that decay and desync per settler, so the crowd doesn't march in lockstep.
+- **Per-settlement markets** — every settlement has its own bench and its own stall-keeper; the market closes at night and reopens on time.
+- **A real economy** — cap pouches that round-trip save/load; sellers earn, buyers spend, medicine is a stocked shelf that can sell out.
+- **Names, bonds, and households** — friends, sweethearts, and spouses emerge from how people treat each other; couples share a pouch, a bench, and a bed.
+- **Talk, rows, and fights** — using the game's own voice lines and the game's own kick animation; subtitles when you're close enough to hear.
+- **Birth, growth, grief, and burial** — the full life cycle, from a carried bundle to a dressed child to a remembered death.
+- **Illness** — radstorms, shared meals, wounds, and contagion; treatable at the market when you can afford it.
+- **Weather memory** — settlers remember the day's sky, and a radstorm day is a real event.
+- **Road life** — provisioners and caravan guards eat on the road, and the friends they made travel with them.
+
+## Known limits (honest)
+
+- **No audio layer.** Speech is captions, subtitles when you're near, and the game's own voiced dialogue where its voices support it. The settlement radio announces news as captions. There is no custom voice acting — nothing can be done if the game simply doesn't provide a line for a voice.
+- **A newborn child is invisible until the next save/load.** The one spawn route that doesn't crash or half-birth the child deliberately leaves it un-initialized; the game's own load routine completes it — head, movement, name, clothes — the next time you load the save.
+- **The fight kick needs the Anims ESP.** Without it fights still happen but read as a stagger. The known presentation bugs (both actors collapsing, a push with no visible shove) are documented and deferred to the post-beta animation pass.
+- **By design:** animals get fed at the market but never trade or talk; robots talk but never eat, sleep, or fall in love; companions never enter the dating zone (friendship only); only human couples conceive; unowned settlements still have living settlers; provisioner first names never surface in-game.
+- **MCM is optional** — without it the INI alone rules.
+- The F4SE serialization UID is a placeholder; it only matters if the mod later joins the F4SE plugin registry.
+
+## Compatibility
+
+Tested and working with: **Address Library** (required), **MCM** (optional), **Baby Sim - Babies That Grow Up** (optional), **Realistic Conversations** (compat tuning file included), **Sim Settlements** and **Sim Settlements 2** (recommended for players, no interaction), and **Settler and Companion Dialogue Overhaul** (no interaction). The voice-aware rule is the one real constraint: a named voice (Sturges, Marcy, companions) has no recording of the generic settler lines, so those minds stay mute rather than say a line their voice can't speak.
+
+Live on GitHub: [lelsliem/The-Commonwealth-Lives](https://github.com/lelsliem/The-Commonwealth-Lives) — releases and the full changelog live there. **This is a beta — save often, and report what you see.**
+
+---
+
+## For developers
+
+The adapter is a **client** of the [Living Commonwealth Engine (LCE)](https://github.com/lelsliem/Living-Commonwealth-Engine-LCE-), exactly like the engine's test harness, but living in its own repository and talking to a game. It does **not** reimplement simulation:
+
+- The adapter **calls**: `CreateEntity`, `DestroyEntity`, `Remember` (experiences and world facts), `Update` — and **reads** intents via `GetComponent<Intent>`.
 - The adapter **guarantees**: an intent is a *hint*, not a command.
-- The core **promises**: no game knowledge, no queries of the world, a
-  stateless tick.
+- The core **promises**: no game knowledge, no queries of the world, a stateless tick.
 
-The contract lives in the core repo:
-`Docs/Architecture/PlatformIntegration.md`. Start there.
+The contract lives in the core repo: `Docs/Architecture/PlatformIntegration.md`.
 
-## Repository map
+### Repository map
 
 ```
 xmake.lua          build (xmake; drives the core's CMake via the lce.core rule)
@@ -130,54 +98,27 @@ src/               the plugin: main (lifecycle), Adapter (the world object),
                    (census + seeding), Movement (the walk), SimRelevant
                    (the settler predicate), Tuning (the INI), WorldFacts
                    (weather + market hours), Components, BlobCodec,
-                   Birth (pregnancy/growth/pairing), Names (pools + role
-                   names), Dialogue (talk pools), Rows (verbal altercations),
-                   Gossip, Arcs (mediation + grief), Fights (physical
-                   escalation), Bonds (relationship states),
-                   ConflictGates (once-per-day fight/row gate),
-                   Households (shared wallet), Kin (family gate),
-                   Subtitles (on-screen fight lines)
+                   Birth (pregnancy/growth/visible children), Names (pools
+                   + role names), Dialogue (the curated talk pools), Rows,
+                   Gossip, Arcs (mediation + grief), Fights, Bonds,
+                   ConflictGates, Households (shared wallet), Kin (family
+                   gate), Subtitles (on-screen lines)
 tests/             the adapter's test harness (links LCE.Core only, no game)
-Docs/              handoff doc, decisions, design, roadmap
+Docs/              handoff doc, decisions (DecisionLog), design, roadmap
 Depends/           local third-party clones — study/build inputs, not committed
 Build/             build output (gitignored)
 ```
 
-## Building
+### Building
 
 ```bash
 # one command — builds the DLL + the test harness
 xmake -y
 
-# run the tests (no game required)
+# run the tests (no game required) — 27 suites, all green before anything ships
 xmake run TheLivingCommonwealth.Tests
 ```
 
-## Installing
-
-1. Build the DLL (or grab it from a release)
-2. Copy `TheLivingCommonwealth.dll` to your F4SE plugins folder
-   (`Data/F4SE/Plugins/`)
-3. Copy `config/TheLivingCommonwealth.ini` to the same folder
-4. For fights: enable `TheLivingCommonwealthAnims.esp` in your load order
-5. For visible children: install Baby Sim - Babies That Grow Up and set
-   `sim.birth.visible = 1` in the INI
-
-## INI tuning
-
-The `TheLivingCommonwealth.ini` file controls the simulation:
-
-- **Need decay rates**: `sim.hunger.decay`, `sim.fatigue.decay`, etc.
-- **Market hours**: `market.open.hour`, `market.close.hour`
-- **Fight tuning**: `sim.fight.chance`, `sim.fight.push`, `sim.fight.stagger`
-- **Birth lifecycle**: `sim.birth.enabled`, `sim.birth.chance`,
-  `sim.birth.gestation`, `sim.birth.childhood`, `sim.birth.visible`
-- **Name pools**: `names.first.male`, `names.first.female`,
-  `names.first.animal`, `names.last`
-- **Dialogue pools**: `dialogue.greet`, `dialogue.trade`, etc.
-
-Missing or broken lines keep defaults — a broken line never breaks the world.
-
-## License
+### License
 
 GPL-3.0-or-later (it links CommonLibF4). The core it depends on is MIT.

@@ -18,7 +18,7 @@
 set_xmakever("3.0.0")
 
 set_project("TheLivingCommonwealth")
-set_version("0.8.6")
+set_version("0.8.12")
 
 set_xmakever("3.0.0")
 set_plat("windows")
@@ -153,11 +153,6 @@ target("TheLivingCommonwealth", function()
     add_rules("lce.core")
 
     add_files("src/**.cpp")
-
-    -- TEMP (0.8.7 crash hunt): emit a linker map so the minidump's
-    -- stack RVAs resolve to source functions. Remove after the hunt.
-    add_ldflags("/MAP:build\\map_dll.txt", { force = true })
-    add_ldflags("/MAPINFO:EXPORTS", { force = true })
 
     -- The banner's build stamp: the git short hash, so the log's first
     -- lines always say which DLL ran. The version alone stops changing

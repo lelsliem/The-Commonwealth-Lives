@@ -88,7 +88,7 @@ MO2 (`B:\Modding\MO2`). The plugin logs to
 | 0.8.9 | Babies, implemented | ✅ verified in-game (2026-08-16) — the birth journey v2: the mother carries a swaddled bundle (sim.baby.holdDays, default 2), then it comes off and a child spawns at her feet — deferred spawn (invisible, then real after a save/load: the only route that produces a fully-initialized child; forced init = headless/T-pose, PlaceAtMe = CTD), gender-matched from the farm-children bases, dressed via the base's default outfit (defOutfit, a ChildOutfit* OTFT bundle — the game's own child-clothing path; the earlier no-clothes bug was an OTFT-vs-ARMO cast miss, fixed 0.8.9-child), never in the settler faction (no duplicate mind), paired with the sim-only child; co-save v11 (BabyHold + VisualChild sections); the crib walk + market baby-goods shelf were cut (the mod stays as its author designed); 27/27 green |
 | 0.8.10 | Animations + fight-feel | 🔲 DEFERRED (2026-08-17) — left alone for now by decision; stays planned, revisited after the beta (kick works; the both-fall/ghost-push presentation bugs are documented in Run080) |
 | 0.8.11 | Log hygiene + loose ends | ✅ done (2026-08-17) — the decision-chatter cap was already in place (key-dedupe + sim.log.decisions.every); the walk probe (sim.log.probes, the biggest writer) now defaults OFF; loose ends decided — unowned settlements keep minds, the who-is-the-world calls stand as designed (DecisionLog 0066) |
-| 0.8.12 | Final Touches + beta | 🔲 planned — the clean run, README, package, Nexus beta |
+| 0.8.12 | Final Touches + beta | 🔄 in progress (2026-08-17) — version 0.8.12, warning-free build, docs reconciled (0.8.7 CHANGELOG restored, RELEASE_NOTES to 0.8.11, audio-probe verdict folded in), player README written; the release package + Nexus beta remain |
 | 1.0.0 | Freeze and ship | 🔲 planned |
 
 **Build:** `xmake` (one command). Two targets:
@@ -168,12 +168,14 @@ issue; sessions capped at 16) → `ProbeWalks` (live distance probes).
 
 **The co-save record:** the core's snapshot is process-local (component
 keys are stable strings). The adapter owns the durable F4SE co-save
-record (stable type names, versioning): v7 currently, adding sections
-for bonds (v5), stall-keepers (v3), memory world-days (v4), conflict
-gates, and the co-save's additive components (Name, CapPouch, SpeciesTag,
-Pregnancy, BirthDay, Health). The 0.8.1 co-save audit fixed the stable-name
-table itself — Health, Pregnancy/BirthDay, and CompanionTag were registered
-serializers but never named, so mid-hold illness and in-progress pregnancy
-were lost on save/load; all four names now ride the record
-(MidOutbreakSaveTest locks the round-trip). Migration: old saves load
+record (stable type names, versioning): **v11** currently — v4 memory
+world-days, v5 bonds, v6 legacy, v7 conflict gates, v8 gates/weather,
+v9 stipend marks, v10 BabyHold (the carry), v11 VisualChild (the
+visible child's pair), plus the co-save's additive components (Name,
+CapPouch, SpeciesTag, Pregnancy, BirthDay, Health). The 0.8.1 co-save
+audit fixed the stable-name table itself — Health, Pregnancy/BirthDay,
+and CompanionTag were registered serializers but never named, so
+mid-hold illness and in-progress pregnancy were lost on save/load; all
+four names now ride the record (MidOutbreakSaveTest locks the
+round-trip). Migration: old saves load
 forward; a future component is skipped, never fatal.

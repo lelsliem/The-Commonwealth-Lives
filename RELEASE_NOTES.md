@@ -17,6 +17,99 @@ bench, arrive, trade, and the whole world survives save/load.
 
 ---
 
+## 0.8.11 — Log Hygiene + Loose Ends (2026-08-17)
+
+The quiet-log pass before the beta. The decision log was already
+capped (one line per mind, and only when its intent changes); the one
+real change is the walk probe — the log's single biggest writer —
+now off by default (`sim.log.probes`). The arrival and session-end
+lines stay; only the progress heartbeats go, so a session's log is a
+story, not a wall. Two parked questions answered for good: unowned
+settlements keep their minds (the world is alive everywhere, and
+`requireOwned` remains the opt-in), and the who-is-the-world calls
+from the audit all stand as designed. 0.8.10 animations + fight-feel
+is deferred by decision — the kick chain works and the presentation
+bugs are documented; it is revisited after the beta.
+
+## 0.8.9 — Babies, implemented (2026-08-15, verified 2026-08-16)
+
+The birth journey gets a body — a newborn is carried, then becomes a
+child of the Commonwealth.
+
+- **The carry.** On birth, the mother visibly holds a swaddled
+  bundle — the Baby Sim mod's variant when it is installed, the
+  game's own Shaun bundle when not — so everyone gets a carry, mod
+  or not. The hold rides the save (co-save v10) so a mid-carry
+  survives save/load.
+- **The child.** After `sim.baby.holdDays` (default 2) the bundle
+  comes off and a child spawns at the mother's feet — gender-matched
+  from the game's own farm-children pool. The child is deliberately
+  left un-initialized (the one spawn route that doesn't crash or
+  half-birth): invisible until the game's own save/load routine
+  completes it, then it steps out fully real — head, movement,
+  correct name and gender. Forcing the init yields the headless
+  T-posing child, and the game's own PlaceAtMe is a documented CTD;
+  the deferred route is the only one that works.
+- **The clothes (the dress find).** Children kept spawning in their
+  pants because the game's child-outfit records are OTFT bundles, not
+  ARMOs — the equip silently no-op'd. The child's base now gets its
+  default outfit at spawn (the game's own child-clothing path), so
+  children appear dressed and stay dressed across reloads.
+- **The road feed (0.8.9-road).** Provisioners, caravan guards, and
+  caravan workers eat from the caravan's supplies on the road at
+  `sim.road.feedThreshold` — no market clustering — and their bonds
+  and memories travel with them, so a provisioner greets a settler
+  they befriended when passing through.
+- The crib walk and market baby-goods shelf were cut: the Baby Sim
+  mod runs as its author designed; the sim only adds the moment of
+  birth and the moment of the child. The baby-mod integration stays a
+  soft dependency (author engaged).
+
+## 0.8.8 — Timings & Weights (2026-08-15)
+
+The exchange show's pacing is tunable from the INI and the MCM
+Interactions page: `sim.interact.pairCooldown` (a specific pair
+never re-exchanges within the window), `sim.interact.dailyCap` (how
+many interactions a mind opens per day), and the weighted pools
+(`weight.greet / .gossip / .family / .row`) — greet and gossip
+dominate the crowd, family is boosted for bonded pairs, and a feud
+pair is a hard row whatever the weights say. The bond names the
+register the exchange asks the game to voice (family for a bonded
+household, flirt for a compatible unpaired pair, greet for the
+crowd); the field verdict: the game refuses `kMisc_Greeting` for
+settler voices, so that register defaults off.
+
+## 0.8.7 — Dialog Growth: the game's own lines (2026-08-15)
+
+The drafted dialogue was replaced by the game's own recordings — a
+content swap, zero new machinery. The voice-bank survey extracted
+and classified the game's settler bank (~17,500 files), guards,
+Gen3 synths, children, and ghouls; every pool now carries the game's
+real lines (Greet 30, Gossip 23, Row 32, Trade 30, Family 16,
+Grief 15, Fight 2, Feud 2), shipped in code and the INI
+(`dialogue.*`).
+
+**The voice-aware picker.** A line only speaks if the speaker's voice
+bank recorded it — ground truth from the game's own Voices BA2 name
+table. The game resolves audio by voice type, so a voice can never
+say a line its bank lacks; when no line exists for that voice, the
+mind stays mute (captions only). Named voices (Sturges, Marcy,
+companions) have no recording of the generic lines — the mute rule
+stands for them.
+
+**Realistic Conversations compatibility.** The 2018 ESP's 33 GMST
+overrides are re-delivered as a tuning file next to the DLL — no
+xedit patch, no ESP, no load-order slot; a missing file is the off
+switch.
+
+**The audio trigger probe verdict.** The experiment asking whether
+the DLL can make the game actually play a curated line's .fuz came
+back no — no audible playback on either route (VM Say / ProcessGreet)
+without crashing. Speech shows in-world instead: the exchange
+registers drive the game's own voiced dialogue where its voices
+support it, subtitles appear when the player is close enough to
+hear, and the settlement radio carries news as captions.
+
 ## 0.8.6 — Scale in the Field (2026-08-14)
 
 The hard gate, measured: the adapter feeds the engine's TickReport and

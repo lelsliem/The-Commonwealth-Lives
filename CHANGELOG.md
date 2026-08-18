@@ -203,6 +203,47 @@ the cadence claim; the stamps land once per interaction whichever way
 it lands), are cleared with the world, and never touch the co-save.
 0.8.8 harness 27/27 green; field tuning pending.
 
+## 0.8.7 — Dialog growth: the game's own lines, voice-aware (2026-08-15)
+
+The drafted pools were replaced by the game's own recordings — a
+content swap, zero new machinery. (This section was missing from the
+CHANGELOG — the work shipped under the old 0.9.1 labels and the
+renumber pass missed the log; restored 2026-08-17.)
+
+- **The curated catalog.** The voice-bank survey
+  (Docs/Dialogue/LineCatalog.md) extracted and classified the game's
+  settler bank (~17,500 files), guards (4 voices), Gen3 synths,
+  children, and ghouls. Each pool now carries the game's real lines —
+  Greet 30, Gossip 23, Row 32, Trade 30, Family 16, Grief 15,
+  Fight 2, Feud 2 — with per-voice coverage recorded (`(8v)` = all 8
+  settler voices recorded it). Shipped in `src/Dialogue.h` (defaults)
+  and the INI (`dialogue.*`). The comma gotcha: the list parser
+  splits on commas, so mid-line pauses use em-dashes.
+- **The voice-aware picker** — ground truth from the game's own
+  `Fallout4 - Voices.ba2` name table (a formid → voice-set map).
+  `PickForVoice` only draws lines the speaker's voice bank recorded;
+  a voice with nothing in the pool stays mute (captions only).
+  `VoiceOf`/`VoiceOfForm` resolve a mind's voice from its actor's
+  voiceType; `Say` logs `[voice]` vs `[cap]` per line, proving which
+  path ran.
+- **The ghoul bank.** Ghoul settlers resolved to their own voice
+  types and share the same 8v generic lines (52 of the pool's lines,
+  same formids) — 64 curated lines carry ghoul coverage. Named
+  voices (Sturges, Marcy, companions) have no recording of the
+  generic lines — the mute rule stands.
+- **Realistic Conversations compatibility** — the 2018 ESP's 33 GMST
+  overrides re-delivered as a tuning file
+  (`Realistic Conversations.ini` next to the DLL), applied to the
+  game's own GameSettingCollection at load. No xedit patch, no ESP,
+  no load-order slot; a missing file is the off switch.
+- **The audio trigger probe** (`sim.diag.audioProbe`, off) — the
+  experiment asking whether the DLL can make the game *play* a
+  curated line's .fuz. Verdict (2026-08-17): no audible playback on
+  either route (VM Say / ProcessGreet), and forcing it produced the
+  PackVariables CTD family. The probe stays off as the documented
+  experiment; speech shows in-world (0.8.8 registers) and the radio
+  carries captions.
+
 ## 0.8.6b — the earn-caps economy, who-pays benched (2026-08-14)
 
 Both who-pays knobs shipped and harness-pinned, then failed in the

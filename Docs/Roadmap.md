@@ -12,34 +12,36 @@ Project Roadmap
 
 Status
 
-Current Version : 0.8.7 — dialog growth. The 0.8 run (0.8.0 →
-                   0.8.6c) shipped and was field-verified 2026-08-14
-                   (tag `0.8.6`); the dialogue work then landed as
-                   this stone (see the 0.8.7 section): every dialogue
-                   pool re-curated from the game's own
-                   settler/guard/child/ghoul recordings
-                   (Docs/Dialogue/LineCatalog.md), shipped in code +
-                   INI, plus the Realistic Conversations
-                   compatibility (the 33-GMST overrides re-delivered
-                   as a tuning file, no ESP).
+Current Version : 0.8.12 — final touches + beta. The 0.8 run is
+                   complete through 0.8.11 (the birth journey, the
+                   dialog growth, timings & weights, and log hygiene
+                   are all done and field-verified; 0.8.10 animations
+                   + fight-feel is DEFERRED by decision — see its
+                   section). 0.8.12 is the clean run before the beta:
+                   every field note folded in, docs reconciled,
+                   warnings cleared, and the player-facing README
+                   written (2026-08-17).
 
-Current Stage   : 0.8.9 DONE — the birth journey is verified
-                   in-game (2026-08-16): the carry, the deferred
-                   child spawn that materializes real on save/load,
-                   and the dress find (children wear clothes now).
-                   The 0.8.7 dialog exchange, 0.8.8 timings & weights,
-                   and 0.8.9-road all landed in the same pass — 27/27
-                   harness suites green. 0.8.10 is DEFERRED by
-                   decision (2026-08-17 — animations/fight-feel left
-                   alone for now); 0.8.11 log hygiene + loose ends is
-                   DONE (see its section). See the 0.8.7 / 0.8.8 /
-                   0.8.9 sections.
+Current Stage   : 0.8.12 in progress — the clean-run pass: version
+                   bumped to 0.8.12, the 0.8.7-crash-hunt linker-map
+                   leftover removed (warning-free build), the
+                   audio-probe verdict folded into 0.8.7 (no audible
+                   .fuz playback; speech is in-world), the missing
+                   0.8.7 CHANGELOG section restored, RELEASE_NOTES
+                   brought up to 0.8.11, and the player-facing README
+                   rewritten (what it does, requirements, install,
+                   tune, known limits, compatibility). Remaining:
+                   the release package + the Nexus beta itself.
 
-Next Milestone  : 0.8.12 final touches + beta on Nexus. 0.8.10
-                   animations + fight-feel stays PLANNED/DEFERRED —
-                   the kick chain works, the both-fall/ghost-push
-                   presentation bugs are documented in Run080, and
-                   the animation pass is revisited after the release
+Next Milestone  : the 0.8.12 beta release — the release package
+                   (README, changelog, requirements, the Anims ESP)
+                   assembled and the first public release ships on
+                   Nexus; GitHub stays the source; beta feedback
+                   feeds the post-beta run. 0.8.10 animations +
+                   fight-feel stays PLANNED/DEFERRED — the kick
+                   chain works, the both-fall/ghost-push presentation
+                   bugs are documented in Run080, and the animation
+                   pass is revisited after the release
 
 ═══════════════════════════════════════════════
 
@@ -295,7 +297,9 @@ STATUS: COMPLETE ✅ (verified 2026-08-13)
 
 ═══════════════════════════════════════════════
 
-STATUS: BUILT ✅ (harness-verified 2026-08-13) — in-game pending
+STATUS: COMPLETE ✅ (built + harness-verified 2026-08-13; field-verified
+in-game via the 0.8.1 pass — a natural radstorm day: 73 medicine buys,
+0 deaths)
 
 [✓] Health component (adapter-owned, co-save additive): 1.0 healthy,
     0.0 dead, carries the Sickness (kind, severity, contracted day,
@@ -329,9 +333,11 @@ STATUS: BUILT ✅ (harness-verified 2026-08-13) — in-game pending
 
 ═══════════════════════════════════════════════
 
-STATUS: IN PROGRESS — the co-save audit, the cough gate, the radio
-pacing, the illness kill, and the child retune landed (2026-08-13);
-the balance and the wound window wait on an in-game session.
+STATUS: COMPLETE ✅ — the co-save audit, the cough gate, the radio
+pacing, the illness kill, and the child retune landed (2026-08-13)
+and were field-verified (the 0.8.3 sick-household pass verified the
+medicine economy in normal play: self-buy, the broke-gate, shelf
+persistence, and the family care-buy).
 
 [✓] Mid-outbreak co-save — DONE, and it caught a real bug: Health
     (0.8.0) and Pregnancy/BirthDay (0.7.7) were registered as
@@ -627,7 +633,24 @@ seam). To route the probe through the production path, the catalog
 table gained its INFO form ids (a text → formid column, ground
 truth from the LineCatalog) and `FormIdFor()`. Off by default;
 the log tags each attempt so the in-game ear knows which route
-fired. Verdict pending in-game.
+fired.
+
+**The verdict (folded in 2026-08-17): no audible .fuz playback, and
+the design moved on.** The probe ran in-game across several sessions
+— the user heard nothing on either route (`[probe say]` dispatched
+the VM's Say; `[probe greet]` fired ProcessGreet) while the log
+showed the attempts firing. The DLL has no crash-free path to make
+an actor speak a curated line's audio; forcing the VM Say route
+further back produced CTDs (the PackVariables family — the probe
+stays **off**, `sim.diag.audioProbe = 0`, as the documented
+experiment if audio is ever wanted). The speech design settled
+instead on what works: **in-world exchanges** — the 0.8.8 registers
+drive the game's *own* voiced dialogue where its voices support it
+(kMisc_Greeting refused for settler voices, so greet defaults off;
+family/flirt attempts are gated), subtitles only when the player is
+close enough to hear, and the settlement radio carries news as
+captions, never small talk. Voice types and audio are purely
+game-facing — nothing engine-side is needed.
 
 **The Realistic Conversations compatibility.** The 2018 ESP's 33
 GMST overrides re-delivered as a tuning file
@@ -638,12 +661,6 @@ switch; a setting the game no longer has is skipped, never fatal.
 The NPC-to-NPC voiced chatter it drives is the game's own system;
 our sim's subtitle lines are a separate text channel that never
 touches those settings.
-
-The remaining piece is the audio trigger: playing a line's actual
-.fuz on an actor (the vendored commonlibf4 has no direct Say
-wrapper — the probe tests the ProcessGreet / dialogue-package
-route). Nothing engine-side is needed: voice types and audio are
-purely game-facing, which the adapter already owns.
 
 0.8.8 — Timings & Weights
 
@@ -792,8 +809,33 @@ materials.
 
 ═══════════════════════════════════════════════
 
-STATUS: PLANNED
+STATUS: IN PROGRESS (2026-08-17) — the clean-run pass is done; the
+release package + Nexus beta remain.
 
+The clean run before the beta: every field note folded in, docs
+reconciled, warnings cleared, harness at full green, the README
+written for players (what it does, install, tune, known limits,
+compatibility), the release package assembled — then the first public
+release ships on Nexus; GitHub stays the source; beta feedback feeds
+the post-beta run.
+
+- **Warnings cleared** — the build is warning-free. The version
+  stamp moved to 0.8.12, and the TEMP 0.8.7-crash-hunt linker map
+  (long dead — the hunt ended with SUP's old DLL and the probe kept
+  off) was removed from xmake.lua.
+- **Field notes folded in** — the audio-probe verdict (0.8.7): no
+  audible .fuz playback on either route; the probe stays off as the
+  documented experiment and speech shows in-world. The missing
+  0.8.7 CHANGELOG section was restored (the renumber pass missed
+  it), and RELEASE_NOTES now carries 0.8.7 → 0.8.11 entries for the
+  release package.
+- **The player-facing README** — rewritten player-first: what it
+  does, requirements, install (manual + MO2), tune (MCM + INI),
+  known limits (the honest list), and compatibility. Developer
+  sections (the adapter/core split, repository map, building)
+  live below the fold.
+- **Remaining:** the release package itself (archive layout, the
+  Anims ESP, requirements doc) and the Nexus beta submission.
 The clean run before the beta: every field note folded in, docs
 reconciled, warnings cleared, harness at full green, the README
 written for players, the release package assembled — then the first
