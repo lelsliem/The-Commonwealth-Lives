@@ -14,7 +14,7 @@ of the conversation that built it.
 
 **Design docs in this repo** (`Docs/Design/`): `Translation.md` (form ↔
 entity), `Executor.md` (the tick + intent executor), `Walking.md` (the
-walk), `CoSave.md` (the co-save record — v7; v5's bond map and v3's
+walk), `CoSave.md` (the co-save record — v11; v5's bond map and v3's
 stall section still ride), `Behaviour.md` (the
 species split), `Market.h`'s sibling `SettlementMarkets.md` (the census
 + per-settlement markets), `Trade.md` (the stall-keeper trade),
@@ -134,10 +134,11 @@ src/Households.h       shared wallet, family bench
 src/Gossip.h           bond/death/feud spread to settlement
 src/Arcs.h             mediation, grief, birth arc
 src/Kin.h              family gate (curated vanilla families)
-src/Subtitles.h        on-screen fight lines (game's SubtitleManager)
+src/Adapter.cpp        ShowChatter — on-screen lines via the game's
+                       SubtitleManager (fight lines, proximity chatter)
 src/ConflictGates.h    once-per-day fight/row gate (co-saved)
 src/Serialization.h/.cpp  per-type serializers
-src/CoSave.h/.cpp      the durable co-save record (v7)
+src/CoSave.h/.cpp      the durable co-save record (v11)
 src/BlobCodec.h        little-endian byte codec
 src/Components.h       FormRef + SpeciesTag + CapPouch + Name + Pregnancy
                        + BirthDay (adapter components)

@@ -1,12 +1,16 @@
 # LineCatalog — Voiced Settler-Bank Lines
 
-> Hand-curated from the game's own voice bank (see `VoiceBank.md` for the survey).
+> Hand-curated from the game's own voice bank (the survey pipeline lives
+> in `Not for github/` — `survey_voices.py` extracts the names, the
+> `*_catalog.md` files hold each bank's classified lines).
 > Every line below is *voiced* — the game ships audio for it in the 8 settler
 > voice types (Male/Female × Old/EvenToned/Rough/Boston). The `(nv)` tag is the
 > per-line voice coverage out of 8. Lines are the sim's *ambient* layer: they
 > can be triggered through the game's Say/PlayIdle system when the player is
 > near. Memory-driven lines (names, feuds, grief for specific people) have no
-> recording and stay caption-only — see `HybridArchitecture.md`.
+> recording and stay caption-only — the 0.8.7 audio-probe verdict in
+> `Docs/Roadmap.md` (Roadmap 0.8.7) records why speech settled on
+> in-world exchanges plus captions instead of a voiced layer.
 >
 > Source: Fallout4.esm quest dialogue + Fallout4_en.DLSTRINGS, resolved through
 > the settler Voices BA2 (4,737 lines extracted, 8 voice types).

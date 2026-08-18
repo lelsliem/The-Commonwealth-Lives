@@ -103,7 +103,8 @@ src/               the plugin: main (lifecycle), Adapter (the world object),
                    + role names), Dialogue (the curated talk pools), Rows,
                    Gossip, Arcs (mediation + grief), Fights, Bonds,
                    ConflictGates, Households (shared wallet), Kin (family
-                   gate), Subtitles (on-screen lines)
+                   gate), Adapter's ShowChatter (on-screen lines via the
+                   game's SubtitleManager)
 tests/             the adapter's test harness (links LCE.Core only, no game)
 Docs/              handoff doc, decisions (DecisionLog), design, roadmap
 Depends/           local third-party clones — study/build inputs, not committed
